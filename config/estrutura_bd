@@ -1,0 +1,233 @@
+CREATE TABLE usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    senha VARCHAR(255) NOT NULL,
+    telefone VARCHAR(20),
+    nivel ENUM('aluno', 'admin') DEFAULT 'aluno',
+    data_expiracao DATE DEFAULT NULL,
+    foto VARCHAR(255) DEFAULT 'assets/img/user-default.png',
+    data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE pagamentos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    descricao VARCHAR(100) NOT NULL, /* Ex: Mensal, Trimestral */
+    valor DECIMAL(10, 2) NOT NULL,
+    data_vencimento DATE NOT NULL,
+    data_pagamento DATE, /* Se null, está pendente */
+    status ENUM('pago', 'pendente', 'atrasado') DEFAULT 'pago',
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- (Opcional) Cria um Admin padrão para você testar
+-- Senha do admin abaixo é: "admin123" (já criptografada)
+INSERT INTO usuarios (nome, email, senha, nivel) 
+VALUES ('Ryan Admin', 'admin@ryancoach.com', '$2y$10$7Kz.Xq.8/5V.5V.5V.5V.e/5V.5V.5V.5V.5V.5V.5V.5V.5V.5', 'admin');
+
+CREATE TABLE treinos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    aluno_id INT NOT NULL,
+    admin_id INT NOT NULL, 
+    nome VARCHAR(100) NOT NULL, 
+    nivel_plano ENUM('basico', 'avancado', 'premium') NOT NULL,
+    data_inicio DATE NOT NULL,
+    data_fim DATE NOT NULL,
+    
+    dias_semana VARCHAR(50) NOT NULL, 
+    
+    divisao_nome VARCHAR(50),
+    observacoes TEXT,
+    ativo BOOLEAN DEFAULT 1,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (aluno_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (admin_id) REFERENCES usuarios(id)
+);
+
+CREATE TABLE periodizacoes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    treino_id INT NOT NULL,
+    data_inicio_macro DATE NOT NULL,
+    data_fim_macro DATE NOT NULL,
+    objetivo_macro VARCHAR(255), 
+    FOREIGN KEY (treino_id) REFERENCES treinos(id) ON DELETE CASCADE
+);
+
+CREATE TABLE microciclos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    periodizacao_id INT NOT NULL,
+    semana_numero INT NOT NULL, 
+    nome_fase VARCHAR(100), 
+    foco_comentario TEXT, 
+    
+    reps_compostos VARCHAR(50), 
+    reps_isoladores VARCHAR(50), 
+    descanso_compostos INT DEFAULT 90,
+    descanso_isoladores INT DEFAULT 60,
+    
+    data_inicio_semana DATE, 
+    data_fim_semana DATE,
+    
+    FOREIGN KEY (periodizacao_id) REFERENCES periodizacoes(id) ON DELETE CASCADE
+);
+
+CREATE TABLE treino_divisoes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    treino_id INT NOT NULL,
+    letra VARCHAR(5) NOT NULL, 
+    nome VARCHAR(100), 
+    FOREIGN KEY (treino_id) REFERENCES treinos(id) ON DELETE CASCADE
+);
+
+CREATE TABLE exercicios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    divisao_id INT NOT NULL,
+    nome_exercicio VARCHAR(200) NOT NULL,
+    tipo_mecanica ENUM('composto', 'isolador', 'livre') DEFAULT 'livre', 
+    video_url VARCHAR(255), 
+    observacao_exercicio VARCHAR(255), 
+    ordem INT NOT NULL, 
+    FOREIGN KEY (divisao_id) REFERENCES treino_divisoes(id) ON DELETE CASCADE
+);
+
+CREATE TABLE series (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    exercicio_id INT NOT NULL,
+    categoria ENUM('warmup', 'feeder', 'work', 'top', 'backoff', 'falha') NOT NULL,
+    quantidade INT DEFAULT 1, 
+    
+    reps_fixas VARCHAR(50), 
+    descanso_fixo VARCHAR(50),
+    carga_prevista VARCHAR(50), 
+    rpe_previsto INT, 
+    
+    FOREIGN KEY (exercicio_id) REFERENCES exercicios(id) ON DELETE CASCADE
+);
+
+CREATE TABLE treino_historico (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    aluno_id INT NOT NULL,
+    treino_id INT NOT NULL,
+    divisao_id INT NOT NULL,
+    exercicio_id INT NOT NULL,
+    serie_numero INT NOT NULL,
+    reps_realizadas INT,
+    carga_kg DECIMAL(5,2),
+    data_treino DATETIME DEFAULT CURRENT_TIMESTAMP,
+    numero_serie INT DEFAULT 1,
+    serie_id INT NULL,
+    FOREIGN KEY (aluno_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (exercicio_id) REFERENCES exercicios(id) ON DELETE CASCADE
+);
+
+-- 1. TABELA PRINCIPAL DE AVALIAÇÕES (Completa)
+CREATE TABLE avaliacoes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    aluno_id INT NOT NULL,
+    registrado_por ENUM('aluno', 'admin') NOT NULL,
+    data_avaliacao DATE NOT NULL,
+    
+    /* Dados Vitais */
+    idade INT,
+    genero ENUM('M', 'F') DEFAULT 'M', /* Necessário para cálculo de BF */
+    peso_kg DECIMAL(5,2),
+    altura_cm INT,
+    
+    /* Medidas Superiores */
+    pescoco DECIMAL(5,2),
+    ombro DECIMAL(5,2),
+    torax_inspirado DECIMAL(5,2),
+    torax_relaxado DECIMAL(5,2),
+    
+    braco_dir_relaxado DECIMAL(5,2),
+    braco_esq_relaxado DECIMAL(5,2),
+    braco_dir_contraido DECIMAL(5,2),
+    braco_esq_contraido DECIMAL(5,2),
+    
+    antebraco_dir DECIMAL(5,2),
+    antebraco_esq DECIMAL(5,2),
+    
+    /* Medidas Tronco & Inferiores */
+    cintura DECIMAL(5,2),
+    abdomen DECIMAL(5,2),
+    quadril DECIMAL(5,2),
+    
+    coxa_dir DECIMAL(5,2),
+    coxa_esq DECIMAL(5,2),
+    panturrilha_dir DECIMAL(5,2),
+    panturrilha_esq DECIMAL(5,2),
+    
+    /* Resultados Calculados (Preenchidos pelo sistema) */
+    imc DECIMAL(5,2),
+    percentual_gordura DECIMAL(5,2),
+    massa_magra_kg DECIMAL(5,2),
+    massa_gorda_kg DECIMAL(5,2),
+    
+    observacoes TEXT,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (aluno_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- 2. TABELA DE MÍDIA (Fotos e Vídeos vinculados à avaliação)
+CREATE TABLE avaliacoes_arquivos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    avaliacao_id INT NOT NULL,
+    tipo ENUM('foto', 'video') NOT NULL,
+    caminho_ou_url VARCHAR(255) NOT NULL, /* Caminho do arquivo ou Link */
+    angulo VARCHAR(50), /* Ex: Frente, Costas, Perfil */
+    FOREIGN KEY (avaliacao_id) REFERENCES avaliacoes(id) ON DELETE CASCADE
+);
+
+-- 2. Tabela de Mídia (Fotos e Vídeos vinculados)
+CREATE TABLE avaliacoes_arquivos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    avaliacao_id INT NOT NULL,
+    tipo ENUM('foto', 'video') NOT NULL,
+    caminho_ou_url VARCHAR(255) NOT NULL, /* Caminho da pasta ou Link do YouTube */
+    angulo VARCHAR(50), /* Ex: Frente, Costas, Perfil */
+    FOREIGN KEY (avaliacao_id) REFERENCES avaliacoes(id) ON DELETE CASCADE
+);
+
+
+-- 1. A Dieta (Cabeçalho)
+CREATE TABLE dietas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    aluno_id INT NOT NULL,
+    titulo VARCHAR(100) NOT NULL, -- Ex: "Protocolo de Definição"
+    objetivo VARCHAR(255), -- Ex: "2.200 Kcal - Baixo Carbo"
+    ativo BOOLEAN DEFAULT 1,
+    data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (aluno_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- 2. As Refeições (Horários)
+CREATE TABLE refeicoes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    dieta_id INT NOT NULL,
+    nome VARCHAR(100) NOT NULL, -- Ex: "Café da Manhã"
+    horario TIME, -- Ex: "08:00"
+    ordem INT NOT NULL, -- Para ordenar na tela (1, 2, 3...)
+    FOREIGN KEY (dieta_id) REFERENCES dietas(id) ON DELETE CASCADE
+);
+
+-- 3. Os Alimentos (O que comer)
+CREATE TABLE itens_dieta (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    refeicao_id INT NOT NULL,
+    opcao_numero INT DEFAULT 1, -- 1 = Opção Principal, 2 = Substituição
+    descricao TEXT NOT NULL, -- Ex: "3 Ovos mexidos com 30g de Queijo"
+    observacao VARCHAR(255), -- Ex: "Pode usar azeite ou manteiga"
+    FOREIGN KEY (refeicao_id) REFERENCES refeicoes(id) ON DELETE CASCADE
+);
+
+-- 4. O Check do Aluno (Diário)
+CREATE TABLE dieta_registro (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    aluno_id INT NOT NULL,
+    refeicao_id INT NOT NULL,
+    data_registro DATE NOT NULL,
+    feito BOOLEAN DEFAULT 1,
+    FOREIGN KEY (aluno_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (refeicao_id) REFERENCES refeicoes(id) ON DELETE CASCADE
+);

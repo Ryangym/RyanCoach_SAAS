@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Fontes - Ryan Coach</title>
+    <style>
+        /* --- 1. DEFINIÇÃO DAS FONTES --- */
+        @font-face {
+            font-family: 'Monda';
+            src: url('assets/fontes/Monda.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        @font-face {
+            font-family: 'Poppins';
+            src: url('assets/fontes/Poppins-Bold.ttf') format('truetype');
+            font-weight: bold;
+            font-style: normal;
+        }
+
+        @font-face {
+            font-family: 'Hookride';
+            src: url('assets/fontes/HOOKRIDE.otf') format('opentype');
+        }
+
+        @font-face {
+            font-family: 'Jackoe';
+            src: url('assets/fontes/Jackoe.otf') format('opentype');
+        }
+
+        @font-face {
+            font-family: 'Karlotte';
+            src: url('assets/fontes/Karlotte.otf') format('opentype');
+        }
+
+        @font-face {
+            font-family: 'Rociroll';
+            src: url('assets/fontes/Rociroll.otf') format('opentype');
+        }
+
+        @font-face {
+            font-family: 'Cinema Sunday';
+            src: url('assets/fontes/cinema-sunday.otf') format('opentype');
+        }
+
+        /* --- 2. ESTILO GERAL DA PÁGINA (TEMA DARK) --- */
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: sans-serif;
+            margin: 0;
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #FFBA42; /* O Dourado do seu tema */
+            text-transform: uppercase;
+            margin-bottom: 40px;
+            font-family: 'Monda', sans-serif;
+            letter-spacing: 2px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        .font-card {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 25px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .font-card:hover {
+            border-color: #FFBA42;
+            transform: translateY(-5px);
+        }
+
+        .font-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .font-name {
+            color: #FFBA42;
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
+
+        .font-file {
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        .preview {
+            font-size: 2.5rem;
+            line-height: 1.2;
+            margin-bottom: 10px;
+        }
+
+        .preview-small {
+            font-size: 1rem;
+            opacity: 0.7;
+            margin-top: 10px;
+        }
+
+        /* --- 3. CLASSES ESPECÍFICAS --- */
+        .f-monda { font-family: 'Monda', sans-serif; }
+        .f-poppins { font-family: 'Poppins', sans-serif; }
+        .f-hookride { font-family: 'Hookride', sans-serif; }
+        .f-jackoe { font-family: 'Jackoe', sans-serif; }
+        .f-karlotte { font-family: 'Karlotte', sans-serif; }
+        .f-rociroll { font-family: 'Rociroll', sans-serif; }
+        .f-cinema { font-family: 'Cinema Sunday', sans-serif; }
+
+    </style>
+</head>
+<body>
+
+    <h1>Ryan Coach - Tipografia</h1>
+
+    <div class="container">
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-name">Monda</span>
+                <span class="font-file">Monda.ttf</span>
+            </div>
+            <div class="preview f-monda">
+                RYAN COACH<br>
+                Treino Pesado
+            </div>
+            <div class="preview-small f-monda">
+                abcdefghijklmnopqrstuvwxyz 0123456789
+            </div>
+        </div>
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-name">Poppins (Bold)</span>
+                <span class="font-file">Poppins-Bold.ttf</span>
+            </div>
+            <div class="preview f-poppins">
+                Transforme seu corpo
+            </div>
+            <div class="preview-small f-poppins">
+                abcdefghijklmnopqrstuvwxyz 0123456789
+            </div>
+        </div>
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-name">Hookride</span>
+                <span class="font-file">HOOKRIDE.otf</span>
+            </div>
+            <div class="preview f-hookride">
+                Ryan Coach
+            </div>
+            <div class="preview-small f-hookride">
+                Estilo Script Urbano
+            </div>
+        </div>
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-name">Jackoe</span>
+                <span class="font-file">Jackoe.otf</span>
+            </div>
+            <div class="preview f-jackoe">
+                NO PAIN NO GAIN
+            </div>
+            <div class="preview-small f-jackoe">
+                Ideal para títulos de impacto
+            </div>
+        </div>
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-name">Karlotte</span>
+                <span class="font-file">Karlotte.otf</span>
+            </div>
+            <div class="preview f-karlotte">
+                Consultoria Online
+            </div>
+            <div class="preview-small f-karlotte">
+                Fonte cursiva / assinatura
+            </div>
+        </div>
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-name">Rociroll</span>
+                <span class="font-file">Rociroll.otf</span>
+            </div>
+            <div class="preview f-rociroll">
+                HIPERTROFIA
+            </div>
+            <div class="preview-small f-rociroll">
+                Fonte decorativa moderna
+            </div>
+        </div>
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-name">Cinema Sunday</span>
+                <span class="font-file">cinema-sunday.otf</span>
+            </div>
+            <div class="preview f-cinema">
+                Resultados Reais
+            </div>
+            <div class="preview-small f-cinema">
+                Estilo manuscrito marker
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

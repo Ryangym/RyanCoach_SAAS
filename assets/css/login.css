@@ -1,0 +1,494 @@
+/* --- Importação das Fontes Customizadas (copiado de menu.css) --- */
+@font-face {
+    font-family: 'cinema-sunday';
+    src: url('../fontes/cinema-sunday.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+/* A fonte 'Ms Madi' já está sendo importada no HTML via Google Fonts */
+
+/* --- Variáveis de Cor (do seu site) --- */
+:root {
+    --vinho: #360a03;
+    --black: #0a0a0a;
+    --dark-grey: #1b1b1b;
+    --accent-red-border: #ac0f0f;
+    --accent-red-shadow: rgba(194, 9, 9, 0.55);
+    --accent-red-hover: #c70000;
+    --accent-gold: #FFBA42;
+}
+
+/* --- Estilização da Barra de Rolagem --- */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #c70000 #222;
+}
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #222; border-radius: 10px; }
+::-webkit-scrollbar-thumb { background-color: #c70000; border-radius: 10px; border: 2px solid #222; }
+
+/* --- Estilização Base --- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Roboto", sans-serif;
+  background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.381)), url(../img/background-gym.png);
+  background-size: 100%;
+  background-position: center;
+  background-attachment: fixed;
+  color: #fff;
+  display: flex;
+  flex-direction: column; /* Para empilhar o logo e o card */
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 2rem;
+}
+
+/* --- Logo (Acima do Card) --- */
+.logo-link {
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    text-decoration: none;
+}
+.logo {
+    font-family: "Ms Madi", cursive;
+    text-shadow: #760e0e 6px 6px 8px;
+    font-size: 3.5rem;
+    color: #ffffff;
+    text-align: center;
+    display: block;
+    margin-bottom: 1.5rem;
+    transition: color 0.3s, text-shadow 0.3s;
+}
+.logo:hover {
+  color: #FFBA42; 
+  text-shadow: #760e0e 6px 6px 8px, 0 0 10px rgba(255, 186, 66, 0.7); 
+}
+
+/* --- Títulos (H1, H2, P) --- */
+h1 {
+    font-family: "Ms Madi", cursive;
+    font-size: 2.8rem;
+    font-weight: normal;
+    text-shadow: #760e0e 3px 3px 5px;
+}
+
+h2 {
+    font-family: 'cinema-sunday', sans-serif;
+    font-size: 2.5rem;
+    letter-spacing: 1px;
+    font-weight: normal;
+    margin-bottom: 1rem;
+}
+
+p {
+    font-size: 1rem;
+    font-weight: 300;
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+    margin: 1.25rem 0;
+    padding: 0 1.5rem;
+}
+
+span {
+    font-size: 0.85rem;
+    color: #ccc;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+/* --- Botões --- */
+button {
+    border-radius: 99em; /* Formato de pílula */
+    border: 2px solid var(--accent-red-border);
+    padding: 0.75rem 2.8rem;
+    font-size: 0.8rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 80ms ease-in, background-color 0.3s, box-shadow 0.3s;
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+button:focus {
+    outline: none;
+}
+
+/* Botão Vermelho Sólido (Entrar / Cadastrar) */
+button.btn-submit {
+    background-color: var(--accent-red-border);
+    color: #ffffff;
+    box-shadow: 0 0 15px rgba(163, 12, 12, 0.7);
+}
+button.btn-submit:hover {
+    background-color: var(--accent-red-hover);
+}
+
+/* Botão Dourado Vazado (Trocar Painel) */
+button.btn-ghost {
+    background-color: transparent;
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+}
+button.btn-ghost:hover {
+    background-color: var(--accent-gold);
+    color: var(--black);
+}
+
+/* --- Container Principal (O Card de Vidro) --- */
+.container {
+    /* Efeito Glassmorphism */
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--accent-red-border);
+    border-radius: 15px;
+    box-shadow: 0 8px 32px 0 var(--accent-red-shadow);
+    
+    position: relative;
+    overflow: hidden; /* ESSENCIAL para a animação */
+    width: 100%;
+    max-width: 800px;
+    min-height: 580px;
+}
+
+/* --- Container dos Formulários (Login e Cadastro) --- */
+.form-container {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transition: all 0.6s ease-in-out;
+}
+
+.sign-in-container {
+    left: 0;
+    width: 50%;
+    z-index: 2; /* Fica na frente por padrão */
+}
+
+.sign-up-container {
+    left: 0;
+    width: 50%;
+    opacity: 0; /* Começa escondido */
+    z-index: 1;
+}
+
+form {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 2.5rem;
+    text-align: center;
+}
+
+/* --- Inputs Flutuantes --- */
+.input-group {
+    position: relative;
+    margin: 0.75rem 0;
+    width: 100%;
+}
+
+.input-group input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #444;
+    color: #fff;
+    font-family: "Roboto", sans-serif;
+    font-size: 1rem;
+    padding: 0.75rem 0.25rem;
+    transition: border-color 0.3s ease;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-bottom-color: var(--accent-gold);
+}
+
+.input-group label {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.25rem;
+    color: #aaa;
+    font-size: 1rem;
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.input-group input:focus + label,
+.input-group input:not(:placeholder-shown) + label {
+    top: -1rem;
+    left: 0;
+    font-size: 0.8rem;
+    color: var(--accent-gold);
+}
+
+.form-link.forgot-pass {
+    color: var(--accent-gold);
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin: 0.5rem 0 1rem 0;
+    transition: color 0.3s;
+}
+.form-link:hover {
+    color: #fff;
+}
+
+/* --- Overlay Deslizante --- */
+.overlay-container {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 100;
+    transition: transform 0.6s ease-in-out;
+}
+
+.overlay {
+    /* REMOVIDO: background: linear-gradient(135deg, var(--vinho), #4e0e05); */
+    /* Agora o overlay é apenas um container para o vídeo e os painéis */
+    position: relative; /* Para posicionar o vídeo */
+    left: -100%;
+    height: 100%;
+    width: 200%;
+    transform: translateX(0);
+    transition: transform 0.6s ease-in-out;
+}
+
+/* Estilização do Vídeo no Overlay */
+.overlay-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Garante que o vídeo preencha o espaço sem distorcer */
+    z-index: -1; /* Manda o vídeo para trás do conteúdo do overlay */
+}
+
+/* Adiciona um gradiente escuro sobre o vídeo para legibilidade */
+.overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.8)); /* Gradiente escuro */
+    z-index: 0; /* Fica acima do vídeo, mas abaixo do texto */
+}
+
+
+.overlay-panel {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    transform: translateX(0);
+    transition: transform 0.6s ease-in-out;
+    z-index: 1; /* Garante que o texto fique acima do gradiente */
+}
+
+.overlay-left {
+    transform: translateX(-20%); /* Começa "escondido" */
+}
+
+.overlay-right {
+    right: 0;
+    transform: translateX(0);
+}
+
+/* --- Links de troca no Mobile (COMEÇAM ESCONDIDOS) --- */
+.form-bottom-text.mobile-only {
+    display: none; 
+}
+
+
+/* ======================================================= */
+/* --- ANIMAÇÃO (Quando o .container.active é adicionado) --- */
+/* ======================================================= */
+
+/* 1. Mover o painel de Login para a direita (fora da tela) */
+.container.active .sign-in-container {
+    transform: translateX(100%);
+    opacity: 0;
+    z-index: 1;
+}
+
+/* 2. Mover o painel de Cadastro para a direita (para dentro da tela) */
+.container.active .sign-up-container {
+    transform: translateX(100%);
+    opacity: 1;
+    z-index: 5;
+    animation: show 0.6s;
+}
+
+/* 3. Mover o Overlay Container para a esquerda */
+.container.active .overlay-container {
+    transform: translateX(-100%);
+}
+
+/* 4. Mover o conteúdo do Overlay para a direita (para revelar o painel esquerdo) */
+.container.active .overlay {
+    transform: translateX(50%);
+}
+
+/* 5. Animações de texto nos painéis do overlay */
+.container.active .overlay-left {
+    transform: translateX(0);
+}
+.container.active .overlay-right {
+    transform: translateX(20%);
+}
+
+@keyframes show {
+    0%, 49.99% {
+        opacity: 0;
+        z-index: 1;
+    }
+    
+    50%, 100% {
+        opacity: 1;
+        z-index: 5;
+    }
+}
+
+
+/* ======================================================= */
+/* --- RESPONSIVIDADE (A MÁGICA ACONTECE AQUI) --- */
+/* ======================================================= */
+@media (max-width: 768px) {
+    .logo {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* 1. Oculta o overlay */
+    .overlay-container {
+        display: none;
+    }
+
+    /* 2. O container principal MANTÉM seu estilo de card de vidro */
+    .container {
+        max-width: 420px;
+        min-height: 580px; /* Altura para caber os formulários */
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--accent-red-border);
+        border-radius: 15px;
+        box-shadow: 0 8px 32px 0 var(--accent-red-shadow);
+        position: relative; /* Para conter os forms absolutos */
+        overflow: hidden; /* ESSENCIAL para a animação */
+    }
+
+    /* 3. Formulários são absolutos e empilhados */
+    .form-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        
+        /* Removem estilos de card duplicados que estavam antes */
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        
+        /* Animação de slide + fade */
+        transition: all 0.6s ease-in-out; 
+    }
+
+    /* 4. Reseta os transforms do desktop */
+    .sign-in-container,
+    .container.active .sign-in-container,
+    .sign-up-container,
+    .container.active .sign-up-container {
+        transform: none; /* Reseta o translateX(100%) do desktop */
+    }
+    
+    /* 5. Estado Padrão (Login Visível) */
+    .sign-in-container {
+        transform: translateX(0);
+        opacity: 1;
+        z-index: 2;
+    }
+    .sign-up-container {
+        transform: translateX(100%); /* Começa fora, à direita */
+        opacity: 0;
+        z-index: 1;
+    }
+    
+    /* 6. Estado Ativo (Cadastro Visível) */
+    .container.active .sign-in-container {
+        transform: translateX(-100%); /* Sai para a esquerda */
+        opacity: 0;
+        z-index: 1;
+    }
+    .container.active .sign-up-container {
+        transform: translateX(0); /* Entra vindo da direita */
+        opacity: 1;
+        z-index: 2;
+    }
+
+    /* 7. Mostra os links de texto "Cadastre-se" / "Faça Login" */
+    .form-bottom-text.mobile-only {
+        display: block; /* Garante que os links de troca apareçam */
+        text-align: center;
+        color: #ccc;
+        font-size: 0.95rem;
+        margin-top: 1.5rem;
+    }
+    .form-bottom-text.mobile-only .form-link {
+        font-weight: bold;
+        color: rgb(22, 76, 213);
+    }
+}
+
+
+/* --- Correção do Fundo Branco no Autofill --- */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    /* Força a cor do texto a ser branca (ou use var(--accent-gold) se preferir) */
+    -webkit-text-fill-color: #fff !important; 
+    
+    /* O "truque" para forçar o fundo: 
+       Usamos uma sombra interna gigante na cor do seu tema,
+       pois os navegadores ignoram a propriedade 'background-color' no autofill. */
+    box-shadow: 0 0 0 1000px var(--black) inset !important;
+    
+    /* Garante que a fonte seja a mesma do site */
+    font-family: "Roboto", sans-serif;
+    font-size: 1rem;
+
+    /* Remove a borda azul que alguns navegadores adicionam */
+    border: none;
+    border-bottom: 2px solid #444;
+    
+    /* Opcional: ajuda a manter a transição suave */
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Garante que o foco do autofill use a cor dourada */
+input:-webkit-autofill:focus {
+    border-bottom-color: var(--accent-gold);
+}

@@ -1,0 +1,102 @@
+body{
+    background-color: rgb(0, 0, 0);
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;;
+}
+
+/* ------------------checkmark------------------ */
+.container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.container {
+  border: 1px solid red;
+  width: 50px;
+  height: 50px; 
+  margin-left: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.checkmark {
+  position: relative;
+  box-shadow: rgb(255, 84, 0) 0px 0px 0px 2px;
+  background-color: rgba(16, 16, 16, 0.5);
+  height: 20px;
+  width: 20px;
+  margin-right: 10px;
+  flex-shrink: 0;
+  margin-top: -1px;
+  transition: all 0.2s ease 0s;
+  cursor: pointer;
+  transform-origin: 0px 10px;
+  border-radius: 4px;
+  margin: -1px 10px 0px 0px;
+  padding: 0px;
+  box-sizing: border-box;
+}
+
+.container input:checked ~ .checkmark {
+  box-shadow: rgb(255, 84, 0) 0px 0px 0px 2px;
+  background-color: rgba(245, 24, 24, 0.5);
+  height: 20px;
+  width: 20px;
+  margin-right: 10px;
+  flex-shrink: 0;
+  margin-top: -1px;
+  transition: all 0.2s ease 0s;
+  cursor: pointer;
+  transform-origin: 0px 10px;
+  border-radius: 4px;
+  margin: -1px 10px 0px 0px;
+  padding: 0px;
+  box-sizing: border-box;
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.container .checkmark:after {
+  left: 0.45em;
+  top: 0.25em;
+  width: 0.25em;
+  height: 0.5em;
+  border: solid white;
+  border-width: 0 0.15em 0.15em 0;
+  transform: rotate(45deg);
+  transition: all 500ms ease-in-out;
+}
+/* ------------------end checkmark------------------ */
+
+/* ------------------ background------------------ */
+
+/* background: radial-gradient(circle at top left, #930925, transparent 60%),
+    radial-gradient(circle at bottom right, #000000, transparent 60%);
+  background-size: 400% 400%;
+  animation: bg 12s ease infinite; */
+@keyframes bg {
+  0% {
+    background-position: 8, 50%;
+  }
+  50% {
+    background-position: 100%, 100%;
+  }
+  100% {
+    background-position: 8%, 50%;
+  }
+}
+/* ------------------end background------------------ */

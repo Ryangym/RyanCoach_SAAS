@@ -1627,87 +1627,129 @@ switch ($pagina) {
         // -----------------------------------------------------------------------------------------------------------------------------------------------------
 
     case 'novo_treino':
-        // Busca lista de alunos APENAS se for Personal/Admin (para o futuro)
-        // Se for atleta, $alunos fica vazio e o select não aparece
-        $alunos = [];
-        if (isset($_SESSION['tipo_conta']) && ($_SESSION['tipo_conta'] === 'personal' || $_SESSION['tipo_conta'] === 'admin')) {
-             $stmt = $pdo->query("SELECT id, nome FROM usuarios WHERE tipo_conta = 'atleta' ORDER BY nome ASC");
-             $alunos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
+        require_once '../config/db_connect.php';
+        $user_id = $_SESSION['user_id'];
 
-        echo '<section class="fade-in">
-                <header class="dash-header">
-                    <button onclick="carregarConteudo(\'dashboard\')" style="background:none; border:none; color:#fff; font-size:1.2rem; margin-right:15px;">
-                        <i class="fa-solid fa-arrow-left"></i>
+        // 1. Busca os treinos para listar na tela de fundo
+        $sql = "SELECT * FROM treinos WHERE aluno_id = ? AND ativo = 1 ORDER BY id DESC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$user_id]);
+        $meus_treinos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
+        // --- TELA DE FUNDO (LISTA DE TREINOS) ---
+        echo '<section id="meus-treinos-painel" class="fade-in">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+                    <div>
+                        <h2 style="font-family:Orbitron; color:var(--gold); margin:0;">Meus Treinos</h2>
+                        <p style="color:#888; font-size:0.9rem;">Gerencie seus planejamentos</p>
+                    </div>
+                    <button class="btn-gold" onclick="toggleNovoTreino()">
+                        <i class="fa-solid fa-plus"></i> <span class="mobile-hide">NOVO TREINO</span>
                     </button>
-                    <h1>CRIAR NOVO <span class="highlight-text">TREINO</span></h1>
-                </header>
+                </div>
 
-                <div class="form-container" style="background:#1e1e1e; padding:20px; border-radius:10px; border:1px solid #333;">
-                    <form id="formNovoTreino" onsubmit="criarTreino(event)">
+                <div class="treinos-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">';
+                    
+                if (count($meus_treinos) > 0) {
+                    foreach ($meus_treinos as $t) {
+                        $data_inicio = date('d/m/Y', strtotime($t['data_inicio']));
+                        $nivel_label = ucfirst($t['nivel_plano']);
+                        $bg_icon = ($t['nivel_plano'] == 'basico') ? 'fa-clipboard-list' : 'fa-dumbbell';
                         
-                        ';
-                        
-                        // Lógica: Se for Atleta, input hidden. Se for Personal, Select.
-                        if ($_SESSION['tipo_conta'] === 'atleta') {
-                            echo '<input type="hidden" name="aluno_id" value="'.$_SESSION['user_id'].'">
-                                  <div style="background:rgba(218,165,32,0.1); padding:10px; border-radius:5px; margin-bottom:15px; border:1px solid var(--gold); color:var(--gold);">
-                                      <i class="fa-solid fa-user"></i> Criando treino para: <strong>Você mesmo</strong>
-                                  </div>';
-                        } else {
-                            echo '<div class="form-group" style="margin-bottom:15px;">
-                                    <label style="display:block; color:#ccc; margin-bottom:5px;">Selecione o Aluno:</label>
-                                    <select name="aluno_id" required style="width:100%; padding:10px; background:#333; border:1px solid #444; color:#fff; border-radius:5px;">
-                                        <option value="">-- Escolha --</option>';
-                                        foreach ($alunos as $al) {
-                                            echo '<option value="'.$al['id'].'">'.$al['nome'].'</option>';
-                                        }
-                            echo   '</select>
-                                  </div>';
-                        }
-
-        echo '          <div class="form-group" style="margin-bottom:15px;">
-                            <label style="display:block; color:#ccc; margin-bottom:5px;">Nome do Treino / Fase:</label>
-                            <input type="text" name="nome" placeholder="Ex: Adaptação, Força..." required style="width:100%; padding:10px; background:#333; border:1px solid #444; color:#fff; border-radius:5px;">
-                        </div>
-
-                        <div class="form-group" style="margin-bottom:15px;">
-                            <label style="display:block; color:#ccc; margin-bottom:5px;">Divisão (Letras):</label>
-                            <input type="text" name="divisao" placeholder="Ex: ABC, ABCD..." required style="width:100%; padding:10px; background:#333; border:1px solid #444; color:#fff; border-radius:5px; text-transform:uppercase;">
-                        </div>
-
-                        <div class="form-group" style="margin-bottom:15px;">
-                            <label style="display:block; color:#ccc; margin-bottom:5px;">Data de Início:</label>
-                            <input type="date" name="data_inicio" value="'.date('Y-m-d').'" required style="width:100%; padding:10px; background:#333; border:1px solid #444; color:#fff; border-radius:5px;">
-                        </div>
-
-                        <div class="form-group" style="margin-bottom:15px;">
-                            <label style="display:block; color:#ccc; margin-bottom:5px;">Dias de Treino:</label>
-                            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;">
-                                <label style="background:#333; padding:10px; text-align:center; border-radius:5px;"><input type="checkbox" name="dias_semana[]" value="1"> Seg</label>
-                                <label style="background:#333; padding:10px; text-align:center; border-radius:5px;"><input type="checkbox" name="dias_semana[]" value="2"> Ter</label>
-                                <label style="background:#333; padding:10px; text-align:center; border-radius:5px;"><input type="checkbox" name="dias_semana[]" value="3"> Qua</label>
-                                <label style="background:#333; padding:10px; text-align:center; border-radius:5px;"><input type="checkbox" name="dias_semana[]" value="4"> Qui</label>
-                                <label style="background:#333; padding:10px; text-align:center; border-radius:5px;"><input type="checkbox" name="dias_semana[]" value="5"> Sex</label>
-                                <label style="background:#333; padding:10px; text-align:center; border-radius:5px;"><input type="checkbox" name="dias_semana[]" value="6"> Sáb</label>
-                                <label style="background:#333; padding:10px; text-align:center; border-radius:5px;"><input type="checkbox" name="dias_semana[]" value="7"> Dom</label>
+                        echo '
+                        <div class="treino-card glass-card" style="position:relative; transition: transform 0.2s; cursor:pointer;" onclick="carregarConteudo(\'treino_painel&id='.$t['id'].'\')">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div style="background:rgba(218,165,32,0.1); width:50px; height:50px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:var(--gold); font-size:1.5rem;">
+                                    <i class="fa-solid '.$bg_icon.'"></i>
+                                </div>
+                                <button class="btn-icon-delete" onclick="event.stopPropagation(); deletarTreino('.$t['id'].')" style="background:transparent; border:none; color:#666; font-size:1rem; cursor:pointer;">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
                             </div>
-                        </div>
+                            <h3 style="color:#fff; margin-top:15px; font-size:1.1rem;">'.$t['nome'].'</h3>
+                            <div style="display:flex; gap:10px; margin-top:5px;">
+                                <span class="badge" style="background:#333; color:#ccc; padding:2px 8px; border-radius:4px; font-size:0.7rem;">'.$t['divisao_nome'].'</span>
+                                <span class="badge" style="background:#333; color:var(--gold); padding:2px 8px; border-radius:4px; font-size:0.7rem;">'.$nivel_label.'</span>
+                            </div>
+                            <div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; font-size:0.8rem; color:#666; display:flex; justify-content:space-between;">
+                                <span>Início: '.$data_inicio.'</span>
+                                <span><i class="fa-solid fa-arrow-right"></i> Acessar</span>
+                            </div>
+                        </div>';
+                    }
+                } else {
+                    echo '<div style="grid-column: 1 / -1; text-align:center; padding:50px; color:#666; border:1px dashed #333; border-radius:10px;">
+                            <i class="fa-solid fa-ghost" style="font-size:2rem; margin-bottom:15px; opacity:0.5;"></i>
+                            <p>Nenhum treino encontrado.</p>
+                          </div>';
+                }
 
-                        <div class="form-group" style="margin-bottom:20px;">
-                            <label style="display:block; color:#ccc; margin-bottom:5px;">Planejamento:</label>
-                            <select name="nivel" style="width:100%; padding:10px; background:#333; border:1px solid #444; color:#fff; border-radius:5px;">
-                                <option value="avancado" selected>Com Periodização (12 Semanas)</option>
-                                <option value="basico">Básico (Sem datas fixas)</option>
+        echo '  </div>
+              </section>';
+
+        // --- MODAL DE NOVO TREINO (ESTRUTURA IDÊNTICA AO ADMIN) ---
+        echo '
+        <div id="box-novo-treino" class="modal-overlay" style="display:none;">
+            <div class="modal-content selection-modal" style="max-width: 650px; text-align: left; position: relative;">
+                
+                <button class="modal-close" onclick="toggleNovoTreino()">&times;</button>
+
+                <h3 class="section-title" style="color: var(--gold); margin-bottom: 25px; text-align: center;">
+                    <i class="fa-solid fa-dumbbell"></i> Criar Nova Estrutura
+                </h3>
+                
+                <form id="formNovoTreino" onsubmit="criarTreino(event)">';
+                    
+                    // --- O RESTANTE DO FORMULÁRIO (CÓPIA FIEL DO ADMIN) ---
+             echo ' <div class="form-row">
+                        <div class="form-col">
+                            <label class="input-label">Nome do Planejamento</label>
+                            <input type="text" name="nome" class="user-input" placeholder="Ex: Hipertrofia Fase 1" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label class="input-label">Tipo de Plano</label>
+                            <select name="nivel" class="user-input" id="selectNivel" onchange="togglePeriodizacao()" required>
+                                <option value="basico">Básico (Ficha Fixa)</option>
+                                <option value="avancado" selected>Avançado (Periodizado)</option>
+                                <option value="premium">Premium (Periodizado +)</option>
                             </select>
                         </div>
+                        <div class="form-col">
+                            <label class="input-label">Data de Início</label>
+                            <input type="date" name="data_inicio" class="user-input" required value="'.date('Y-m-d').'">
+                        </div>
+                        <div class="form-col" style="flex: 0 0 120px;">
+                            <label class="input-label">Divisão</label>
+                            <input type="text" name="divisao" class="user-input" placeholder="ABC" maxlength="5" style="text-transform:uppercase;" required>
+                        </div>
+                    </div>
 
-                        <button type="submit" class="btn-finish" style="width:100%;">
-                            CRIAR TREINO <i class="fa-solid fa-arrow-right"></i>
-                        </button>
-                    </form>
-                </div>
-              </section>';
+                            <div style="margin-bottom: 25px;">
+                                <label class="input-label">Dias de Treino</label>
+                                <div class="days-selector">
+                                    <label><input type="checkbox" name="dias_semana[]" value="1" class="day-checkbox"><span class="day-label">SEG</span></label>
+                                    <label><input type="checkbox" name="dias_semana[]" value="2" class="day-checkbox"><span class="day-label">TER</span></label>
+                                    <label><input type="checkbox" name="dias_semana[]" value="3" class="day-checkbox"><span class="day-label">QUA</span></label>
+                                    <label><input type="checkbox" name="dias_semana[]" value="4" class="day-checkbox"><span class="day-label">QUI</span></label>
+                                    <label><input type="checkbox" name="dias_semana[]" value="5" class="day-checkbox"><span class="day-label">SEX</span></label>
+                                    <label><input type="checkbox" name="dias_semana[]" value="6" class="day-checkbox"><span class="day-label">SÁB</span></label>
+                                    <label><input type="checkbox" name="dias_semana[]" value="7" class="day-checkbox"><span class="day-label">DOM</span></label>
+                                </div>
+                            </div>
+
+                            <div id="aviso-periodizacao" class="alert-box">
+                                <span class="alert-title">Modo Periodização Ativo</span>
+                                <p class="alert-text">Serão gerados 12 Microciclos automaticamente.</p>
+                            </div>
+
+                            <button type="submit" class="btn-gold" style="width:100%; margin-top: 15px; padding: 15px;">CRIAR ESTRUTURA</button>
+                        </form>
+                    </div>
+        </div>';
         break;
     
 
@@ -1763,7 +1805,7 @@ switch ($pagina) {
         echo '
             <section id="painel-treino" class="fade-in">
                 <div style="display:flex; align-items:center; gap:20px; margin-bottom:30px;">
-                    <button class="btn-action-icon" onclick="carregarConteudo(\'treinos\')"><i class="fa-solid fa-arrow-left"></i></button>
+                    <button class="btn-action-icon" onclick="carregarConteudo(\'novo_treino\')"><i class="fa-solid fa-arrow-left"></i></button>
                     <div>
                         <h2 style="color:#fff; font-family:Orbitron; margin:0;">'.$treino['nome'].'</h2>
                         <p style="color:#888; font-size:0.9rem;">Aluno: <strong style="color:var(--gold);">'.$treino['nome_aluno'].'</strong> • '.strtoupper($treino['nivel_plano']).'</p>
@@ -1862,7 +1904,7 @@ switch ($pagina) {
                                         $ex_json = htmlspecialchars(json_encode($ex_data), ENT_QUOTES, 'UTF-8');
 
                                         echo '
-                                        <div class="exercise-card">
+                                        <div class="exercise-card-edit">
                                             <div class="ex-info">
                                                 <span class="ex-meta">'.strtoupper($ex['tipo_mecanica']).'</span>
                                                 <h4>'.$ex['nome_exercicio'].'</h4>
@@ -2116,19 +2158,11 @@ switch ($pagina) {
                     </div>
                     
                     <div class="menu-card" onclick="carregarConteudo(\'novo_treino\')">
-                        <div class="mc-icon" style="background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid #555;">
-                            <i class="fa-solid fa-plus"></i>
-                        </div>
-                        <span>Novo Treino</span>
-                    </div>
-
-                    <div class="menu-card" onclick="let id = prompt(\'Digite o ID do Treino para editar:\'); if(id) carregarConteudo(\'treino_painel&id=\'+id)">
                         <div class="mc-icon" style="background: rgba(150, 50, 255, 0.1); color: #a855f7; border: 1px solid #a855f7;">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </div>
-                        <span>Editor (Teste)</span>
+                        <span>Novo Treino</span>
                     </div>
-
                 </div>
 
                 <h3 class="section-label" style="margin-left: 10px; margin-top: 30px;">SISTEMA</h3>

@@ -214,3 +214,100 @@ function criarTreino(event) {
         btnSubmit.disabled = false;
     });
 }
+
+function copiarLinkIndicacao(link) {
+    navigator.clipboard.writeText(link).then(() => {
+        alert("Link copiado! Envie para seu aluno.");
+    })
+    .catch(err => {
+        console.error("Erro ao copiar: ", err);
+        alert("Não foi possível copiar automaticamente. Seu código é: " + link.split("ref=")[1]);
+    });
+}
+
+// ------------------FINANCEIRO ------------------
+document.addEventListener('submit', function (e) {
+    if (e.target && e.target.id === 'formLancamentoFinanceiro') {
+        e.preventDefault();
+        salvarLancamentoAjax(e);
+    }
+});
+async function salvarLancamentoAjax(event) {
+    const form = event.target.closest('form');
+    if (!form) return;
+
+    const formData = new FormData(form);
+    const btn = form.querySelector('button[type="submit"]');
+
+    const textoOriginal = btn.innerText;
+    btn.innerText = "Salvando...";
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('actions/financeiro_add.php', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Resposta inválida do servidor');
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            fecharModalFinanceiro();
+            setTimeout(() => carregarConteudo('financeiro'), 80);
+        } else {
+            alert("Erro: " + (data.error || "Falha ao salvar"));
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Erro de comunicação com o servidor.");
+    } finally {
+        btn.innerText = textoOriginal;
+        btn.disabled = false;
+    }
+}
+function fecharModalFinanceiro() {
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.style.display = 'none';
+    });
+
+    document.body.style.overflow = '';
+}
+async function atualizarStatusFinanceiro(id, acao) {
+    let mensagem = "Confirmar ação?";
+    if (acao === 'excluir') mensagem = "Tem certeza que deseja excluir permanentemente?";
+    if (acao === 'estornar') mensagem = "Deseja estornar e voltar para pendente?";
+
+    if (!confirm(mensagem)) return;
+
+    try {
+        const response = await fetch(
+            `actions/financeiro_status.php?id=${id}&acao=${acao}`,
+            { headers: { 'Accept': 'application/json' } }
+        );
+
+        if (!response.ok) {
+            throw new Error('Falha no servidor');
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            carregarConteudo('financeiro');
+        } else {
+            alert("Erro: " + (data.error || "Falha na operação"));
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Erro ao processar a ação.");
+    }
+}
+// ------------------ FIM FINANCEIRO ------------------

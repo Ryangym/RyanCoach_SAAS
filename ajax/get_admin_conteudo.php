@@ -187,7 +187,7 @@ switch ($pagina) {
             <section id="gerenciar-alunos">
                 <header class="dash-header">
                     <h1>GERENCIAR <span class="highlight-text">USUÁRIOS</span></h1>
-                    <p class="text-desc">Painel de controle dos atletas e administradores.</p>
+                    <p class="text-desc">Painel de controle de todos os usuários do sistema.</p>
                 </header>
                 
                 <div class="glass-card mt-large">
@@ -202,9 +202,9 @@ switch ($pagina) {
                         <table class="admin-table" id="tabelaAlunos">
                             <thead>
                                 <tr>
-                                    <th class="th-admin-table">ALUNO</th>
+                                    <th class="th-admin-table">USUÁRIO</th>
                                     <th class="th-admin-table">CONTATO</th>
-                                    <th class="th-admin-table">STATUS</th>
+                                    <th class="th-admin-table">NÍVEL</th>
                                     <th class="th-admin-table" id="th-acao">AÇÃO</th>
                                 </tr>
                             </thead>
@@ -213,11 +213,16 @@ switch ($pagina) {
                             if ($total_alunos > 0) {
                                 foreach ($alunos as $a) {
                                     $foto = !empty($a['foto']) ? $a['foto'] : 'assets/img/user-default.png';
-                                    $nivelTag = ($a['tipo_conta'] === 'admin') 
-                                        ? '<span class="status-badge" style="background:rgba(255,66,66,0.2); color:#ff4242; border:1px solid #ff4242;">ADMIN</span>' 
-                                        : '<span class="status-badge" style="background:rgba(0,255,0,0.1); color:#00ff00; border:1px solid #00ff00;">ALUNO</span>';
                                     
-                                    // Link do Zap limpo (remove caracteres não numéricos)
+                                    // --- LÓGICA DE BADGES ATUALIZADA ---
+                                    if ($a['tipo_conta'] === 'admin') {
+                                        $nivelTag = '<span class="status-badge" style="background:rgba(255,66,66,0.2); color:#ff4242; border:1px solid #ff4242;">ADMIN</span>';
+                                    } elseif ($a['tipo_conta'] === 'personal' || $a['tipo_conta'] === 'coach') {
+                                        $nivelTag = '<span class="status-badge" style="background:rgba(218,165,32,0.2); color:var(--gold); border:1px solid var(--gold);">COACH</span>';
+                                    } else {
+                                        $nivelTag = '<span class="status-badge" style="background:rgba(0,255,0,0.1); color:#00ff00; border:1px solid #00ff00;">ALUNO</span>';
+                                    }
+                                    
                                     $zap_clean = preg_replace('/[^0-9]/', '', $a['telefone']);
                                     $link_zap = "https://wa.me/55".$zap_clean;
 
@@ -237,7 +242,7 @@ switch ($pagina) {
                                         <td>
                                             <div style="display:flex; align-items:center; gap:10px;">
                                                 <span style="color:#ccc; font-size:0.9rem;">'.$a['telefone'].'</span>
-                                                <a href="'.$link_zap.'" target="_blank" class="btn-action-icon btn-confirm" title="Chamar no WhatsApp" style="width: 25px; height: 25px; font-size: 0.8rem;">
+                                                <a href="'.$link_zap.'" target="_blank" class="btn-action-icon btn-confirm" title="WhatsApp">
                                                     <i class="fa-brands fa-whatsapp"></i>
                                                 </a>
                                             </div>
@@ -251,7 +256,7 @@ switch ($pagina) {
                                     </tr>';
                                 }
                             } else {
-                                echo '<tr><td colspan="3" style="text-align:center; padding:30px;">Nenhum usuário encontrado.</td></tr>';
+                                echo '<tr><td colspan="4" style="text-align:center; padding:30px;">Nenhum usuário encontrado.</td></tr>';
                             }
 
         echo '              </tbody>
@@ -308,22 +313,27 @@ switch ($pagina) {
                     <h3 class="section-title" style="color: var(--gold); margin-bottom: 20px; text-align: center;">
                         <i class="fa-solid fa-user-pen"></i> Editar Dados
                     </h3>
+                    
                     <form action="actions/admin_aluno.php" method="POST">
                         <input type="hidden" name="acao" value="editar">
                         <input type="hidden" name="id" id="edit_id">
+                        
                         <div class="row-flex" style="display: flex; gap: 15px; margin-bottom: 15px;">
                             <div style="flex: 1;">
                                 <label style="color:#ccc; font-size: 0.8rem;">Nome Completo</label>
                                 <input type="text" name="nome" id="edit_nome" class="admin-input" required>
                             </div>
                         </div>
+
                         <div style="margin-bottom: 15px;">
                             <label style="color:var(--gold); font-size: 0.8rem; font-weight:bold;">Tipo de Usuário (Permissão)</label>
                             <select name="tipo_conta" id="edit_tipo_conta" class="admin-input" style="border-color:var(--gold);">
                                 <option value="aluno">Aluno (Padrão)</option>
+                                <option value="personal">Coach / Personal</option>
                                 <option value="admin">Administrador (Acesso Total)</option>
                             </select>
                         </div>
+
                         <div class="row-flex" style="display: flex; gap: 15px; margin-bottom: 15px;">
                             <div style="flex: 1;">
                                 <label style="color:#ccc; font-size: 0.8rem;">Email</label>
@@ -334,21 +344,23 @@ switch ($pagina) {
                                 <input type="text" name="telefone" id="edit_telefone" class="admin-input">
                             </div>
                         </div>
+
                         <div class="row-flex" style="display: flex; gap: 15px; margin-bottom: 15px;">
                             <div style="flex: 1;">
                                 <label style="color:#ccc; font-size: 0.8rem;">Vencimento do Plano</label>
                                 <input type="date" name="data_expiracao" id="edit_expiracao" class="admin-input">
                             </div>
                         </div>
+
                         <div style="margin-bottom: 20px;">
                             <label style="color:#ff4242; font-size: 0.8rem;">Redefinir Senha</label>
                             <input type="text" name="nova_senha" class="admin-input" placeholder="Deixe vazio para manter">
                         </div>
+
                         <button type="submit" class="btn-gold" style="width: 100%; padding: 15px;">SALVAR ALTERAÇÕES</button>
                     </form>
                 </div>
             </div>
-
         ';
         break;
 

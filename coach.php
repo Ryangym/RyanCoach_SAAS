@@ -2,17 +2,22 @@
 session_start();
 require_once 'config/db_connect.php';
 
-// Verifica se está logado e se é ADMIN
-if (!isset($_SESSION['user_id']) || $_SESSION['tipo_conta'] !== 'admin') {
-    // Se tentar entrar e não for admin, manda pro login ou pra área de usuário
+// 1. VERIFICAÇÃO DE SEGURANÇA
+if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
 }
+
+if ($_SESSION['tipo_conta'] !== 'personal' && $_SESSION['tipo_conta'] !== 'coach' && $_SESSION['tipo_conta'] !== 'admin') {
+    header("Location: usuario.php");
+    exit;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <title>Administrador - Ryan Coach</title>
+    <title>Área do Coach</title>
     
     <link rel="stylesheet" href="assets/css/menu.css">
     <link rel="stylesheet" href="assets/css/usuario.css"> 
@@ -374,7 +379,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['tipo_conta'] !== 'admin') {
             areaConteudo.classList.add('loading');
 
             try {
-                const response = await fetch(`ajax/get_admin_conteudo.php?pagina=${pagina}`);
+                const response = await fetch(`ajax/get_coach_conteudo.php?pagina=${pagina}`);
                 
                 if (!response.ok) throw new Error('Erro na requisição');
                 
@@ -459,63 +464,59 @@ if (!isset($_SESSION['user_id']) || $_SESSION['tipo_conta'] !== 'admin') {
         // ---------------------------------------------------------------
         // 1. Gerenciamento DE ALUNOS 
         // ---------------------------------------------------------------
-                // Variável Global para guardar o aluno que está sendo gerenciado
-                let alunoSelecionadoAtual = null;
+ // Variável global para guardar o aluno selecionado atualmente
+                let alunoAtual = null;
 
                 function abrirPainelAluno(aluno) {
-                    // 1. Salva o objeto aluno na variável global para usar depois
-                    alunoSelecionadoAtual = aluno;
-
-                    // 2. Preenche os dados visuais do Hub (Modal Principal)
-                    document.getElementById('hub-nome').innerText = aluno.nome;
-                    document.getElementById('hub-email').innerText = aluno.email;
+                    alunoAtual = aluno; // Salva o obj aluno para usar nos botões
                     
-                    // Verifica se tem foto
-                    let fotoUrl = aluno.foto ? aluno.foto : 'assets/img/user-default.png';
-                    document.getElementById('hub-foto').src = fotoUrl;
-
-                    // 3. Abre o modal
-                    document.getElementById('modalGerenciarAluno').style.display = 'flex';
+                    // Preenche o Hub
+                    document.getElementById("hub-nome").innerText = aluno.nome;
+                    document.getElementById("hub-email").innerText = aluno.email;
+                    document.getElementById("hub-foto").src = aluno.foto || "assets/img/user-default.png";
+                    
+                    document.getElementById("modalGerenciarAluno").style.display = "flex";
                 }
 
                 function fecharPainelAluno() {
-                    document.getElementById('modalGerenciarAluno').style.display = 'none';
+                    document.getElementById("modalGerenciarAluno").style.display = "none";
                 }
 
+                // Roteador de Ações do Hub
                 function hubAcao(acao) {
-                    // Segurança: se não tiver aluno selecionado, para tudo
-                    if (!alunoSelecionadoAtual) {
-                        alert("Erro: Nenhum aluno selecionado.");
-                        return;
+                    if(!alunoAtual) return;
+
+                    if (acao === "historico") {
+                        // Fecha modal e vai pro histórico
+                        fecharPainelAluno();
+                        carregarConteudo("aluno_historico&id=" + alunoAtual.id);
                     }
-
-                    // Fecha o modal do Hub para abrir o próximo
-                    fecharPainelAluno();
-
-                    switch (acao) {
-                        case 'editar':
-                            // AQUI ESTÁ A MÁGICA: Passa o aluno salvo para a função de editar
-                            openEditModal(alunoSelecionadoAtual);
-                            break;
-
-                        case 'historico':
-                            carregarConteudo('aluno_historico&id=' + alunoSelecionadoAtual.id);
-                            break;
-
-                        case 'avaliacao_lista':
-                            carregarConteudo('aluno_avaliacoes&id=' + alunoSelecionadoAtual.id);
-                            break;
-
-                        case 'dieta_editor':
-                            carregarConteudo('dieta_editor&id=' + alunoSelecionadoAtual.id);
-                            break;
-                            
-                        case 'excluir':
-                            if(confirm("Tem certeza que deseja excluir " + alunoSelecionadoAtual.nome + "?\nEssa ação não pode ser desfeita.")) {
-                                // Chama seu script de exclusão (ajuste a URL se necessário)
-                                window.location.href = 'actions/admin_aluno.php?acao=excluir&id=' + alunoSelecionadoAtual.id;
-                            }
-                            break;
+                    else if (acao === "avaliacao_lista") { 
+                        // VAI PARA A LISTA DE AVALIAÇÕES (Essa parte faltava)
+                        fecharPainelAluno();
+                        carregarConteudo("aluno_avaliacoes&id=" + alunoAtual.id);
+                    }
+                    else if (acao === "avaliacao_nova") {
+                        // Abre direto o modal de criar (atalho)
+                        fecharPainelAluno();
+                        abrirModalAvaliacao(alunoAtual.id);
+                    }
+                    else if (acao === "dieta_editor") {
+                        // 1. Fecha o Hub (Modal do Aluno)
+                        fecharPainelAluno();
+                        
+                        // 2. Carrega a tela do Editor de Dieta passando o ID do aluno atual
+                        carregarConteudo("dieta_editor&id=" + alunoAtual.id);
+                    }
+                    else if (acao === "editar") {
+                        // Fecha Hub e abre Editar (Preenche os dados)
+                        fecharPainelAluno();
+                        preencherModalEditar(alunoAtual);
+                    }
+                    else if (acao === "excluir") {
+                        if(confirm("Tem certeza que deseja apagar o usuário " + alunoAtual.nome + "?")) {
+                            window.location.href = "actions/admin_aluno.php?id=" + alunoAtual.id + "&acao=excluir";
+                        }
                     }
                 }
 
@@ -542,29 +543,26 @@ if (!isset($_SESSION['user_id']) || $_SESSION['tipo_conta'] !== 'admin') {
         // ---------------------------------------------------------------
         // 2. FINANCEIRO (MODAL)
         // ---------------------------------------------------------------
-        // Abre Modal
-        function openModal() {
-            document.getElementById('modalLancamento').style.display = 'flex';
-        }
 
-        // Fecha Modal
-        function closeModal() {
-            document.getElementById('modalLancamento').style.display = 'none';
-        }
-
-        // Filtra a lista enquanto digita
-        function filtrarAlunosFinanceiro() {
-            let input = document.getElementById("busca-aluno-input");
-            let filter = input.value.toUpperCase();
-            let dropdown = document.getElementById("dropdown-alunos");
-            let items = dropdown.getElementsByClassName("dropdown-item");
+        // 1. Filtrar Alunos
+        window.filtrarAlunosFinanceiro = function() {
+            // Atenção aos IDs: devem ser iguais aos do PHP ("-fin")
+            let input = document.getElementById("busca-aluno-fin");
+            let dropdown = document.getElementById("dropdown-alunos-fin");
             
-            // Se estiver vazio, esconde a lista
+            // Proteção caso o modal ainda não tenha carregado
+            if (!input || !dropdown) return;
+
+            let filter = input.value.toUpperCase();
+            let items = dropdown.getElementsByClassName("dropdown-item");
+
+            // Se o campo estiver vazio, esconde a lista
             if (filter === "") {
                 dropdown.style.display = "none";
                 return;
             }
-            
+
+            // Mostra a lista e filtra
             dropdown.style.display = "block";
             let encontrou = false;
 
@@ -573,32 +571,44 @@ if (!isset($_SESSION['user_id']) || $_SESSION['tipo_conta'] !== 'admin') {
                 let txtValue = span.textContent || span.innerText;
                 
                 if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                    items[i].style.display = ""; // Mostra
+                    items[i].style.display = "flex"; // Flex para manter alinhamento
                     encontrou = true;
                 } else {
-                    items[i].style.display = "none"; // Esconde
+                    items[i].style.display = "none";
                 }
             }
 
-            // Se não achou ninguém, esconde a lista
             if (!encontrou) dropdown.style.display = "none";
-        }
+        };
 
-        // Seleciona o aluno e preenche o input oculto
-        function selecionarAlunoFinanceiro(id, nome) {
-            document.getElementById("busca-aluno-input").value = nome; // Mostra nome visualmente
-            document.getElementById("id-aluno-selecionado").value = id; // Define ID para o PHP
-            document.getElementById("dropdown-alunos").style.display = "none"; // Fecha lista
-        }
+        // 2. Selecionar Aluno
+        window.selecionarAlunoFinanceiro = function(id, nome) {
+            document.getElementById("busca-aluno-fin").value = nome; // Visual
+            document.getElementById("id-aluno-fin").value = id; // Valor Real (Hidden)
+            document.getElementById("dropdown-alunos-fin").style.display = "none"; // Fecha lista
+        };
 
-        // Fecha a lista se clicar fora dela
+        // 3. Fechar ao clicar fora (Genérico)
         window.addEventListener('click', function(e) {
-            let dropdown = document.getElementById("dropdown-alunos");
-            let input = document.getElementById("busca-aluno-input");
-            if (dropdown && e.target !== input && !dropdown.contains(e.target)) {
-                dropdown.style.display = 'none';
+            let dropFin = document.getElementById("dropdown-alunos-fin");
+            let inputFin = document.getElementById("busca-aluno-fin");
+            
+            // Se clicou fora do input e fora do dropdown
+            if (dropFin && inputFin && e.target !== inputFin && !dropFin.contains(e.target)) {
+                dropFin.style.display = 'none';
             }
         });
+
+        // 4. Abrir e Fechar Modal
+        window.openModal = function() {
+            let modal = document.getElementById('modalLancamento');
+            if(modal) modal.style.display = 'flex';
+        };
+
+        window.closeModal = function() {
+            let modal = document.getElementById('modalLancamento');
+            if(modal) modal.style.display = 'none';
+        };
 
 
         // ---------------------------------------------------------------

@@ -31,13 +31,15 @@
                     <label for="reg-phone">Telefone</label>
                 </div>
                 <div class="input-group">
-                    <input type="password" id="reg-pass" name="senha" placeholder=" " required />
-                    <label for="reg-pass">Senha</label>
+                    <input type="password" name="senha" placeholder=" " required>
+                    <label>Senha</label>
                 </div>
+
                 <div class="input-group">
-                    <input type="password" id="reg-confirm-pass" name="confirmar_senha" placeholder=" " required />
-                    <label for="reg-confirm-pass">Confirmar Senha</label>
+                    <input type="text" name="codigo_indicacao" id="input-cupom" placeholder=" " style="color: var(--gold); font-weight: bold;">
+                    <label for="input-cupom">Código de convite (opcional)</label>
                 </div>
+
                 <button type="submit" class="btn-submit">Cadastrar</button>
                 
                 <p class="form-bottom-text mobile-only">
@@ -47,7 +49,7 @@
         </div>
 
         <div class="form-container sign-in-container">
-            <form action="actions/auth_login.php" method="POST">
+            <form id="formLogin" onsubmit="fazerLogin(event)">
                 <input type="hidden" name="tipo_login" value="aluno">
                 <h1>Entrar</h1>
                 <span>Use sua conta</span>
@@ -123,6 +125,54 @@
                 showSignIn();
             });
         });
+
+    function fazerLogin(event) {
+        event.preventDefault(); // <--- ISSO IMPEDE A TELA PRETA (submit padrão)
+
+        const form = document.getElementById('formLogin');
+        const formData = new FormData(form);
+        const btn = form.querySelector('button[type="submit"]');
+        
+        // Efeito visual no botão
+        const textoOriginal = btn.innerHTML;
+        btn.innerHTML = 'Entrando...';
+        btn.disabled = true;
+
+        fetch('actions/auth_login.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // O PHP mandou o link certo, o JS obedece
+                window.location.href = data.redirect;
+            } else {
+                alert(data.message); // Mostra erro (senha errada, etc)
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro de conexão.');
+            btn.innerHTML = textoOriginal;
+            btn.disabled = false;
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const refCode = urlParams.get('ref'); // Pega ?ref=CODIGO
+        if (refCode) {
+            const input = document.getElementById('input-cupom');
+            if (input) {
+                input.value = refCode;
+                input.readOnly = true; // Trava para não editar
+            }
+        }
+    });
+
     </script>
 </body>
 </html>

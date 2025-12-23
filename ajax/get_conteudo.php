@@ -2088,13 +2088,25 @@ switch ($pagina) {
         require_once '../config/db_connect.php';
         $user_id = $_SESSION['user_id'];
         
-        // Busca dados básicos
-        $stmt = $pdo->prepare("SELECT nome, email, foto, tipo_conta FROM usuarios WHERE id = ?");
+        // Busca dados do usuário e do coach (se tiver)
+        $sql = "SELECT u.nome, u.email, u.foto, u.tipo_conta, u.codigo_convite, u.coach_id, 
+                       c.nome as nome_coach, c.foto as foto_coach, c.email as email_coach
+                FROM usuarios u 
+                LEFT JOIN usuarios c ON u.coach_id = c.id 
+                WHERE u.id = ?";
+        
+        $stmt = $pdo->prepare($sql);
         $stmt->execute([$user_id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        $foto = $user['foto'] ? $user['foto'] : 'assets/img/user-default.png';
+        $foto = !empty($user['foto']) ? $user['foto'] : 'assets/img/user-default.png';
+        $codigo = $user['codigo_convite'] ?? '---';
+        $link_indica = "https://ryancoach.com/login.php?ref=" . $codigo;
         
+        // Verifica se tem coach para decidir o layout do botão e do modal
+        $tem_coach = !empty($user['coach_id']);
+        $foto_coach = !empty($user['foto_coach']) ? $user['foto_coach'] : 'assets/img/user-default.png';
+
         echo '<section id="menu-hub" class="fade-in">
                 
                 <div class="menu-profile-header" onclick="carregarConteudo(\'perfil\')">
@@ -2106,95 +2118,115 @@ switch ($pagina) {
                             <small class="mph-badge">'.strtoupper($user['tipo_conta']).'</small>
                         </div>
                     </div>
-                    <div class="mph-arrow">
-                        <span style="font-size:0.7rem; color:#888; margin-right:5px;">Editar</span>
-                        <i class="fa-solid fa-chevron-right"></i>
-                    </div>
+                    <div class="mph-arrow"><i class="fa-solid fa-chevron-right"></i></div>
                 </div>
 
                 <h3 class="section-label" style="margin-left: 10px;">PRINCIPAL</h3>
                 <div class="menu-grid">
-                    
                     <div class="menu-card" onclick="carregarConteudo(\'treinos\')">
-                        <div class="mc-icon" style="background: rgba(255, 186, 66, 0.1); color: var(--gold);">
-                            <i class="fa-solid fa-dumbbell"></i>
-                        </div>
-                        <span>Treinos</span>
+                        <div class="mc-icon" style="background: rgba(255, 186, 66, 0.1); color: var(--gold);"><i class="fa-solid fa-dumbbell"></i></div><span>Treinos</span>
                     </div>
-
                     <div class="menu-card" onclick="carregarConteudo(\'avaliacoes\')">
-                        <div class="mc-icon" style="background: rgba(0, 200, 255, 0.1); color: #00c8ff;">
-                            <i class="fa-solid fa-ruler-combined"></i>
-                        </div>
-                        <span>Avaliação</span>
+                        <div class="mc-icon" style="background: rgba(0, 200, 255, 0.1); color: #00c8ff;"><i class="fa-solid fa-ruler-combined"></i></div><span>Avaliação</span>
                     </div>
-
                     <div class="menu-card" onclick="carregarConteudo(\'historico\')">
-                        <div class="mc-icon" style="background: rgba(100, 255, 100, 0.1); color: #64ff64;">
-                            <i class="fa-solid fa-clock-rotate-left"></i>
-                        </div>
-                        <span>Histórico</span>
+                        <div class="mc-icon" style="background: rgba(100, 255, 100, 0.1); color: #64ff64;"><i class="fa-solid fa-clock-rotate-left"></i></div><span>Histórico</span>
                     </div>
-
                     <div class="menu-card" onclick="carregarConteudo(\'dieta\')">
-                        <div class="mc-icon" style="background: rgba(255, 100, 100, 0.1); color: #ff6464;">
-                            <i class="fa-solid fa-apple-whole"></i>
-                        </div>
-                        <span>Dieta</span>
+                        <div class="mc-icon" style="background: rgba(255, 100, 100, 0.1); color: #ff6464;"><i class="fa-solid fa-apple-whole"></i></div><span>Dieta</span>
                     </div>
-
                     <div class="menu-card" onclick="carregarConteudo(\'financeiro\')">
-                        <div class="mc-icon" style="background: rgba(200, 100, 255, 0.1); color: #c864ff;">
-                            <i class="fa-solid fa-file-invoice-dollar"></i>
-                        </div>
-                        <span>Planos</span>
+                        <div class="mc-icon" style="background: rgba(200, 100, 255, 0.1); color: #c864ff;"><i class="fa-solid fa-file-invoice-dollar"></i></div><span>Planos</span>
                     </div>
-
                     <div class="menu-card" onclick="carregarConteudo(\'gerar_pdf\')">
-                        <div class="mc-icon" style="background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid #555;">
-                            <i class="fa-solid fa-print"></i>
-                        </div>
-                        <span>Relatórios</span>
-                    </div>
-                    
-                    <div class="menu-card" onclick="carregarConteudo(\'novo_treino\')">
-                        <div class="mc-icon" style="background: rgba(150, 50, 255, 0.1); color: #a855f7; border: 1px solid #a855f7;">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </div>
-                        <span>Novo Treino</span>
+                        <div class="mc-icon" style="background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid #555;"><i class="fa-solid fa-print"></i></div><span>Relatórios</span>
                     </div>
                 </div>
 
                 <h3 class="section-label" style="margin-left: 10px; margin-top: 30px;">SISTEMA</h3>
                 <div class="settings-list">
                     
-                    <a href="https://wa.me/55SEUNUMERO" target="_blank" class="setting-item">
-                        <div class="st-left">
-                            <i class="fa-brands fa-whatsapp" style="color: #25D366;"></i>
-                            <span>Suporte via WhatsApp</span>
+                    <div class="setting-item" onclick="copiarLinkIndicacao(\''.$link_indica.'\')" style="cursor:pointer;">
+                        <div class="st-left"><i class="fa-solid fa-ticket" style="color: var(--gold);"></i>
+                            <div><span style="display:block;">Indique e Ganhe</span><span style="display:block; font-size:0.7rem; color:#666;">Cód: <strong style="color:var(--gold)">'.$codigo.'</strong></span></div>
                         </div>
+                        <i class="fa-regular fa-copy" style="font-size: 0.8rem; color: #666;"></i>
+                    </div>
+
+                    ';
+                    if (!$tem_coach) {
+                        // SEM COACH: Botão Vincular
+                        echo '<div class="setting-item" onclick="abrirModalVincular()" style="cursor:pointer;">
+                                <div class="st-left"><i class="fa-solid fa-user-plus" style="color: #fff;"></i><span>Vincular Personal</span></div>
+                                <i class="fa-solid fa-chevron-right"></i>
+                              </div>';
+                    } else {
+                        // COM COACH: Botão Meu Treinador
+                        echo '<div class="setting-item" onclick="abrirModalVincular()" style="cursor:pointer;">
+                                <div class="st-left"><i class="fa-solid fa-user-check" style="color: #00ff00;"></i>
+                                    <div><span style="display:block;">Meu Treinador</span><span style="display:block; font-size:0.7rem; color:#666;">'.$user['nome_coach'].'</span></div>
+                                </div>
+                                <i class="fa-solid fa-gear" style="font-size: 0.8rem; color: #666;"></i>
+                              </div>';
+                    }
+                    echo '
+
+                    <a href="https://wa.me/55SEUNUMERO" target="_blank" class="setting-item">
+                        <div class="st-left"><i class="fa-brands fa-whatsapp" style="color: #25D366;"></i><span>Suporte Whatsapp</span></div>
                         <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.8rem; color: #666;"></i>
                     </a>
 
                     <div class="setting-item" onclick="window.location.href=\'index.php\'">
-                        <div class="st-left">
-                            <i class="fa-solid fa-globe"></i>
-                            <span>Página Inicial do Site</span>
-                        </div>
+                        <div class="st-left"><i class="fa-solid fa-globe"></i><span>Página Inicial</span></div>
                         <i class="fa-solid fa-chevron-right"></i>
                     </div>
 
                     <div class="setting-item logout" onclick="window.location.href=\'actions/logout.php\'">
-                        <div class="st-left">
-                            <i class="fa-solid fa-right-from-bracket"></i>
-                            <span>Sair da Conta</span>
-                        </div>
+                        <div class="st-left"><i class="fa-solid fa-right-from-bracket"></i><span>Sair da Conta</span></div>
                     </div>
-
                 </div>
                 
-                <div style="text-align:center; margin-top:40px; color:#444; font-size:0.7rem;">
-                    <p>Ryan Coach App v1.0</p>
+                <div style="text-align:center; margin-top:40px; color:#444; font-size:0.7rem;"><p>Ryan Coach App v1.0</p></div>
+                
+                <div id="modalVincularCoach" class="modal-overlay" style="display:none;">
+                    <div class="modal-content" style="max-width:400px; text-align:center;">
+                        <button class="modal-close" onclick="fecharModalVincular()">&times;</button>
+                        
+                        ';
+                        if (!$tem_coach) {
+                            // --- CONTEÚDO PARA VINCULAR (Não tem coach) ---
+                            echo '
+                            <div style="background:rgba(218,165,32,0.1); width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px auto;">
+                                <i class="fa-solid fa-user-plus" style="color:var(--gold); font-size:1.5rem;"></i>
+                            </div>
+                            <h3 style="color:#fff; margin-bottom:10px;">Vincular Treinador</h3>
+                            <p style="color:#ccc; font-size:0.9rem; margin-bottom:20px;">Digite o código do seu Personal Trainer.</p>
+                            
+                            <form action="actions/aluno_vincular.php" method="POST">
+                                <input type="hidden" name="acao" value="vincular">
+                                <input type="text" name="codigo_coach" class="admin-input" placeholder="Ex: RYAN10" style="text-align:center; text-transform:uppercase; font-size:1.2rem; letter-spacing:2px; margin-bottom:20px;" required>
+                                <button type="submit" class="btn-gold" style="width:100%; padding:12px;">CONECTAR</button>
+                            </form>';
+                        } else {
+                            // --- CONTEÚDO PARA DESVINCULAR (Já tem coach) ---
+                            echo '
+                            <img src="'.$foto_coach.'" style="width:80px; height:80px; border-radius:50%; border:3px solid var(--gold); object-fit:cover; margin-bottom:15px;">
+                            <h3 style="color:#fff; margin:0 0 5px 0;">'.$user['nome_coach'].'</h3>
+                            <p style="color:#666; font-size:0.8rem; margin-bottom:25px;">'.$user['email_coach'].'</p>
+                            
+                            <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px; margin-bottom:25px; border:1px solid #333;">
+                                <p style="color:#ccc; font-size:0.9rem; margin:0;">Você está vinculado a este treinador. Ele é responsável pelos seus treinos.</p>
+                            </div>
+
+                            <form action="actions/aluno_vincular.php" method="POST" onsubmit="return confirm(\'Tem certeza que deseja desvincular? Seus treinos atuais podem ser perdidos.\')">
+                                <input type="hidden" name="acao" value="desvincular">
+                                <button type="submit" style="background: rgba(255,66,66,0.1); color: #ff4242; border: 1px solid #ff4242; width:100%; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold;">
+                                    <i class="fa-solid fa-link-slash"></i> DESVINCULAR
+                                </button>
+                            </form>';
+                        }
+                        echo '
+                    </div>
                 </div>
 
               </section>';

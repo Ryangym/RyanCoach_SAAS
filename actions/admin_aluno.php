@@ -2,36 +2,58 @@
 session_start();
 require_once '../config/db_connect.php';
 
-// Segurança: Apenas Admin
-if (!isset($_SESSION['user_id']) || $_SESSION['user_nivel'] !== 'admin') {
+// 1. Segurança: Apenas Admin pode acessar
+if (!isset($_SESSION['user_id']) || $_SESSION['tipo_conta'] !== 'admin') {
     die("Acesso negado.");
 }
 
-$acao = $_REQUEST['acao'] ?? ''; // Pode vir via POST (editar) ou GET (excluir)
+$acao = $_REQUEST['acao'] ?? '';
 
 try {
     if ($acao === 'editar') {
-        // --- EDITAR ALUNO (INCLUINDO NÍVEL) ---
+        // --- EDITAR USUÁRIO ---
+        
         $id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_NUMBER_INT);
         $nome = filter_input(INPUT_POST, 'nome', FILTER_SANITIZE_STRING);
         $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
         $telefone = filter_input(INPUT_POST, 'telefone', FILTER_SANITIZE_STRING);
-        $data_exp = $_POST['data_expiracao'] ?: NULL;
-        $nivel = $_POST['nivel'] ?? 'aluno'; // Novo campo: aluno ou admin
         
+        // Data de Expiração do Plano
+        $data_exp = !empty($_POST['data_expiracao']) ? $_POST['data_expiracao'] : NULL;
+        
+        // Tipo de Conta (Validando 'coach' no lugar de 'personal')
+        $tipo_conta = $_POST['tipo_conta'] ?? 'atleta'; 
+        $tipos_permitidos = ['atleta', 'coach', 'admin'];
+        
+        // Se vier 'personal' do formulário antigo, força para 'coach'
+        if ($tipo_conta === 'personal') {
+            $tipo_conta = 'coach';
+        }
+        
+        if (!in_array($tipo_conta, $tipos_permitidos)) {
+            $tipo_conta = 'atleta';
+        }
+
         $nova_senha = $_POST['nova_senha'] ?? '';
 
-        // Monta Query Dinâmica (para senha opcional)
-        $sql = "UPDATE usuarios SET nome = :nome, email = :email, telefone = :telefone, data_expiracao = :dexp, nivel = :nivel";
+        // Query de Atualização
+        $sql = "UPDATE usuarios SET 
+                nome = :nome, 
+                email = :email, 
+                telefone = :telefone, 
+                data_expiracao_plano = :dexp, 
+                tipo_conta = :tipo_conta"; 
+        
         $params = [
             'nome' => $nome,
             'email' => $email,
             'telefone' => $telefone,
             'dexp' => $data_exp,
-            'nivel' => $nivel,
+            'tipo_conta' => $tipo_conta,
             'id' => $id
         ];
 
+        // Atualiza a senha se foi enviada
         if (!empty($nova_senha)) {
             $sql .= ", senha = :senha";
             $params['senha'] = password_hash($nova_senha, PASSWORD_DEFAULT);
@@ -42,14 +64,14 @@ try {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
-        header("Location: ../admin.php?pagina=alunos&msg=editado");
+        // Sucesso
+        header("Location: ../admin.php?pagina=alunos&msg=sucesso");
         exit;
 
     } elseif ($acao === 'excluir') {
-        // --- EXCLUIR ALUNO ---
+        // --- EXCLUIR USUÁRIO ---
         $id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT);
         
-        // Evita que o admin se exclua
         if ($id == $_SESSION['user_id']) {
             die("Você não pode excluir sua própria conta.");
         }
@@ -62,6 +84,7 @@ try {
     }
 
 } catch (PDOException $e) {
-    echo "Erro: " . $e->getMessage();
+    echo "Erro SQL: " . $e->getMessage();
+    exit;
 }
 ?>

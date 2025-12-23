@@ -1,22 +1,46 @@
 <?php
+// Limpa qualquer saída anterior para garantir JSON limpo
+ob_start();
+
 session_start();
 require_once '../config/db_connect.php';
 
-if (!isset($_SESSION['user_nivel']) || $_SESSION['user_nivel'] !== 'admin') {
-    die("Acesso negado.");
+// Desativa erros na tela
+error_reporting(0);
+ini_set('display_errors', 0);
+header('Content-Type: application/json');
+
+// 1. Verificação de Segurança
+if (!isset($_SESSION['user_id'])) {
+    ob_clean();
+    echo json_encode(['status' => 'error', 'message' => 'Sessão expirada. Faça login novamente.']);
+    exit;
 }
+
+$criador_id = $_SESSION['user_id'];
+$tipo_conta = $_SESSION['tipo_conta'] ?? 'personal';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $pdo->beginTransaction();
 
-        // 1. Dados do Formulário
-        $aluno_id = $_POST['aluno_id'];
-        $nome_treino = $_POST['nome'];
-        $nivel = $_POST['nivel'];
-        $divisao = strtoupper($_POST['divisao']);
+        // 2. Dados do Formulário
+        if ($tipo_conta === 'atleta') {
+            $aluno_id = $criador_id; 
+        } else {
+            $aluno_id = filter_input(INPUT_POST, 'aluno_id', FILTER_SANITIZE_NUMBER_INT);
+        }
+
+        $nome_treino = filter_input(INPUT_POST, 'nome', FILTER_SANITIZE_STRING);
+        $nivel = $_POST['nivel'] ?? 'basico';
+        $divisao = strtoupper($_POST['divisao'] ?? 'A');
         $data_inicio = $_POST['data_inicio'];
-        $dias_selecionados = $_POST['dias_semana'] ?? []; // Array [1, 3, 5]
+        $dias_selecionados = $_POST['dias_semana'] ?? []; 
+        $observacoes = filter_input(INPUT_POST, 'observacoes', FILTER_SANITIZE_STRING);
+
+        if (!$aluno_id || !$nome_treino || !$data_inicio) {
+            throw new Exception("Preencha todos os campos obrigatórios.");
+        }
 
         if (empty($dias_selecionados)) {
             throw new Exception("Selecione pelo menos um dia de treino.");
@@ -25,82 +49,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         sort($dias_selecionados); 
         $dias_json = json_encode($dias_selecionados);
 
-        // --- NOVA LÓGICA DE DATA FINAL PRECISA ---
-        // Objetivo: Encontrar o último dia de treino da 12ª semana
-        
+        // --- LÓGICA DE DATA FINAL ---
         $objData = new DateTime($data_inicio);
-        // Avança para o início da 12ª semana (Soma 11 semanas à data inicial)
         $objData->modify('+11 weeks');
+        $data_fim_calculada = $objData->format('Y-m-d');
         
-        // Agora percorremos os 7 dias dessa última semana para achar o último dia de treino
-        $data_fim_calculada = $objData->format('Y-m-d'); // Fallback
-        
-        // Cria um loop de 7 dias a partir do início da última semana
+        // Ajuste fino para terminar no último dia de treino real da semana
+        $tempData = clone $objData;
         for ($d = 0; $d < 7; $d++) {
-            // N = 1(Seg) a 7(Dom)
-            $dia_semana_atual = $objData->format('N');
-            
-            // Se este dia da semana está nos dias de treino, ele é um candidato a data final
-            if (in_array($dia_semana_atual, $dias_selecionados)) {
-                $data_fim_calculada = $objData->format('Y-m-d');
+            if (in_array($tempData->format('N'), $dias_selecionados)) {
+                $data_fim_calculada = $tempData->format('Y-m-d');
             }
-            
-            // Avança um dia para verificar o próximo
-            $objData->modify('+1 day');
+            $tempData->modify('+1 day');
         }
-        // ------------------------------------------
 
-        // 2. Inserir na tabela `treinos`
-        $stmt = $pdo->prepare("INSERT INTO treinos (aluno_id, admin_id, nome, nivel_plano, data_inicio, data_fim, dias_semana, divisao_nome) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$aluno_id, $_SESSION['user_id'], $nome_treino, $nivel, $data_inicio, $data_fim_calculada, $dias_json, $divisao]);
+        // 3. Inserir Treino (CORRIGIDO: Agora usa 'criador_id')
+        $sql = "INSERT INTO treinos 
+                (aluno_id, criador_id, nome, nivel_plano, data_inicio, data_fim, dias_semana, divisao_nome, observacoes, ativo) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
+                
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            $aluno_id, 
+            $criador_id, // Passando o ID do usuário logado
+            $nome_treino, 
+            $nivel, 
+            $data_inicio, 
+            $data_fim_calculada, 
+            $dias_json, 
+            $divisao,
+            $observacoes
+        ]);
+        
         $treino_id = $pdo->lastInsertId();
 
-        // 3. Se for Periodizado, gerar Microciclos
+        // 4. Periodização (Se aplicável)
         if ($nivel !== 'basico') {
-            
-            // Criar Macro
             $stmt = $pdo->prepare("INSERT INTO periodizacoes (treino_id, data_inicio_macro, data_fim_macro, objetivo_macro) VALUES (?, ?, ?, ?)");
             $stmt->execute([$treino_id, $data_inicio, $data_fim_calculada, 'Hipertrofia']);
             $periodizacao_id = $pdo->lastInsertId();
 
-            // Calcular Datas das 12 Semanas (Loop)
             $data_atual = new DateTime($data_inicio);
             
             for ($i = 1; $i <= 12; $i++) {
-                // Copia a data atual para não alterar a referência do loop principal
                 $semana_start = clone $data_atual;
-                
-                // Define o fim desta semana (6 dias depois do início)
                 $semana_end = clone $data_atual;
                 $semana_end->modify('+6 days');
 
-                // Encontra os dias reais de treino dentro dessa semana
-                $datas_reais = [];
-                $intervalo = new DatePeriod($semana_start, new DateInterval('P1D'), $semana_end->modify('+1 day'));
-
-                foreach ($intervalo as $dt) {
-                    if (in_array($dt->format('N'), $dias_selecionados)) {
-                        $datas_reais[] = $dt->format('Y-m-d');
-                    }
-                }
-
-                // Define início e fim do microciclo baseado nos treinos reais
-                $inicio_micro = !empty($datas_reais) ? $datas_reais[0] : $semana_start->format('Y-m-d');
-                $fim_micro = !empty($datas_reais) ? end($datas_reais) : $semana_end->format('Y-m-d');
-
-                // Define nome da fase
+                $stmt = $pdo->prepare("INSERT INTO microciclos (periodizacao_id, semana_numero, nome_fase, data_inicio_semana, data_fim_semana) VALUES (?, ?, ?, ?, ?)");
+                
                 $fase = ($i <= 4) ? 'Base' : (($i <= 8) ? 'Intensificação' : 'Polimento');
+                $stmt->execute([$periodizacao_id, $i, $fase, $semana_start->format('Y-m-d'), $semana_end->format('Y-m-d')]);
 
-                // Salva Microciclo
-                $stmt = $pdo->prepare("INSERT INTO microciclos (periodizacao_id, semana_numero, nome_fase, data_inicio_semana, data_fim_semana, descanso_compostos, descanso_isoladores) VALUES (?, ?, ?, ?, ?, 120, 90)");
-                $stmt->execute([$periodizacao_id, $i, $fase, $inicio_micro, $fim_micro]);
-
-                // Prepara data para a próxima semana (+1 semana a partir do início desta)
                 $data_atual->modify('+1 week');
             }
         }
 
-        // 4. Criar Divisões (A, B, C...)
+        // 5. Divisões
         $letras = str_split(preg_replace('/[^A-Z]/', '', $divisao));
         if(empty($letras)) $letras = ['A'];
 
@@ -110,11 +115,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $pdo->commit();
-        echo "<script>alert('Treino estruturado com sucesso!'); window.location.href='../admin.php?pagina=treinos_editor';</script>";
+        
+        // SUCESSO: Retorna o ID do treino criado para o JS redirecionar
+        ob_clean();
+        echo json_encode([
+            'status' => 'success', 
+            'message' => 'Treino criado com sucesso!',
+            'treino_id' => $treino_id
+        ]);
+        exit;
 
     } catch (Exception $e) {
-        $pdo->rollBack();
-        echo "<script>alert('Erro: " . $e->getMessage() . "'); window.history.back();</script>";
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        ob_clean();
+        echo json_encode(['status' => 'error', 'message' => 'Erro: ' . $e->getMessage()]);
+        exit;
     }
+} else {
+    ob_clean();
+    echo json_encode(['status' => 'error', 'message' => 'Método inválido.']);
+    exit;
 }
 ?>

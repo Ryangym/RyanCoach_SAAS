@@ -1,25 +1,45 @@
 <?php
 session_start();
-require_once 'config/db_connect.php'; // Necessário para checar o banco atualizado
+require_once 'config/db_connect.php';
 
-// 1. Verifica Login
-if (!isset($_SESSION['user_id']) || $_SESSION['user_nivel'] !== 'aluno') {
+// 1. Verifica se está logado
+if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
 }
 
-// 2. Verifica Status do Plano (TRAVA DE SEGURANÇA)
-$stmt = $pdo->prepare("SELECT data_expiracao FROM usuarios WHERE id = :id");
-$stmt->execute(['id' => $_SESSION['user_id']]);
-$user_data = $stmt->fetch(PDO::FETCH_ASSOC);
+$user_id = $_SESSION['user_id'];
 
-// Se data_expiracao for NULL ou menor que hoje, bloqueia
-$hoje = date('Y-m-d');
-if (empty($user_data['data_expiracao']) || $user_data['data_expiracao'] < $hoje) {
-    // Exceção: Se for admin testando, não bloqueia (opcional, mas bom pra teste)
-    // Mas aqui é arquivo de usuário, então bloqueia.
-    header("Location: bloqueado.php");
+// 2. Busca dados atualizados do usuário (CORREÇÃO AQUI)
+// Alteramos 'data_expiracao' para 'data_expiracao_plano' e 'nivel' para 'tipo_conta'
+$sql_user = "SELECT id, nome, email, foto, tipo_conta, plano_atual, data_expiracao_plano 
+             FROM usuarios 
+             WHERE id = :id";
+
+$stmt = $pdo->prepare($sql_user);
+$stmt->execute(['id' => $user_id]);
+$dados_usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Se o usuário foi deletado mas a sessão continua ativa
+if (!$dados_usuario) {
+    session_destroy();
+    header("Location: login.php");
     exit;
+}
+
+// 3. Atualiza a sessão para garantir sincronia
+$_SESSION['tipo_conta'] = $dados_usuario['tipo_conta'];
+$_SESSION['plano_atual'] = $dados_usuario['plano_atual'];
+
+// 4. Lógica de Validade do Plano (Opcional por enquanto)
+$dias_restantes = 0;
+if ($dados_usuario['data_expiracao_plano']) {
+    $data_hoje = new DateTime();
+    $data_exp = new DateTime($dados_usuario['data_expiracao_plano']);
+    if ($data_exp > $data_hoje) {
+        $intervalo = $data_hoje->diff($data_exp);
+        $dias_restantes = $intervalo->days;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -1180,8 +1200,197 @@ if (empty($user_data['data_expiracao']) || $user_data['data_expiracao'] < $hoje)
             document.getElementById('modalPDFConfig').style.display = 'flex';
         };
     }
+
+
+
+
+
+
+    // ---------------------------------------------------------------
+        // 3. EDITOR DE TREINOS (CRIAÇÃO)
+        // ---------------------------------------------------------------
+
+        function toggleNovoTreino() {
+            const modal = document.getElementById('box-novo-treino');
+            
+            if (modal.style.display === 'none' || modal.style.display === '') {
+                modal.style.display = 'flex'; // FLEX é essencial para centralizar
+            } else {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Fecha se clicar fora do modal (fundo escuro)
+        window.addEventListener('click', function(e) {
+            const modal = document.getElementById('box-novo-treino');
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        function togglePeriodizacao() {
+            var nivel = document.getElementById("selectNivel").value;
+            var aviso = document.getElementById("aviso-periodizacao");
+            if (nivel === "basico") { aviso.style.display = "none"; } 
+            else { aviso.style.display = "block"; }
+        }
+
+        // Fecha a lista se clicar fora (Genérico para qualquer dropdown)
+        window.addEventListener('click', function(e) {
+            // Dropdown Treino
+            let dropTreino = document.getElementById("dropdown-alunos-treino");
+            let inputTreino = document.getElementById("busca-aluno-treino");
+            if (dropTreino && e.target !== inputTreino && !dropTreino.contains(e.target)) {
+                dropTreino.style.display = 'none';
+            }
+        });
+
+
+        // ---------------------------------------------------------------
+        // 4. PAINEL DO TREINO (ABAS, EXERCÍCIOS E PERIODIZAÇÃO)
+        // ---------------------------------------------------------------
+        
+        // Gerenciamento de Abas (A, B, C)
+        function openTab(evt, divName) {
+            var i, content, tablinks;
+            content = document.getElementsByClassName("division-content");
+            for (i = 0; i < content.length; i++) { content[i].className = content[i].className.replace(" active", ""); }
+            tablinks = document.getElementsByClassName("div-tab-btn");
+            for (i = 0; i < tablinks.length; i++) { tablinks[i].className = tablinks[i].className.replace(" active", ""); }
+            document.getElementById(divName).className += " active";
+            evt.currentTarget.className += " active";
+        }
+
+        // --- MODAL EXERCÍCIO (Com Lista de Séries) ---
+        let seriesArray = [];
+
+        // Função para ABRIR NOVO (Limpa tudo)
+        function openExercicioModal(divId, treinoId) {
+            // Reseta formulário e variáveis
+            document.getElementById("formExercicio").reset();
+            document.getElementById("formExercicio").action = "actions/treino_add_exercicio.php"; // Ação de Adicionar
+            document.getElementById("modal_divisao_id").value = divId;
+            document.getElementById("modal_treino_id").value = treinoId;
+            document.getElementById("modal_exercicio_id").value = ""; // Limpa ID
+            
+            document.querySelector("#modalExercicio .section-title").innerText = "Novo Exercício";
+            document.querySelector("#modalExercicio .btn-gold[type='submit']").innerText = "SALVAR EXERCÍCIO";
+
+            seriesArray = [];
+            renderSetsList();
+            
+            document.getElementById("modalExercicio").style.display = "flex";
+        }
+
+        // Função para ABRIR EDIÇÃO (Preenche tudo)
+        function editarExercicio(exData, treinoId, divId) {
+            // Preenche campos simples
+            document.getElementById("formExercicio").action = "actions/treino_edit_exercicio.php"; // Ação de Editar
+            document.getElementById("modal_divisao_id").value = divId;
+            document.getElementById("modal_treino_id").value = treinoId;
+            document.getElementById("modal_exercicio_id").value = exData.id;
+            
+            document.querySelector("input[name='nome_exercicio']").value = exData.nome_exercicio;
+            document.querySelector("select[name='tipo_mecanica']").value = exData.tipo_mecanica;
+            document.querySelector("input[name='video_url']").value = exData.video_url || "";
+            document.querySelector("input[name='observacao']").value = exData.observacao_exercicio || "";
+
+            // Muda Título do Modal
+            document.querySelector("#modalExercicio .section-title").innerText = "Editar Exercício";
+            document.querySelector("#modalExercicio .btn-gold[type='submit']").innerText = "ATUALIZAR EXERCÍCIO";
+
+            // Preenche as Séries
+            seriesArray = [];
+            if (exData.series && exData.series.length > 0) {
+                exData.series.forEach(s => {
+                    seriesArray.push({
+                        qtd: s.quantidade,
+                        tipo: s.categoria,
+                        reps: s.reps_fixas || "",
+                        desc: s.descanso_fixo || "",
+                        rpe: s.rpe_previsto || ""
+                    });
+                });
+            }
+            renderSetsList();
+
+            document.getElementById("modalExercicio").style.display = "flex";
+        }
+
+        function closeExercicioModal() {
+            document.getElementById("modalExercicio").style.display = "none";
+        }
+
+        function addSetToList() {
+            const qtd = document.getElementById("set_qtd").value;
+            const tipo = document.getElementById("set_tipo").value;
+            const reps = document.getElementById("set_reps").value;
+            const desc = document.getElementById("set_desc").value;
+            const rpe = document.getElementById("set_rpe").value;
+
+            if(qtd > 0) {
+                seriesArray.push({ qtd, tipo, reps, desc, rpe });
+                renderSetsList();
+            }
+        }
+
+        function renderSetsList() {
+            const listDiv = document.getElementById("temp-sets-list");
+            const jsonInput = document.getElementById("series_json_input");
+            listDiv.innerHTML = "";
+            
+            if(seriesArray.length === 0) {
+                listDiv.innerHTML = "<p style='color:#666; font-size:0.8rem; text-align:center; margin-top:10px;'>Nenhuma série adicionada.</p>";
+            } else {
+                seriesArray.forEach((s, index) => {
+                    listDiv.innerHTML += `
+                        <div class="temp-set-item">
+                            <span><strong>${s.qtd}x</strong> ${s.tipo.toUpperCase()} (${s.reps} reps)</span>
+                            <span style="color:#ff4242; cursor:pointer;" onclick="removeSet(${index})"><i class="fa-solid fa-times"></i></span>
+                        </div>
+                    `;
+                });
+            }
+            jsonInput.value = JSON.stringify(seriesArray);
+        }
+
+        function removeSet(index) {
+            seriesArray.splice(index, 1);
+            renderSetsList();
+        }
+
+        // --- MODAL PERIODIZAÇÃO (Semana) ---
+        function openMicroModal(micro, treinoId) {
+        document.getElementById('micro_id').value = micro.id;
+        document.getElementById('micro_treino_id').value = treinoId;
+        
+        document.getElementById('micro_fase').value = micro.nome_fase;
+        document.getElementById('micro_foco').value = micro.foco_comentario;
+        
+        // Novos campos
+        document.getElementById('micro_reps_comp').value = micro.reps_compostos;
+        document.getElementById('micro_desc_comp').value = micro.descanso_compostos; 
+        
+        document.getElementById('micro_reps_iso').value = micro.reps_isoladores;
+        document.getElementById('micro_desc_iso').value = micro.descanso_isoladores; 
+        
+        document.getElementById('span_semana_num').innerText = micro.semana_numero;
+        document.getElementById('modalMicro').style.display = 'flex';
+        }
+        
+        function closeMicroModal() {
+            document.getElementById('modalMicro').style.display = 'none';
+        }
+
+        // Fechar qualquer modal ao clicar fora
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                event.target.style.display = "none";
+            }
+        }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="assets/js/script.js"></script>
 </body>
 </html>

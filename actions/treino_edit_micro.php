@@ -2,9 +2,7 @@
 session_start();
 require_once '../config/db_connect.php';
 
-if (!isset($_SESSION['user_nivel']) || $_SESSION['user_nivel'] !== 'admin') {
-    die("Acesso negado.");
-}
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -40,7 +38,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'id' => $micro_id
         ]);
 
-        header("Location: ../admin.php?pagina=treino_painel&id=" . $treino_id);
+        if ($stmt->execute()) {
+            // SUCESSO: Retorna JSON
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'success', 'message' => 'Semana atualizada com sucesso!']);
+        } else {
+            // ERRO: Retorna JSON
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => 'Erro ao atualizar.']);
+        }
         exit;
 
     } catch (PDOException $e) {

@@ -1,11 +1,11 @@
 <?php
 session_start();
+require_once 'config/db_connect.php';
 
-// VERIFICAÇÃO DE SEGURANÇA ADMIN
-// Se NÃO tem usuário logado OU se o nível NÃO é 'admin'
-if (!isset($_SESSION['user_id']) || $_SESSION['user_nivel'] !== 'admin') {
-    // Expulsa para o login de admin
-    header("Location: loginAdmin.php");
+// Verifica se está logado e se é ADMIN
+if (!isset($_SESSION['user_id']) || $_SESSION['tipo_conta'] !== 'admin') {
+    // Se tentar entrar e não for admin, manda pro login ou pra área de usuário
+    header("Location: login.php");
     exit;
 }
 ?>
@@ -1211,5 +1211,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_nivel'] !== 'admin') {
     };
     </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="assets/js/script.js"></script>
 </body>
 </html>

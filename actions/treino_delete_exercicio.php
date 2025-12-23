@@ -1,23 +1,37 @@
 <?php
-session_start();
+// Limpa buffer para garantir JSON puro
+ob_start();
+
 require_once '../config/db_connect.php';
 
-if (!isset($_SESSION['user_nivel']) || $_SESSION['user_nivel'] !== 'admin') {
-    die("Acesso negado.");
-}
+// Configurações de erro e JSON
+error_reporting(0);
+ini_set('display_errors', 0);
+header('Content-Type: application/json');
 
+// Pega o ID da URL (GET)
 $id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT);
-$treino_id = filter_input(INPUT_GET, 'treino_id', FILTER_SANITIZE_NUMBER_INT);
 
-if ($id && $treino_id) {
+if ($id) {
     try {
-        $stmt = $pdo->prepare("DELETE FROM exercicios WHERE id = :id");
-        $stmt->execute(['id' => $id]);
-        
-        header("Location: ../admin.php?pagina=treino_painel&id=" . $treino_id . "&msg=exercicio_excluido");
-        exit;
+
+        $sql = "DELETE FROM exercicios WHERE id = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':id', $id);
+
+        if ($stmt->execute()) {
+            ob_clean();
+            echo json_encode(['status' => 'success', 'message' => 'Exercício excluído!']);
+        } else {
+            ob_clean();
+            echo json_encode(['status' => 'error', 'message' => 'Erro ao excluir no banco.']);
+        }
     } catch (PDOException $e) {
-        echo "Erro ao excluir: " . $e->getMessage();
+        ob_clean();
+        echo json_encode(['status' => 'error', 'message' => 'Erro SQL: ' . $e->getMessage()]);
     }
+} else {
+    ob_clean();
+    echo json_encode(['status' => 'error', 'message' => 'ID inválido.']);
 }
 ?>

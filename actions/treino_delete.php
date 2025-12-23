@@ -1,37 +1,42 @@
 <?php
+// Inicia o buffer para evitar sujeira no JSON
+ob_start();
+
 session_start();
 require_once '../config/db_connect.php';
 
-// 1. Verificação de Segurança (Apenas Admin)
-if (!isset($_SESSION['user_nivel']) || $_SESSION['user_nivel'] !== 'admin') {
-    die("Acesso negado.");
-}
+// Desativa erros visuais que quebram o JSON
+error_reporting(0);
+ini_set('display_errors', 0);
+header('Content-Type: application/json');
 
-// 2. Recebe o ID do treino
+// Pega o ID
 $id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT);
 
 if ($id) {
-    try {
-        // Graças ao ON DELETE CASCADE configurado no banco, 
-        // deletar o treino remove automaticamente:
-        // - Periodizações
-        // - Microciclos
-        // - Divisões (treino_divisoes)
-        // - Exercícios
-        // - Séries
-        $stmt = $pdo->prepare("DELETE FROM treinos WHERE id = :id");
-        $stmt->execute(['id' => $id]);
-        
-        // Retorna para o editor de treinos
-        header("Location: ../admin.php?pagina=treinos_editor&msg=treino_excluido");
-        exit;
+    try {    
+        $sql = "DELETE FROM treinos WHERE id = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':id', $id);
 
+        if ($stmt->execute()) {
+            ob_clean();
+            echo json_encode(['status' => 'success', 'message' => 'Treino excluído com sucesso!']);
+        } else {
+            ob_clean();
+            echo json_encode(['status' => 'error', 'message' => 'Erro ao excluir treino no banco.']);
+        }
     } catch (PDOException $e) {
-        die("Erro ao excluir treino: " . $e->getMessage());
+        ob_clean();
+        // Verifica se é erro de chave estrangeira (tentar apagar treino que tem alunos/exercícios vinculados sem Cascade)
+        if ($e->getCode() == '23000') {
+            echo json_encode(['status' => 'error', 'message' => 'Não é possível excluir este treino pois ele possui dados vinculados (exercícios ou histórico).']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Erro SQL: ' . $e->getMessage()]);
+        }
     }
 } else {
-    // Se não houver ID, apenas volta
-    header("Location: ../admin.php?pagina=treinos_editor");
-    exit;
+    ob_clean();
+    echo json_encode(['status' => 'error', 'message' => 'ID inválido.']);
 }
 ?>

@@ -2,45 +2,60 @@
 session_start();
 require_once '../config/db_connect.php';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-    $senha = $_POST['senha'];
-    $tipo_login_esperado = $_POST['tipo_login'] ?? ''; 
+// Limpa dados de entrada
+$email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+$senha = $_POST['senha'];
 
-    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE email = :email");
+if (empty($email) || empty($senha)) {
+    header("Location: ../login.php?erro=campos_vazios");
+    exit;
+}
+
+try {
+    // Busca o usuário com as NOVAS colunas da V2
+    $sql = "SELECT id, nome, email, senha, tipo_conta, plano_atual, foto, coach_id 
+            FROM usuarios 
+            WHERE email = :email";
+            
+    $stmt = $pdo->prepare($sql);
     $stmt->execute(['email' => $email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    // Verifica se usuário existe e senha confere
     if ($user && password_verify($senha, $user['senha'])) {
         
-        // Verificações de Nível (Mantive sua lógica anterior)
-        if ($tipo_login_esperado === 'admin' && $user['nivel'] !== 'admin') {
-            echo "<script>alert('Acesso Negado! Alunos não têm permissão.'); window.location.href = '../login.php';</script>";
-            exit;
-        }
-        if ($tipo_login_esperado === 'aluno' && $user['nivel'] === 'admin') {
-             echo "<script>alert('Administradores devem usar o Painel Admin.'); window.location.href = '../loginAdmin.php';</script>";
-            exit;
-        }
-
-        // --- AQUI ESTÁ A MÁGICA DA FOTO ---
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['user_nome'] = $user['nome'];
-        $_SESSION['user_nivel'] = $user['nivel'];
+        // --- SESSÃO ATUALIZADA PARA O SAAS ---
+        $_SESSION['user_id']      = $user['id'];
+        $_SESSION['user_nome']    = $user['nome'];
+        $_SESSION['user_email']   = $user['email'];
+        $_SESSION['user_foto']    = $user['foto'];
         
-        // Se tiver foto no banco, usa ela. Se não, usa o bonequinho padrão.
-        $_SESSION['user_foto'] = !empty($user['foto']) ? $user['foto'] : 'assets/img/user-default.png';
+        // Novas variáveis de controle
+        $_SESSION['tipo_conta']   = $user['tipo_conta'];   // 'atleta', 'personal', 'admin'
+        $_SESSION['plano_atual']  = $user['plano_atual'];  // 'free', 'pro', 'founder'
+        $_SESSION['coach_id']     = $user['coach_id'];     // Se tiver um coach vinculado
+        
+        // Log de acesso (opcional, só para controle)
+        // atualizar_ultimo_login($pdo, $user['id']); 
 
-        // Redirecionamento
-        if ($user['nivel'] === 'admin') {
+        // --- REDIRECIONAMENTO INTELIGENTE ---
+        if ($user['tipo_conta'] === 'admin') {
             header("Location: ../admin.php");
         } else {
+            // Tanto 'atleta' quanto 'personal' vão para a dashboard principal por enquanto
+            // Lá dentro vamos mostrar coisas diferentes
             header("Location: ../usuario.php");
         }
         exit;
 
     } else {
-        echo "<script>alert('Email ou senha incorretos!'); window.history.back();</script>";
+        header("Location: ../login.php?erro=dados_invalidos");
+        exit;
     }
+
+} catch (PDOException $e) {
+    // Em produção, evite mostrar o erro exato do banco
+    header("Location: ../login.php?erro=sistema");
+    exit;
 }
 ?>

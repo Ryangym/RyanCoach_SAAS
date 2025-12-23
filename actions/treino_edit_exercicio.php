@@ -2,9 +2,7 @@
 session_start();
 require_once '../config/db_connect.php';
 
-if (!isset($_SESSION['user_nivel']) || $_SESSION['user_nivel'] !== 'admin') {
-    die("Acesso negado.");
-}
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {

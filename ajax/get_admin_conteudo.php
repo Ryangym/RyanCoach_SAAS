@@ -13,7 +13,7 @@ switch ($pagina) {
         require_once '../config/db_connect.php';
 
         // 1. TOTAIS (Mantido)
-        $query_alunos = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE nivel = 'aluno'");
+        $query_alunos = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE tipo_conta = 'atleta'");
         $total_alunos = $query_alunos->fetchColumn();
 
         $sql_receita = "SELECT SUM(valor) as total FROM pagamentos WHERE status = 'pago' AND MONTH(data_pagamento) = MONTH(CURRENT_DATE()) AND YEAR(data_pagamento) = YEAR(CURRENT_DATE())";
@@ -38,7 +38,7 @@ switch ($pagina) {
         // B. Novos Alunos (Últimos cadastros)
         $sql_novos = "SELECT nome, foto, data_cadastro 
                       FROM usuarios 
-                      WHERE nivel = 'aluno' 
+                      WHERE tipo_conta = 'atleta' 
                       ORDER BY id DESC 
                       LIMIT 4";
         $lista_novos = $pdo->query($sql_novos)->fetchAll(PDO::FETCH_ASSOC);
@@ -179,7 +179,7 @@ switch ($pagina) {
     case 'alunos':
         require_once '../config/db_connect.php';
         
-        $sql = "SELECT * FROM usuarios WHERE nivel != 'master' ORDER BY nome ASC";
+        $sql = "SELECT * FROM usuarios WHERE tipo_conta != 'master' ORDER BY nome ASC";
         $alunos = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
         $total_alunos = count($alunos);
 
@@ -213,7 +213,7 @@ switch ($pagina) {
                             if ($total_alunos > 0) {
                                 foreach ($alunos as $a) {
                                     $foto = !empty($a['foto']) ? $a['foto'] : 'assets/img/user-default.png';
-                                    $nivelTag = ($a['nivel'] === 'admin') 
+                                    $nivelTag = ($a['tipo_conta'] === 'admin') 
                                         ? '<span class="status-badge" style="background:rgba(255,66,66,0.2); color:#ff4242; border:1px solid #ff4242;">ADMIN</span>' 
                                         : '<span class="status-badge" style="background:rgba(0,255,0,0.1); color:#00ff00; border:1px solid #00ff00;">ALUNO</span>';
                                     
@@ -319,7 +319,7 @@ switch ($pagina) {
                         </div>
                         <div style="margin-bottom: 15px;">
                             <label style="color:var(--gold); font-size: 0.8rem; font-weight:bold;">Tipo de Usuário (Permissão)</label>
-                            <select name="nivel" id="edit_nivel" class="admin-input" style="border-color:var(--gold);">
+                            <select name="tipo_conta" id="edit_tipo_conta" class="admin-input" style="border-color:var(--gold);">
                                 <option value="aluno">Aluno (Padrão)</option>
                                 <option value="admin">Administrador (Acesso Total)</option>
                             </select>
@@ -830,7 +830,7 @@ switch ($pagina) {
         $treinos = $pdo->query($sql_list)->fetchAll(PDO::FETCH_ASSOC);
 
         // 2. LISTA DE ALUNOS (Para o Dropdown)
-        $alunos = $pdo->query("SELECT id, nome, foto FROM usuarios WHERE nivel = 'aluno' ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $alunos = $pdo->query("SELECT id, nome, foto FROM usuarios WHERE tipo_conta = 'atleta' ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         echo '
             <section id="editor-treinos">
@@ -890,12 +890,11 @@ switch ($pagina) {
                                         
                                         <td data-label="Ação" class="actions" style="text-align:right;">
                                             <div style="display:flex; gap:10px; justify-content:flex-end; align-items:center;">
-                                                <a href="actions/treino_delete.php?id='.$t['id'].'" 
-                                                class="btn-action-icon btn-delete" 
-                                                onclick="return confirm(\'Tem certeza que deseja EXCLUIR este planejamento?\n\nIsso apagará permanentemente:\n- Todas as divisões\n- Exercícios e Séries\n- Histórico de periodização vinculados a ele.\')" 
-                                                title="Excluir Treino">
+                                                <button class="btn-action-icon btn-delete" 
+                                                        onclick="deletarTreino('.$t['id'].')" 
+                                                        title="Excluir Treino">
                                                     <i class="fa-solid fa-trash"></i>
-                                                </a>
+                                                </button>
 
                                                 <button class="btn-gold" style="padding: 5px 15px; font-size: 0.8rem;" onclick="carregarConteudo(\'treino_painel&id='.$t['id'].'\')">
                                                     GERENCIAR <i class="fa-solid fa-arrow-right"></i>
@@ -927,18 +926,34 @@ switch ($pagina) {
                             <div class="form-row">
                                 <div class="form-col" style="position: relative;">
                                     <label class="input-label">Selecione o Atleta</label>
+                                    
                                     <input type="text" id="busca-aluno-treino" class="admin-input" placeholder="Digite para buscar..." autocomplete="off" onkeyup="filtrarAlunosTreino()">
+                                    
                                     <input type="hidden" name="aluno_id" id="id-aluno-treino-selecionado" required>
+                                    
                                     <div id="dropdown-alunos-treino" class="custom-dropdown-list" style="display:none;">';
+                                    
+                                    // INÍCIO DO LOOP PHP
+                                    if (count($alunos) > 0) {
                                         foreach($alunos as $al) {
-                                            $ft = !empty($al['foto']) ? $al['foto'] : 'assets/img/icones/user-default.png';
-                                            echo '<div class="dropdown-item" onclick="selecionarAlunoTreino('.$al['id'].', \''.$al['nome'].'\')">
+                                            // Verifica se tem foto, senão usa padrão
+                                            $ft = !empty($al['foto']) ? $al['foto'] : 'assets/img/user-default.png';
+                                            
+                                            // Protege nomes com aspas simples (ex: D'Avila) para não quebrar o JS
+                                            $nome_seguro = addslashes($al['nome']); 
+                                            
+                                            echo '<div class="dropdown-item" onclick="selecionarAlunoTreino('.$al['id'].', \''.$nome_seguro.'\')">
                                                     <img src="'.$ft.'">
                                                     <span>'.$al['nome'].'</span>
-                                                  </div>';
+                                                </div>';
                                         }
-            echo '                  </div>
-                                </div>
+                                    } else {
+                                        echo '<div class="dropdown-item" style="cursor: default; color: #888;">Nenhum aluno encontrado</div>';
+                                    }
+                                    // FIM DO LOOP PHP
+
+                            echo '  </div>
+                                </div>;
 
                                 <div class="form-col">
                                     <label class="input-label">Nome do Planejamento</label>
@@ -1004,7 +1019,7 @@ switch ($pagina) {
         $pendente = $stmt_pend->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
         // 2. LISTA DE ALUNOS (Para o Dropdown com Pesquisa)
-        $alunos = $pdo->query("SELECT id, nome, foto FROM usuarios WHERE nivel = 'aluno' ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $alunos = $pdo->query("SELECT id, nome, foto FROM usuarios WHERE tipo_conta = 'atleta' ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         // 3. HISTÓRICO (Corrigido para tabela 'pagamentos' e campo 'usuario_id')
         $sql_hist = "SELECT p.*, u.nome as nome_aluno, u.foto as foto_aluno 
@@ -1326,11 +1341,9 @@ switch ($pagina) {
                                                     <i class="fa-solid fa-pen"></i>
                                                 </button>
                                                 
-                                                <a href="actions/treino_delete_exercicio.php?id='.$ex['id'].'&treino_id='.$treino_id.'" 
-                                                   class="btn-action-icon btn-delete" 
-                                                   onclick="return confirm(\'Excluir este exercício?\')">
+                                                <button class="btn-action-icon btn-delete" onclick="deletarExercicio('.$ex['id'].', '.$treino_id.')">
                                                     <i class="fa-solid fa-trash"></i>
-                                                </a>
+                                                </button>
                                             </div>
                                         </div>';
                                     }
@@ -1350,7 +1363,8 @@ switch ($pagina) {
                 <div class="modal-content" style="max-width: 700px;">
                     <button class="modal-close" onclick="closeExercicioModal()">&times;</button>
                     <h3 class="section-title" style="color:var(--gold); margin-bottom:20px;">Novo Exercício</h3>
-                    <form action="actions/treino_add_exercicio.php" method="POST" id="formExercicio">
+
+                    <form id="formExercicio" onsubmit="salvarExercicio(event)">
                         <input type="hidden" name="divisao_id" id="modal_divisao_id">
                         <input type="hidden" name="treino_id" id="modal_treino_id">
                         <input type="hidden" name="exercicio_id" id="modal_exercicio_id">
@@ -1441,7 +1455,7 @@ switch ($pagina) {
                     <h3 class="section-title" style="color:var(--gold); margin-bottom:20px;">
                         <i class="fa-solid fa-calendar-week"></i> Configurar Semana <span id="span_semana_num"></span>
                     </h3>
-                    <form action="actions/treino_edit_micro.php" method="POST">
+                    <form id="formMicro" onsubmit="salvarMicro(event)">
                         <input type="hidden" name="micro_id" id="micro_id">
                         <input type="hidden" name="treino_id" id="micro_treino_id">
 

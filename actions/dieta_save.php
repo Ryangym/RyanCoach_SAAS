@@ -2,8 +2,6 @@
 session_start();
 require_once '../config/db_connect.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['user_nivel'] !== 'admin') { die("Acesso negado."); }
-
 $acao = $_REQUEST['acao'] ?? '';
 $aluno_id = $_REQUEST['aluno_id'] ?? 0;
 

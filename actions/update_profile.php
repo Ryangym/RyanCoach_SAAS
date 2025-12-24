@@ -2,11 +2,14 @@
 session_start();
 require_once '../config/db_connect.php';
 
-// Configuração de limite de upload (em Bytes). Ex: 5MB = 5 * 1024 * 1024
+// Limite de Upload: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024; 
+
+if (!isset($_SESSION['user_id'])) { die("Acesso negado"); }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $user_id = $_SESSION['user_id'];
+    $tipo_conta = $_SESSION['tipo_conta'] ?? '';
     
     // 1. Receber dados de texto
     $nome = filter_input(INPUT_POST, 'nome', FILTER_SANITIZE_STRING);
@@ -31,47 +34,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
 
-    // 3. Lógica de Upload de Imagem (Melhorada)
+    // 3. Lógica de Upload de Imagem
     $sql_foto = "";
     
-    // Verifica se o arquivo foi enviado
     if (isset($_FILES['foto']) && $_FILES['foto']['error'] !== UPLOAD_ERR_NO_FILE) {
         
         $arquivo = $_FILES['foto'];
         
-        // A. Verifica Erros de Upload (Tamanho, Corrupção, etc)
+        // A. Verifica Erros
         if ($arquivo['error'] !== UPLOAD_ERR_OK) {
-            switch ($arquivo['error']) {
-                case UPLOAD_ERR_INI_SIZE:
-                case UPLOAD_ERR_FORM_SIZE:
-                    $msg = "A imagem é muito grande! Tente uma foto com menos de 2MB.";
-                    break;
-                case UPLOAD_ERR_PARTIAL:
-                    $msg = "O upload foi interrompido. Tente novamente.";
-                    break;
-                default:
-                    $msg = "Erro desconhecido no upload. Código: " . $arquivo['error'];
-            }
+            $msg = "Erro no upload. Tente novamente.";
+            if ($arquivo['error'] === UPLOAD_ERR_INI_SIZE) $msg = "Arquivo muito grande.";
             echo "<script>alert('$msg'); window.history.back();</script>";
             exit;
         }
 
-        // B. Verifica Extensão (Adicionado WEBP)
+        // B. Verifica Extensão
         $ext = strtolower(pathinfo($arquivo['name'], PATHINFO_EXTENSION));
         $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
         
         if (!in_array($ext, $allowed)) {
-            echo "<script>alert('Formato não suportado. Use JPG, PNG ou WEBP.'); window.history.back();</script>";
+            echo "<script>alert('Formato inválido (Use JPG, PNG, WEBP).'); window.history.back();</script>";
             exit;
         }
 
-        // C. Verifica Tamanho Manualmente (Segurança Extra)
+        // C. Verifica Tamanho
         if ($arquivo['size'] > MAX_FILE_SIZE) {
-            echo "<script>alert('Arquivo maior que 5MB. Escolha uma foto menor.'); window.history.back();</script>";
+            echo "<script>alert('Arquivo maior que 5MB.'); window.history.back();</script>";
             exit;
         }
 
-        // D. Processa o Salvamento
+        // D. Salva
         $new_name = md5(time() . $user_id) . '.' . $ext;
         $dir = '../assets/uploads/';
         
@@ -82,10 +75,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $path_db = "assets/uploads/" . $new_name;
             $params['foto'] = $path_db;
             
-            // Atualiza sessão na hora
-            $_SESSION['user_foto'] = $path_db;
+            $_SESSION['user_foto'] = $path_db; // Atualiza sessão
         } else {
-            echo "<script>alert('Erro ao mover o arquivo para a pasta.'); window.history.back();</script>";
+            echo "<script>alert('Falha ao salvar a imagem.'); window.history.back();</script>";
             exit;
         }
     }
@@ -99,9 +91,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $_SESSION['user_nome'] = $nome;
         $_SESSION['user_email'] = $email;
 
-        $back_url = ($_SESSION['user_nivel'] == 'admin') 
-            ? '../admin.php?pagina=perfil' 
-            : '../usuario.php?pagina=perfil';
+        // 5. Redirecionamento Correto
+        if ($tipo_conta === 'admin') {
+            $back_url = '../admin.php?pagina=perfil';
+        } elseif ($tipo_conta === 'coach') {
+            $back_url = '../coach.php?pagina=perfil';
+        } else {
+            // Atleta
+            $back_url = '../usuario.php?pagina=perfil';
+        }
             
         echo "<script>alert('Perfil atualizado com sucesso!'); window.location.href='$back_url';</script>";
 

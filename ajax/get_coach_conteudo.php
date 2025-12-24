@@ -600,7 +600,7 @@ switch ($pagina) {
             </div>';
         break;
     // --- MENU (Mobile/Geral) ---
-    case 'admin_menu':
+    case 'coach_menu':
         // 1. Busca dados do Coach (Incluindo o código de convite)
         $stmt = $pdo->prepare("SELECT nome, foto, codigo_convite FROM usuarios WHERE id = ?");
         $stmt->execute([$coach_id]);
@@ -619,7 +619,7 @@ switch ($pagina) {
                         <img src="'.$foto.'" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff4242;">
                         <div>
                             <h3 style="margin: 0 0 5px 0; color: #fff; font-size: 1.1rem;">'.$coach['nome'].'</h3>
-                            <span class="usuario-level" style="color: #ff4242; background: rgba(255, 66, 66, 0.1);">COACH</span>
+                            <span class="usuario-level" style="color: #ff4242; background: rgba(255, 66, 66, 0.1);">MASTER COACH</span>
                         </div>
                     </div>
                     <i class="fa-solid fa-chevron-right" style="color: #666;"></i>

@@ -3,22 +3,22 @@ session_start();
 require_once '../config/db_connect.php';
 header('Content-Type: application/json');
 
-// 1. Verifica permissão
-$tipo_usuario = $_SESSION['tipo_conta'] ?? $_SESSION['user_nivel'] ?? '';
-$permitidos = ['admin', 'coach',];
+// 1. Verifica permissão (Apenas tipo_conta)
+$tipo_usuario = $_SESSION['tipo_conta'] ?? '';
+$permitidos = ['admin', 'coach'];
 
 if (!isset($_SESSION['user_id']) || !in_array($tipo_usuario, $permitidos)) {
     echo json_encode(['success' => false, 'error' => 'Acesso não autorizado.']);
     exit;
 }
 
-// Recebe via POST (Mais seguro para AJAX) ou GET
+// Recebe via POST ou GET
 $id = $_REQUEST['id'] ?? null;
 $acao = $_REQUEST['acao'] ?? null;
 
 if ($id && $acao) {
     try {
-        // 2. Segurança Coach
+        // 2. Segurança Coach: Só mexe no que é aluno dele
         if ($tipo_usuario === 'coach') {
             $stmtCheck = $pdo->prepare("
                 SELECT p.id FROM pagamentos p 
@@ -33,7 +33,7 @@ if ($id && $acao) {
             }
         }
 
-        // 3. Executa
+        // 3. Executa a ação
         $sql = "";
         if ($acao === 'pagar') {
             $sql = "UPDATE pagamentos SET status = 'pago', data_pagamento = CURRENT_DATE() WHERE id = :id";

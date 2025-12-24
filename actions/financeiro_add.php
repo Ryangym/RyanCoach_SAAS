@@ -3,9 +3,9 @@ session_start();
 require_once '../config/db_connect.php';
 header('Content-Type: application/json'); // Importante para o AJAX
 
-// 1. Verifica permissão
-$tipo_usuario = $_SESSION['tipo_conta'] ?? $_SESSION['user_nivel'] ?? '';
-$permitidos = ['admin','coach',];
+// 1. Verifica permissão (Apenas tipo_conta)
+$tipo_usuario = $_SESSION['tipo_conta'] ?? '';
+$permitidos = ['admin', 'coach'];
 
 if (!isset($_SESSION['user_id']) || !in_array($tipo_usuario, $permitidos)) {
     echo json_encode(['success' => false, 'error' => 'Acesso não autorizado.']);
@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit;
     }
 
-    // 2. Segurança para Coach
+    // 2. Segurança para Coach: Verifica se o aluno pertence a ele
     if ($tipo_usuario === 'coach') {
         $stmtCheck = $pdo->prepare("SELECT id FROM usuarios WHERE id = ? AND coach_id = ?");
         $stmtCheck->execute([$usuario_id, $_SESSION['user_id']]);
@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
 
+    // Define data de pagamento se o status for 'pago'
     $data_pagamento = ($status === 'pago') ? date('Y-m-d') : null;
 
     try {

@@ -12,67 +12,90 @@ switch ($pagina) {
     case 'dashboard':
         require_once '../config/db_connect.php';
 
-        // 1. TOTAIS (Mantido)
-        $query_alunos = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE tipo_conta = 'atleta'");
-        $total_alunos = $query_alunos->fetchColumn();
-
-        $sql_receita = "SELECT SUM(valor) as total FROM pagamentos WHERE status = 'pago' AND MONTH(data_pagamento) = MONTH(CURRENT_DATE()) AND YEAR(data_pagamento) = YEAR(CURRENT_DATE())";
-        $query_receita = $pdo->query($sql_receita);
-        $receita_mensal = $query_receita->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
-
-        $sql_pendencias = "SELECT COUNT(*) FROM pagamentos WHERE status = 'pendente'";
-        $query_pendencias = $pdo->query($sql_pendencias);
-        $total_pendencias = $query_pendencias->fetchColumn();
-
-        // 2. NOVAS QUERIES INTELIGENTES
+        // 1. TOTAIS ESTRATÉGICOS (KPIs)
         
-        // A. Próximos Vencimentos (Status Pendente, ordenado por data mais próxima)
-        $sql_vencimentos = "SELECT p.data_vencimento, p.valor, u.nome, u.foto 
-                            FROM pagamentos p 
-                            JOIN usuarios u ON p.usuario_id = u.id 
-                            WHERE p.status = 'pendente' 
-                            ORDER BY p.data_vencimento ASC 
-                            LIMIT 4";
-        $lista_vencimentos = $pdo->query($sql_vencimentos)->fetchAll(PDO::FETCH_ASSOC);
+        // Total Coaches (Seus Clientes B2B)
+        $sql_coaches = "SELECT COUNT(*) FROM usuarios WHERE tipo_conta IN ('coach', 'personal')";
+        $total_coaches = $pdo->query($sql_coaches)->fetchColumn();
 
-        // B. Novos Alunos (Últimos cadastros)
-        $sql_novos = "SELECT nome, foto, data_cadastro 
-                      FROM usuarios 
-                      WHERE tipo_conta = 'atleta' 
-                      ORDER BY id DESC 
-                      LIMIT 4";
-        $lista_novos = $pdo->query($sql_novos)->fetchAll(PDO::FETCH_ASSOC);
+        // Total Alunos (Usuários Finais)
+        $sql_alunos = "SELECT COUNT(*) FROM usuarios WHERE tipo_conta = 'atleta' OR tipo_conta = 'aluno'";
+        $total_alunos = $pdo->query($sql_alunos)->fetchColumn();
+
+        // Receita do Admin (Tudo que não tem coach_id ou é pagamento de coach)
+        // Lógica simplificada: Tudo que entrou no mês
+        $sql_receita = "SELECT SUM(valor) as total FROM pagamentos WHERE status = 'pago' AND MONTH(data_pagamento) = MONTH(CURRENT_DATE()) AND YEAR(data_pagamento) = YEAR(CURRENT_DATE())";
+        $receita_total = $pdo->query($sql_receita)->fetchColumn() ?? 0;
+
+        // Pendências Gerais
+        $sql_pend = "SELECT COUNT(*) FROM pagamentos WHERE status = 'pendente'";
+        $total_pendencias = $pdo->query($sql_pend)->fetchColumn();
+
+
+        // 2. LISTAS INTELIGENTES
+        
+        // A. Novos Coaches (Quem entrou recentemente)
+        $sql_novos_coaches = "SELECT nome, foto, data_cadastro, tipo_conta 
+                              FROM usuarios 
+                              WHERE tipo_conta IN ('coach', 'personal') 
+                              ORDER BY id DESC LIMIT 4";
+        $lista_coaches = $pdo->query($sql_novos_coaches)->fetchAll(PDO::FETCH_ASSOC);
+
+        // B. Novos Alunos (Crescimento da base)
+        $sql_novos_alunos = "SELECT nome, foto, data_cadastro 
+                             FROM usuarios 
+                             WHERE tipo_conta = 'atleta' 
+                             ORDER BY id DESC LIMIT 4";
+        $lista_alunos = $pdo->query($sql_novos_alunos)->fetchAll(PDO::FETCH_ASSOC);
+
+        // Saudação
+        $nome_admin = $_SESSION['user_nome'] ?? 'Admin';
+        $primeiro_nome = explode(' ', trim($nome_admin))[0];
 
         echo '
             <section id="admin-dash">
                 <header class="dash-header">
-                    <h1>OLÁ, <span class="highlight-text">'.$primeiro_nome_admin.'.</span></h1>
-                    <p style="color: #888;">Visão geral do desempenho da academia</p>
+                    <h1>OLÁ, <span class="highlight-text" style="color: #00a8ff;">'.strtoupper($primeiro_nome).'.</span></h1>
+                    <p style="color: #888;">Painel de Controle Master</p>
                 </header>
 
-                <div class="stats-row">
+                <div class="stats-row" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                    
                     <div class="glass-card">
-                        <div class="card-label">ALUNOS TOTAIS</div>
+                        <div class="card-label">CLIENTES (PERSONAIS)</div>
                         <div class="card-body">
-                            <div class="icon-box" style="color: #00ff00; border-color: #00ff00;">
-                                <i class="fa-solid fa-users"></i>
+                            <div class="icon-box" style="color: #00a8ff; border-color: rgba(0, 168, 255, 0.3); background: rgba(0, 168, 255, 0.1);">
+                                <i class="fa-solid fa-briefcase"></i>
                             </div>
                             <div class="info-box">
-                                <h3>'.$total_alunos.'</h3>
-                                <p>Cadastrados</p>
+                                <h3>'.$total_coaches.'</h3>
+                                <p>Ativos</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="glass-card">
-                        <div class="card-label">RECEITA (MÊS)</div>
+                        <div class="card-label">USUÁRIOS FINAIS</div>
                         <div class="card-body">
-                            <div class="icon-box">
-                                <i class="fa-solid fa-brazilian-real-sign"></i>
+                            <div class="icon-box" style="color: #00ff00; border-color: rgba(0, 255, 0, 0.3); background: rgba(0, 255, 0, 0.1);">
+                                <i class="fa-solid fa-users"></i>
                             </div>
                             <div class="info-box">
-                                <h3>R$ '.number_format($receita_mensal, 2, ',', '.').'</h3>
-                                <p>Faturamento Atual</p>
+                                <h3>'.$total_alunos.'</h3>
+                                <p>Atletas</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card">
+                        <div class="card-label">FATURAMENTO GLOBAL</div>
+                        <div class="card-body">
+                            <div class="icon-box" style="color: #fff; border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1);">
+                                <i class="fa-solid fa-earth-americas"></i>
+                            </div>
+                            <div class="info-box">
+                                <h3>R$ '.number_format($receita_total, 2, ',', '.').'</h3>
+                                <p>Mês Atual</p>
                             </div>
                         </div>
                     </div>
@@ -80,56 +103,49 @@ switch ($pagina) {
                     <div class="glass-card">
                         <div class="card-label">PENDÊNCIAS</div>
                         <div class="card-body">
-                            <div class="icon-box" style="color: #ff4242; border-color: #ff4242;">
-                                <i class="fa-solid fa-circle-exclamation"></i>
+                            <div class="icon-box" style="color: #ffcc00; border-color: rgba(255, 204, 0, 0.3); background: rgba(255, 204, 0, 0.1);">
+                                <i class="fa-solid fa-clock"></i>
                             </div>
                             <div class="info-box">
                                 <h3>'.$total_pendencias.'</h3>
-                                <p>Pagamentos em aberto</p>
+                                <p>A Receber</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="insights-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 10px;">
+                <div class="insights-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-top: 10px;">
                     
                     <div class="glass-card" style="padding: 0; overflow: hidden;">
                         <div style="padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
                             <h3 style="color: #fff; font-family: Orbitron; font-size: 1rem; margin:0;">
-                                <i class="fa-regular fa-calendar-xmark" style="color: #ff4242; margin-right: 10px;"></i> VENCIMENTOS
+                                <i class="fa-solid fa-user-tie" style="color: #00a8ff; margin-right: 10px;"></i> NOVOS PERSONAIS
                             </h3>
-                            <span style="font-size: 0.7rem; color: #666; text-transform: uppercase;">Prioridade</span>
+                            <button class="btn-gold" style="padding: 5px 10px; font-size: 0.7rem; background: transparent; border: 1px solid #333; color: #888;" onclick="carregarConteudo(\'alunos\')">VER TODOS</button>
                         </div>
                         
                         <div style="padding: 10px;">';
                         
-                        if(count($lista_vencimentos) > 0) {
-                            foreach($lista_vencimentos as $v) {
-                                $foto = !empty($v['foto']) ? $v['foto'] : 'assets/img/icones/user-default.png';
-                                $data = date('d/m', strtotime($v['data_vencimento']));
+                        if(count($lista_coaches) > 0) {
+                            foreach($lista_coaches as $c) {
+                                $foto = !empty($c['foto']) ? $c['foto'] : 'assets/img/user-default.png';
+                                $data = date('d/m', strtotime($c['data_cadastro']));
+                                $badge = strtoupper($c['tipo_conta']);
                                 
-                                // Lógica visual para data (se já passou, fica vermelho forte)
-                                $is_atrasado = strtotime($v['data_vencimento']) < time();
-                                $cor_data = $is_atrasado ? '#ff4242' : '#ccc';
-                                $texto_data = $is_atrasado ? 'VENCEU '.$data : 'VENCE '.$data;
-
                                 echo '
-                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; margin-bottom: 5px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; margin-bottom: 5px; background: rgba(255,255,255,0.02); border-radius: 8px; transition: 0.3s; cursor: pointer;" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.02)\'">
                                     <div style="display: flex; align-items: center; gap: 12px;">
-                                        <img src="'.$foto.'" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid #555;">
+                                        <img src="'.$foto.'" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #00a8ff;">
                                         <div>
-                                            <h4 style="color: #ddd; font-size: 0.9rem; margin: 0;">'.$v['nome'].'</h4>
-                                            <span style="color: var(--gold); font-size: 0.8rem;">R$ '.number_format($v['valor'], 2, ',', '.').'</span>
+                                            <h4 style="color: #fff; font-size: 0.9rem; margin: 0;">'.$c['nome'].'</h4>
+                                            <span style="color: #00a8ff; font-size: 0.7rem; font-weight: bold;">'.$badge.'</span>
                                         </div>
                                     </div>
-                                    <div style="text-align: right;">
-                                        <span style="color: '.$cor_data.'; font-size: 0.75rem; font-weight: bold; display: block;">'.$texto_data.'</span>
-                                        <button class="btn-gold" style="padding: 2px 8px; font-size: 0.6rem; height: auto;" onclick="carregarConteudo(\'financeiro\')">COBRAR</button>
-                                    </div>
+                                    <span style="color: #666; font-size: 0.75rem;">'.$data.'</span>
                                 </div>';
                             }
                         } else {
-                            echo '<p style="text-align: center; color: #666; padding: 20px;">Nenhuma pendência próxima.</p>';
+                            echo '<p style="text-align: center; color: #666; padding: 20px;">Nenhum coach recente.</p>';
                         }
 
         echo '          </div>
@@ -138,34 +154,32 @@ switch ($pagina) {
                     <div class="glass-card" style="padding: 0; overflow: hidden;">
                         <div style="padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
                             <h3 style="color: #fff; font-family: Orbitron; font-size: 1rem; margin:0;">
-                                <i class="fa-solid fa-rocket" style="color: var(--gold); margin-right: 10px;"></i> NOVOS MEMBROS
+                                <i class="fa-solid fa-users" style="color: #00ff00; margin-right: 10px;"></i> CRESCIMENTO
                             </h3>
-                            <span style="font-size: 0.7rem; color: #666; text-transform: uppercase;">Crescimento</span>
+                            <span style="font-size: 0.7rem; color: #666; text-transform: uppercase;">Novos Alunos</span>
                         </div>
                         
                         <div style="padding: 10px;">';
                         
-                        if(count($lista_novos) > 0) {
-                            foreach($lista_novos as $n) {
-                                $foto = !empty($n['foto']) ? $n['foto'] : 'assets/img/icones/user-default.png';
-                                $data_cadastro = date('d/m', strtotime($n['data_cadastro']));
+                        if(count($lista_alunos) > 0) {
+                            foreach($lista_alunos as $a) {
+                                $foto = !empty($a['foto']) ? $a['foto'] : 'assets/img/user-default.png';
+                                $data = date('d/m', strtotime($a['data_cadastro']));
 
                                 echo '
                                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; margin-bottom: 5px; background: rgba(255,255,255,0.02); border-radius: 8px;">
                                     <div style="display: flex; align-items: center; gap: 12px;">
-                                        <img src="'.$foto.'" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid #555;">
+                                        <img src="'.$foto.'" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; opacity: 0.8;">
                                         <div>
-                                            <h4 style="color: #ddd; font-size: 0.9rem; margin: 0;">'.$n['nome'].'</h4>
-                                            <span style="color: #666; font-size: 0.75rem;">Entrou em '.$data_cadastro.'</span>
+                                            <h4 style="color: #ddd; font-size: 0.9rem; margin: 0;">'.$a['nome'].'</h4>
+                                            <span style="color: #666; font-size: 0.75rem;">Atleta</span>
                                         </div>
                                     </div>
-                                    <div style="display: flex; gap: 5px;">
-                                        <button style="background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Enviar Treino" onclick="carregarConteudo(\'treinos_editor\')"><i class="fa-solid fa-dumbbell"></i></button>
-                                    </div>
+                                    <span style="color: #666; font-size: 0.75rem;">'.$data.'</span>
                                 </div>';
                             }
                         } else {
-                            echo '<p style="text-align: center; color: #666; padding: 20px;">Nenhum cadastro recente.</p>';
+                            echo '<p style="text-align: center; color: #666; padding: 20px;">Nenhum aluno recente.</p>';
                         }
 
         echo '          </div>
@@ -216,11 +230,11 @@ switch ($pagina) {
                                     
                                     // --- LÓGICA DE BADGES ATUALIZADA ---
                                     if ($a['tipo_conta'] === 'admin') {
-                                        $nivelTag = '<span class="status-badge" style="background:rgba(255,66,66,0.2); color:#ff4242; border:1px solid #ff4242;">ADMIN</span>';
+                                        $nivelTag = '<span class="status-badge" style="background:rgba(0, 168, 255, 0.1); color:#00a8ff; border:1px solid #00a8ff;">ADMIN</span>';
                                     } elseif ($a['tipo_conta'] === 'personal' || $a['tipo_conta'] === 'coach') {
-                                        $nivelTag = '<span class="status-badge" style="background:rgba(218,165,32,0.2); color:var(--gold); border:1px solid var(--gold);">COACH</span>';
+                                        $nivelTag = '<span class="status-badge" style="background:rgba(255,66,66,0.2); color:#ff4242; border:1px solid #ff4242;">COACH</span>';
                                     } else {
-                                        $nivelTag = '<span class="status-badge" style="background:rgba(0,255,0,0.1); color:#00ff00; border:1px solid #00ff00;">ALUNO</span>';
+                                        $nivelTag = '<span class="status-badge" style="background:rgba(218,165,32,0.2); color:var(--gold); border:1px solid var(--gold);">ALUNO</span>';
                                     }
                                     
                                     $zap_clean = preg_replace('/[^0-9]/', '', $a['telefone']);
@@ -1021,51 +1035,95 @@ switch ($pagina) {
     case 'financeiro':
         require_once '../config/db_connect.php';
         
-        // 1. CÁLCULOS (Corrigido para tabela 'pagamentos')
-        $sql_fat = "SELECT SUM(valor) as total FROM pagamentos WHERE status = 'pago' AND MONTH(data_pagamento) = MONTH(CURRENT_DATE()) AND YEAR(data_pagamento) = YEAR(CURRENT_DATE())";
-        $stmt_fat = $pdo->query($sql_fat);
-        $faturamento = $stmt_fat->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+        // --- 1. FILTROS E CÁLCULOS ---
 
-        $sql_pend = "SELECT SUM(valor) as total FROM pagamentos WHERE status = 'pendente'";
-        $stmt_pend = $pdo->query($sql_pend);
-        $pendente = $stmt_pend->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+        // Filtro: O que é considerado "Caixa do Admin"?
+        // Usuários sem coach (NULL/0) OU o próprio usuário é do tipo 'coach'/'personal' (pagando mensalidade)
+        $filtro_admin_sql = " AND (u.coach_id IS NULL OR u.coach_id = 0 OR u.tipo_conta IN ('coach', 'personal')) ";
 
-        // 2. LISTA DE ALUNOS (Para o Dropdown com Pesquisa)
-        $alunos = $pdo->query("SELECT id, nome, foto FROM usuarios WHERE tipo_conta = 'atleta' ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
+        // CARD 1: Faturamento GLOBAL (Tudo que entrou na plataforma: Alunos de Personal + Diretos)
+        $sql_fat_global = "SELECT SUM(valor) as total FROM pagamentos WHERE status = 'pago' AND MONTH(data_pagamento) = MONTH(CURRENT_DATE()) AND YEAR(data_pagamento) = YEAR(CURRENT_DATE())";
+        $fat_global = $pdo->query($sql_fat_global)->fetchColumn() ?? 0;
 
-        // 3. HISTÓRICO (Corrigido para tabela 'pagamentos' e campo 'usuario_id')
-        $sql_hist = "SELECT p.*, u.nome as nome_aluno, u.foto as foto_aluno 
-                     FROM pagamentos p 
-                     LEFT JOIN usuarios u ON p.usuario_id = u.id 
-                     ORDER BY p.id DESC LIMIT 20";
-        $transacoes = $pdo->query($sql_hist)->fetchAll(PDO::FETCH_ASSOC);
+        // CARD 2: Faturamento ADMIN (Apenas receitas diretas do Admin)
+        $sql_fat_admin = "SELECT SUM(p.valor) as total FROM pagamentos p 
+                          JOIN usuarios u ON p.usuario_id = u.id 
+                          WHERE p.status = 'pago' 
+                          AND MONTH(p.data_pagamento) = MONTH(CURRENT_DATE()) 
+                          AND YEAR(p.data_pagamento) = YEAR(CURRENT_DATE())" 
+                          . $filtro_admin_sql;
+        $fat_admin = $pdo->query($sql_fat_admin)->fetchColumn() ?? 0;
+
+        // CARD 3: Pendente ADMIN (Apenas o que o Admin tem para receber)
+        $sql_pend_admin = "SELECT SUM(p.valor) as total FROM pagamentos p 
+                           JOIN usuarios u ON p.usuario_id = u.id 
+                           WHERE p.status = 'pendente'" 
+                           . $filtro_admin_sql;
+        $pend_admin = $pdo->query($sql_pend_admin)->fetchColumn() ?? 0;
+
+
+        // --- 2. QUERY PARA AS LISTAS ---
+        
+        // Lista A: CAIXA ADMIN
+        $sql_lista_admin = "SELECT p.*, u.nome as nome_pagador, u.foto as foto_pagador, u.tipo_conta,
+                                   c.nome as nome_coach
+                            FROM pagamentos p 
+                            LEFT JOIN usuarios u ON p.usuario_id = u.id 
+                            LEFT JOIN usuarios c ON u.coach_id = c.id
+                            WHERE 1=1 " . $filtro_admin_sql . "
+                            ORDER BY p.id DESC LIMIT 50";
+        $lista_admin = $pdo->query($sql_lista_admin)->fetchAll(PDO::FETCH_ASSOC);
+
+        // Lista B: GLOBAL (Tudo)
+        $sql_lista_global = "SELECT p.*, u.nome as nome_pagador, u.foto as foto_pagador, u.tipo_conta,
+                                    c.nome as nome_coach
+                             FROM pagamentos p 
+                             LEFT JOIN usuarios u ON p.usuario_id = u.id 
+                             LEFT JOIN usuarios c ON u.coach_id = c.id
+                             ORDER BY p.id DESC LIMIT 50";
+        $lista_global = $pdo->query($sql_lista_global)->fetchAll(PDO::FETCH_ASSOC);
+
+
+        // --- 3. LISTA DE USUÁRIOS PARA O MODAL (Admin vê TODOS) ---
+        $usuarios_list = $pdo->query("SELECT id, nome, foto, tipo_conta FROM usuarios WHERE tipo_conta IN ('atleta', 'aluno', 'coach', 'personal') ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
+
 
         echo '
             <section id="financeiro">
                 <header class="dash-header">
-                    <h1>CONTROLE <span class="highlight-text">FINANCEIRO</span></h1>
-                    <p class="text-desc">Gestão de caixa e assinaturas</p>
+                    <h1>CONTROLE <span class="highlight-text">FINANCEIRO (ADMIN)</span></h1>
                 </header>
 
                 <div class="stats-row">
                     <div class="glass-card">
-                        <div class="card-label">FATURAMENTO (MÊS ATUAL)</div>
+                        <div class="card-label">FATURAMENTO GLOBAL (MÊS)</div>
                         <div class="card-body">
-                            <div class="icon-box success"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                            <div class="icon-box" style="color: #fff; border-color: #fff;"><i class="fa-solid fa-earth-americas"></i></div>
                             <div class="info-box">
-                                <h3>R$ '.number_format($faturamento, 2, ',', '.').'</h3>
-                                <p class="text-muted">Entradas confirmadas</p>
+                                <h3>R$ '.number_format($fat_global, 2, ',', '.').'</h3>
+                                <p class="text-muted">Total Plataforma</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="glass-card">
-                        <div class="card-label">A RECEBER (PENDENTE)</div>
+                        <div class="card-label">RECEITA ADMIN (MÊS)</div>
+                        <div class="card-body">
+                            <div class="icon-box success"><i class="fa-solid fa-wallet"></i></div>
+                            <div class="info-box">
+                                <h3>R$ '.number_format($fat_admin, 2, ',', '.').'</h3>
+                                <p class="text-muted">Caixa Próprio</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card">
+                        <div class="card-label">PENDENTE ADMIN</div>
                         <div class="card-body">
                             <div class="icon-box gold"><i class="fa-solid fa-clock"></i></div>
                             <div class="info-box">
-                                <h3>R$ '.number_format($pendente, 2, ',', '.').'</h3>
-                                <p class="text-muted">Previsão de entrada</p>
+                                <h3>R$ '.number_format($pend_admin, 2, ',', '.').'</h3>
+                                <p class="text-muted">A Receber Próprio</p>
                             </div>
                         </div>
                     </div>
@@ -1073,9 +1131,17 @@ switch ($pagina) {
 
                 <div class="glass-card mt-large">
                     
-                    <div class="section-header-row">
-                        <h3 class="section-title" style="margin:0">HISTÓRICO DE CAIXA</h3>
-                        <button class="btn-gold" onclick="openModal()">
+                    <div class="section-header-row" style="flex-wrap: wrap; gap: 15px;">
+                        <div class="toggle-buttons" style="display: flex; background: #222; padding: 5px; border-radius: 8px; border: 1px solid #333;">
+                            <button id="btn-tab-admin" onclick="alternarVisaoFinanceiro(\'admin\')" style="background: var(--gold); color: #000; border: none; padding: 8px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s;">
+                                <i class="fa-solid fa-user-shield"></i> Admin
+                            </button>
+                            <button id="btn-tab-global" onclick="alternarVisaoFinanceiro(\'global\')" style="background: transparent; color: #888; border: none; padding: 8px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s;">
+                                <i class="fa-solid fa-globe"></i> Global
+                            </button>
+                        </div>
+
+                        <button class="btn-gold" onclick="document.getElementById(\'modalLancamentoAdm\').style.display=\'flex\'" style="background: #00a8ff; color: #fff; border: none;">
                             <i class="fa-solid fa-plus"></i> NOVO LANÇAMENTO
                         </button>
                     </div>
@@ -1084,129 +1150,141 @@ switch ($pagina) {
                         <table class="admin-table">
                             <thead>
                                 <tr>
-                                    <th class="th-admin-table">ALUNO</th>
-                                    <th class="th-admin-table">DESCRIÇÃO</th>
-                                    <th class="th-admin-table">VENCIMENTO</th>
-                                    <th class="th-admin-table">VALOR</th>
-                                    <th class="th-admin-table">STATUS</th>
-                                    <th class="th-admin-table" id="th-acao">AÇÃO</th>
+                                    <th>PAGADOR</th>
+                                    <th>TIPO</th>
+                                    <th>DESCRIÇÃO</th>
+                                    <th>DATA</th>
+                                    <th>VALOR</th>
+                                    <th>STATUS</th>
+                                    <th style="text-align:right;">AÇÃO</th>
                                 </tr>
                             </thead>
-                            <tbody>';
                             
-                            if (count($transacoes) > 0) {
-                                foreach ($transacoes as $t) {
-                                    $statusClass = ($t['status'] == 'pago') ? 'pago' : 'pendente';
-                                    
-                                    // Se for pendente usa vencimento, se for pago usa data_pagamento se existir
-                                    $dataShow = $t['data_vencimento'];
-                                    if($t['status'] == 'pago' && !empty($t['data_pagamento'])) {
-                                        $dataShow = $t['data_pagamento'];
-                                    }
-                                    $dataExibicao = date('d/m/Y', strtotime($dataShow));
-                                    
-                                    $fotoUser = !empty($t['foto_aluno']) ? $t['foto_aluno'] : 'assets/img/user-default.png';
-                                    
-                                    // BOTÕES DE AÇÃO (Restaurados)
-                                    $btns = '<div style="display:flex; gap:10px; justify-content:flex-end;">';
-                                    
-                                    // 1. Pagar/Estornar
-                                    if ($t['status'] == 'pendente') {
-                                        $btns .= '<a href="actions/financeiro_status.php?id='.$t['id'].'&acao=pagar" class="btn-action-icon btn-confirm" title="Confirmar Pagamento"><i class="fa-solid fa-check"></i></a>';
-                                    } else {
-                                        $btns .= '<a href="actions/financeiro_status.php?id='.$t['id'].'&acao=estornar" class="btn-action-icon btn-undo" title="Desfazer/Estornar"><i class="fa-solid fa-rotate-left"></i></a>';
-                                    }
+                            <tbody id="tbody-admin">
+                                ';
+                                if (count($lista_admin) > 0) {
+                                    foreach ($lista_admin as $t) {
+                                        $statusClass = ($t['status'] == 'pago') ? 'pago' : 'pendente';
+                                        $dataShow = ($t['status'] == 'pago' && !empty($t['data_pagamento'])) ? $t['data_pagamento'] : $t['data_vencimento'];
+                                        $dataExibicao = date('d/m/y', strtotime($dataShow));
+                                        $foto = !empty($t['foto_pagador']) ? $t['foto_pagador'] : 'assets/img/user-default.png';
+                                        $nomePagador = $t['nome_pagador'] ?: 'Desconhecido';
+                                        $tipoConta = $t['tipo_conta'] == 'coach' ? '<span style="color:#00a8ff; font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
 
-                                    // 2. Excluir (RESTAURADO)
-                                    $btns .= '<a href="actions/financeiro_status.php?id='.$t['id'].'&acao=excluir" class="btn-action-icon btn-delete" title="Excluir Registro" onclick="return confirm(\'Tem certeza que deseja excluir este lançamento permanentemente?\')"><i class="fa-solid fa-trash"></i></a>';
-                                    
-                                    $btns .= '</div>';
-
-                                    echo '
-                                    <tr>
-                                        <td>
-                                            <div class="user-cell">
-                                                <img src="'.$fotoUser.'" class="table-avatar" alt="Foto">
-                                                <span>'.($t['nome_aluno'] ?: 'Avulso').'</span>
-                                            </div>
-                                        </td>
-                                        <td>'.$t['descricao'].'</td>
-                                        <td>'.$dataExibicao.'</td>
-                                        <td><strong>R$ '.number_format($t['valor'], 2, ',', '.').'</strong></td>
-                                        <td><span class="status-badge '.$statusClass.'">'.strtoupper($t['status']).'</span></td>
-                                        <td style="text-align: right;">'.$btns.'</td>
-                                    </tr>';
+                                        echo '<tr>
+                                            <td><div class="user-cell"><img src="'.$foto.'" class="table-avatar"><span>'.$nomePagador.'</span></div></td>
+                                            <td>'.$tipoConta.'</td>
+                                            <td>'.$t['descricao'].'</td>
+                                            <td>'.$dataExibicao.'</td>
+                                            <td><strong>R$ '.number_format($t['valor'], 2, ',', '.').'</strong></td>
+                                            <td><span class="status-badge '.$statusClass.'">'.strtoupper($t['status']).'</span></td>
+                                            <td style="text-align:right;">
+                                                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                                                    '. ($t['status'] == 'pendente' ? 
+                                                        '<button onclick="atualizarStatusFinanceiro('.$t['id'].', \'pagar\')" class="btn-action-icon btn-confirm"><i class="fa-solid fa-check"></i></button>' : 
+                                                        '<button onclick="atualizarStatusFinanceiro('.$t['id'].', \'estornar\')" class="btn-action-icon btn-undo"><i class="fa-solid fa-rotate-left"></i></button>'
+                                                    ) .'
+                                                    <button onclick="atualizarStatusFinanceiro('.$t['id'].', \'excluir\')" class="btn-action-icon btn-delete"><i class="fa-solid fa-trash"></i></button>
+                                                </div>
+                                            </td>
+                                        </tr>';
+                                    }
+                                } else {
+                                    echo '<tr><td colspan="7" style="text-align:center; padding: 20px;">Nenhum lançamento no caixa do Admin.</td></tr>';
                                 }
-                            } else {
-                                echo '<tr><td colspan="6" style="text-align:center; padding: 20px; color: #666;">Nenhum lançamento encontrado.</td></tr>';
-                            }
+                                echo '
+                            </tbody>
 
-        echo '              </tbody>
+                            <tbody id="tbody-global" style="display: none;">
+                                ';
+                                if (count($lista_global) > 0) {
+                                    foreach ($lista_global as $t) {
+                                        $statusClass = ($t['status'] == 'pago') ? 'pago' : 'pendente';
+                                        $dataShow = ($t['status'] == 'pago' && !empty($t['data_pagamento'])) ? $t['data_pagamento'] : $t['data_vencimento'];
+                                        $dataExibicao = date('d/m/y', strtotime($dataShow));
+                                        $foto = !empty($t['foto_pagador']) ? $t['foto_pagador'] : 'assets/img/user-default.png';
+                                        $nomePagador = $t['nome_pagador'] ?: 'Desconhecido';
+                                        $tipoConta = $t['tipo_conta'] == 'coach' ? '<span style="color:#00a8ff; font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
+                                        
+                                        // Na Global mostra o Coach
+                                        $infoCoach = '';
+                                        if(!empty($t['nome_coach'])) {
+                                            $infoCoach = '<br><span style="color:#666; font-size:0.7rem;">Coach: '.$t['nome_coach'].'</span>';
+                                        }
+
+                                        echo '<tr>
+                                            <td><div class="user-cell"><img src="'.$foto.'" class="table-avatar"><div><span>'.$nomePagador.'</span>'.$infoCoach.'</div></div></td>
+                                            <td>'.$tipoConta.'</td>
+                                            <td>'.$t['descricao'].'</td>
+                                            <td>'.$dataExibicao.'</td>
+                                            <td><strong>R$ '.number_format($t['valor'], 2, ',', '.').'</strong></td>
+                                            <td><span class="status-badge '.$statusClass.'">'.strtoupper($t['status']).'</span></td>
+                                            <td style="text-align:right;">
+                                                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                                                    '. ($t['status'] == 'pendente' ? 
+                                                        '<button onclick="atualizarStatusFinanceiro('.$t['id'].', \'pagar\')" class="btn-action-icon btn-confirm"><i class="fa-solid fa-check"></i></button>' : 
+                                                        '<button onclick="atualizarStatusFinanceiro('.$t['id'].', \'estornar\')" class="btn-action-icon btn-undo"><i class="fa-solid fa-rotate-left"></i></button>'
+                                                    ) .'
+                                                    <button onclick="atualizarStatusFinanceiro('.$t['id'].', \'excluir\')" class="btn-action-icon btn-delete"><i class="fa-solid fa-trash"></i></button>
+                                                </div>
+                                            </td>
+                                        </tr>';
+                                    }
+                                } else {
+                                    echo '<tr><td colspan="7" style="text-align:center; padding: 20px;">Nenhum lançamento no sistema.</td></tr>';
+                                }
+                                echo '
+                            </tbody>
+
                         </table>
                     </div>
                 </div>
             </section>
-
-            <div id="modalLancamento" class="modal-overlay" style="display:none;">
-                <div class="modal-content">
-                    <button class="modal-close" onclick="closeModal()">&times;</button>
+            
+            <div id="modalLancamentoAdm" class="modal-overlay" style="display:none;">
+                <div class="modal-content" style="overflow:visible;"> 
+                    <button class="modal-close" onclick="document.getElementById(\'modalLancamentoAdm\').style.display=\'none\'">&times;</button>
                     
-                    <h3 class="section-title" style="color: var(--gold); margin-bottom: 20px; text-align: center;">
-                        <i class="fa-solid fa-money-bill-wave"></i> Novo Lançamento
+                    <h3 class="section-title" style="color: #00a8ff; margin-bottom: 20px; text-align: center;">
+                        <i class="fa-solid fa-cash-register"></i> Lançamento Admin
                     </h3>
                     
-                    <form action="actions/financeiro_add.php" method="POST">
-                        
-                        <div style="margin-bottom: 15px; position: relative;">
-                            <label style="color:#ccc; font-size: 0.8rem;">Aluno</label>
+                    <form id="formLancamentoFinanceiro">
+                        <div style="margin-bottom:15px; position:relative;">
+                            <label class="input-label">Usuário (Aluno ou Personal)</label>
                             
-                            <input type="text" id="busca-aluno-input" class="admin-input" placeholder="Digite o nome para buscar..." autocomplete="off" onkeyup="filtrarAlunosFinanceiro()">
+                            <input type="text" id="busca-user-adm" class="admin-input" placeholder="Buscar..." autocomplete="off" onkeyup="filtrarUsuariosAdm()">
+                            <input type="hidden" name="usuario_id" id="id-user-adm" required>
                             
-                            <input type="hidden" name="usuario_id" id="id-aluno-selecionado" required>
-
-                            <div id="dropdown-alunos" class="custom-dropdown-list" style="display:none;">';
-                                foreach($alunos as $al) {
-                                    $ft = !empty($al['foto']) ? $al['foto'] : 'assets/img/user-default.png';
-                                    // O JS vai ler o nome dentro do span
-                                    echo '<div class="dropdown-item" onclick="selecionarAlunoFinanceiro('.$al['id'].', \''.$al['nome'].'\')">
-                                            <img src="'.$ft.'">
-                                            <span>'.$al['nome'].'</span>
+                            <div id="dropdown-users-adm" class="custom-dropdown-list" style="display:none; position:absolute; width:100%; max-height:200px; overflow-y:auto; background:#222; border:1px solid #444; z-index:1000;">';
+                                foreach($usuarios_list as $u) {
+                                    $ft = !empty($u['foto']) ? $u['foto'] : 'assets/img/user-default.png';
+                                    $nomeSafe = addslashes($u['nome']);
+                                    $tipoLabel = strtoupper($u['tipo_conta']);
+                                    $corTipo = ($u['tipo_conta'] == 'coach' || $u['tipo_conta'] == 'personal') ? '#00a8ff' : '#888';
+                                    echo '<div class="dropdown-item" style="padding:10px; border-bottom:1px solid #333; cursor:pointer; display:flex; align-items:center; gap:10px;" onclick="selecionarUsuarioAdm('.$u['id'].', \''.$nomeSafe.'\')">
+                                            <img src="'.$ft.'" style="width:30px; height:30px; border-radius:50%; object-fit:cover;">
+                                            <div><span style="display:block; color:#fff;">'.$u['nome'].'</span><span style="display:block; font-size:0.7rem; color:'.$corTipo.';">'.$tipoLabel.'</span></div>
                                           </div>';
                                 }
         echo '              </div>
                         </div>
-
                         <div class="row-flex" style="display: flex; gap: 15px; margin-bottom: 15px;">
-                            <div style="flex: 2;">
-                                <label style="color:#ccc; font-size: 0.8rem;">Descrição</label>
-                                <input type="text" name="descricao" class="admin-input" placeholder="Ex: Plano Trimestral" required>
-                            </div>
-                            <div style="flex: 1;">
-                                <label style="color:#ccc; font-size: 0.8rem;">Valor (R$)</label>
-                                <input type="number" name="valor" step="0.01" class="admin-input" placeholder="0.00" required>
-                            </div>
+                            <div style="flex:2;"><label class="input-label">Descrição</label><input type="text" name="descricao" class="admin-input" placeholder="Ex: Taxa de Adesão" required></div>
+                            <div style="flex:1;"><label class="input-label">Valor (R$)</label><input type="number" name="valor" step="0.01" class="admin-input" placeholder="0.00" required></div>
                         </div>
-
                         <div class="row-flex" style="display: flex; gap: 15px; margin-bottom: 20px;">
-                            <div style="flex: 1;">
-                                <label style="color:#ccc; font-size: 0.8rem;">Vencimento</label>
-                                <input type="date" name="data_vencimento" class="admin-input" required value="'.date('Y-m-d').'">
-                            </div>
-                            <div style="flex: 1;">
-                                <label style="color:#ccc; font-size: 0.8rem;">Status</label>
-                                <select name="status" class="admin-input">
-                                    <option value="pago">Pago (Recebido)</option>
-                                    <option value="pendente">Pendente (A receber)</option>
-                                </select>
-                            </div>
+                            <div style="flex:1;"><label class="input-label">Vencimento</label><input type="date" name="data_vencimento" class="admin-input" required value="'.date('Y-m-d').'"></div>
+                            <div style="flex:1;"><label class="input-label">Status</label><select name="status" class="admin-input"><option value="pago">Pago</option><option value="pendente">Pendente</option></select></div>
                         </div>
-
-                        <button type="submit" class="btn-gold" style="width: 100%; padding: 15px; font-size: 1rem;">REGISTRAR VENDA</button>
+                        <button type="submit" class="btn-gold" style="width:100%; padding:15px; background: #00a8ff; border:none;">REGISTRAR (ADMIN)</button>
                     </form>
                 </div>
             </div>
         ';
+
         break;
+
     
     case 'treino_painel':
         require_once '../config/db_connect.php';
@@ -1852,10 +1930,10 @@ switch ($pagina) {
                 
                 <div class="menu-profile-header" onclick="carregarConteudo(\'perfil\')" style="background: linear-gradient(135deg, #1a1a1a 0%, #000 100%); margin-bottom: 25px; padding: 20px; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.1);">
                     <div style="display: flex; align-items: center; gap: 15px;">
-                        <img src="'.$foto.'" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff4242;">
+                        <img src="'.$foto.'" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #00a8ff;">
                         <div>
                             <h3 style="margin: 0 0 5px 0; color: #fff; font-size: 1.1rem;">'.$admin['nome'].'</h3>
-                            <span class="usuario-level" style="color: #ff4242; background: rgba(255, 66, 66, 0.1);">MASTER COACH</span>
+                            <span class="usuario-level" style="color: #00a8ff; background: rgba(0, 168, 255, 0.1);">SUPER ADMIN</span>
                         </div>
                     </div>
                     <i class="fa-solid fa-chevron-right" style="color: #666;"></i>

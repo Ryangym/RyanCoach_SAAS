@@ -552,51 +552,51 @@ if (!isset($_SESSION['user_id']) || $_SESSION['tipo_conta'] !== 'admin') {
             document.getElementById('modalLancamento').style.display = 'none';
         }
 
-        // Filtra a lista enquanto digita
-        function filtrarAlunosFinanceiro() {
-            let input = document.getElementById("busca-aluno-input");
-            let filter = input.value.toUpperCase();
-            let dropdown = document.getElementById("dropdown-alunos");
-            let items = dropdown.getElementsByClassName("dropdown-item");
+        /* --- FUNÇÕES ESPECÍFICAS DO ADMIN FINANCEIRO --- */
+
+        // Filtrar lista de usuários no modal Admin
+        window.filtrarUsuariosAdm = function() {
+            let input = document.getElementById("busca-user-adm");
+            let dropdown = document.getElementById("dropdown-users-adm");
             
-            // Se estiver vazio, esconde a lista
+            if (!input || !dropdown) return;
+
+            let filter = input.value.toUpperCase();
+            let items = dropdown.getElementsByClassName("dropdown-item");
+
             if (filter === "") {
                 dropdown.style.display = "none";
                 return;
             }
-            
+
             dropdown.style.display = "block";
             let encontrou = false;
 
             for (let i = 0; i < items.length; i++) {
-                let span = items[i].getElementsByTagName("span")[0];
-                let txtValue = span.textContent || span.innerText;
-                
-                if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                    items[i].style.display = ""; // Mostra
+                let texto = items[i].innerText || items[i].textContent;
+                if (texto.toUpperCase().indexOf(filter) > -1) {
+                    items[i].style.display = "flex";
                     encontrou = true;
                 } else {
-                    items[i].style.display = "none"; // Esconde
+                    items[i].style.display = "none";
                 }
             }
-
-            // Se não achou ninguém, esconde a lista
             if (!encontrou) dropdown.style.display = "none";
-        }
+        };
 
-        // Seleciona o aluno e preenche o input oculto
-        function selecionarAlunoFinanceiro(id, nome) {
-            document.getElementById("busca-aluno-input").value = nome; // Mostra nome visualmente
-            document.getElementById("id-aluno-selecionado").value = id; // Define ID para o PHP
-            document.getElementById("dropdown-alunos").style.display = "none"; // Fecha lista
-        }
+        // Selecionar Usuário no modal Admin
+        window.selecionarUsuarioAdm = function(id, nome) {
+            document.getElementById("busca-user-adm").value = nome;
+            document.getElementById("id-user-adm").value = id;
+            document.getElementById("dropdown-users-adm").style.display = "none";
+        };
 
-        // Fecha a lista se clicar fora dela
+        // Fechar dropdown ao clicar fora
         window.addEventListener('click', function(e) {
-            let dropdown = document.getElementById("dropdown-alunos");
-            let input = document.getElementById("busca-aluno-input");
-            if (dropdown && e.target !== input && !dropdown.contains(e.target)) {
-                dropdown.style.display = 'none';
+            let drop = document.getElementById("dropdown-users-adm");
+            let input = document.getElementById("busca-user-adm");
+            if (drop && input && e.target !== input && !drop.contains(e.target)) {
+                drop.style.display = 'none';
             }
         });
 
@@ -1214,6 +1214,33 @@ if (!isset($_SESSION['user_id']) || $_SESSION['tipo_conta'] !== 'admin') {
         }
     };
     </script>
+
+    <script>
+            function alternarVisaoFinanceiro(visao) {
+                const btnAdmin = document.getElementById("btn-tab-admin");
+                const btnGlobal = document.getElementById("btn-tab-global");
+                const tbodyAdmin = document.getElementById("tbody-admin");
+                const tbodyGlobal = document.getElementById("tbody-global");
+
+                if (visao === "admin") {
+                    tbodyAdmin.style.display = "table-row-group";
+                    tbodyGlobal.style.display = "none";
+                    
+                    btnAdmin.style.background = "var(--gold)";
+                    btnAdmin.style.color = "#000";
+                    btnGlobal.style.background = "transparent";
+                    btnGlobal.style.color = "#888";
+                } else {
+                    tbodyAdmin.style.display = "none";
+                    tbodyGlobal.style.display = "table-row-group";
+                    
+                    btnGlobal.style.background = "#fff";
+                    btnGlobal.style.color = "#000";
+                    btnAdmin.style.background = "transparent";
+                    btnAdmin.style.color = "#888";
+                }
+            }
+            </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="assets/js/script.js"></script>
 </body>

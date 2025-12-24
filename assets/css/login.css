@@ -318,7 +318,7 @@ form {
 
 /* --- Links de troca no Mobile (COMEÇAM ESCONDIDOS) --- */
 .form-bottom-text.mobile-only {
-    display: none; 
+    /* display: none;  */
 }
 
 

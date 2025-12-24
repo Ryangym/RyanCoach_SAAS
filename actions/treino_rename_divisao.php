@@ -3,12 +3,6 @@
 session_start();
 require_once '../config/db_connect.php';
 
-// Verifica se é admin
-if (!isset($_SESSION['user_nivel']) || $_SESSION['user_nivel'] !== 'admin') {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Acesso negado']);
-    exit;
-}
 
 // Recebe os dados JSON
 $data = json_decode(file_get_contents('php://input'), true);

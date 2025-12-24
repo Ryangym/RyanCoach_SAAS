@@ -3,45 +3,77 @@ session_start();
 require_once '../config/db_connect.php';
 
 // --- CONFIGURAÇÕES ---
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (Limite Lógico do Script)
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 $upload_dir = __DIR__ . '/../assets/uploads/avaliacoes/';
 
-// --- 1. VERIFICAÇÃO CRÍTICA DE TAMANHO DO SERVIDOR ---
-// Se o arquivo for maior que o post_max_size do PHP, $_POST e $_FILES chegam vazios.
+// --- 1. VERIFICAÇÃO DE SEGURANÇA (Tamanho do Post) ---
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && empty($_POST) && empty($_FILES) && $_SERVER['CONTENT_LENGTH'] > 0) {
-    echo "<script>
-            alert('ERRO CRÍTICO: Os arquivos enviados excedem o limite total do servidor!\\n\\nTente enviar menos fotos por vez ou fotos menores.');
-            window.history.back();
-          </script>";
+    echo "<script>alert('ERRO: Arquivos excedem o limite do servidor.'); window.history.back();</script>";
     exit;
 }
 
+// --- 2. PERMISSÕES E IDENTIFICAÇÃO ---
 if (!isset($_SESSION['user_id'])) { die("Acesso negado"); }
 
+$tipo_conta = $_SESSION['tipo_conta'] ?? '';
+$meu_id = $_SESSION['user_id'];
+
+// Valida tipos permitidos estritos
+if (!in_array($tipo_conta, ['admin', 'coach', 'atleta'])) {
+    die("Tipo de conta inválido ou não autorizado.");
+}
+
+// LÓGICA DE QUEM É O ALUNO E PARA ONDE VOLTA
+if ($tipo_conta === 'atleta') {
+    // 1. Atleta se auto-avaliando
+    $aluno_id = $meu_id;
+    $registrado_por = 'atleta'; 
+    $redirect_url = "../usuario.php?pagina=avaliacoes&msg=sucesso";
+
+} else {
+    // 2. Admin ou Coach avaliando alguém
+    $aluno_id = filter_input(INPUT_POST, 'aluno_id', FILTER_SANITIZE_NUMBER_INT);
+    $registrado_por = $tipo_conta; // 'admin' ou 'coach'
+    
+    if (!$aluno_id) die("Erro: ID do aluno não fornecido.");
+
+    // Define URL de retorno
+    if ($tipo_conta === 'admin') {
+        $redirect_url = "../admin.php?pagina=aluno_avaliacoes&id=$aluno_id&msg=sucesso";
+    } else {
+        // É Coach
+        $redirect_url = "../coach.php?pagina=aluno_avaliacoes&id=$aluno_id&msg=sucesso";
+        
+        // SEGURANÇA EXTRA COACH: Verifica se o aluno é dele
+        $stmtCheck = $pdo->prepare("SELECT id FROM usuarios WHERE id = ? AND coach_id = ?");
+        $stmtCheck->execute([$aluno_id, $meu_id]);
+        if ($stmtCheck->rowCount() == 0) {
+            die("Erro: Você só pode avaliar seus próprios atletas.");
+        }
+    }
+}
+
+// --- 3. PROCESSAMENTO DO FORMULÁRIO ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $arquivos_para_apagar = []; // Lista de rollback manual (arquivos físicos)
+    $arquivos_para_apagar = []; // Para rollback manual
 
     try {
-        $pdo->beginTransaction(); // Inicia a transação (nada é salvo de verdade até o commit)
+        $pdo->beginTransaction();
 
-        // ---------------------------------------------------------
-        // A. DADOS GERAIS
-        // ---------------------------------------------------------
-        $registrado_por = ($_SESSION['user_nivel'] === 'admin') ? 'admin' : 'aluno';
-        $aluno_id = ($registrado_por === 'admin') ? $_POST['aluno_id'] : $_SESSION['user_id'];
-        
+        // Dados Básicos
         $data = $_POST['data_avaliacao'] ?? date('Y-m-d');
         $genero = $_POST['genero'] ?? 'M';
         $idade = filter_input(INPUT_POST, 'idade', FILTER_SANITIZE_NUMBER_INT);
         $obs = $_POST['observacoes'] ?? '';
 
+        // Helper para limpar floats
         function getFloat($key) {
             if (empty($_POST[$key])) return null;
             return (float) str_replace(',', '.', $_POST[$key]);
         }
 
-        // Cálculos
+        // Coleta Medidas
         $peso = getFloat('peso');
         $altura = getFloat('altura');
         $pescoco = getFloat('pescoco');
@@ -49,6 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $abdomen = getFloat('abdomen');
         $quadril = getFloat('quadril');
 
+        // Cálculos (IMC, BF, Massas)
         $imc = null; $bf = null; $massa_gorda = null; $massa_magra = null;
 
         if ($peso && $altura) {
@@ -56,6 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $imc = $peso / ($altura_m * $altura_m);
         }
 
+        // Fórmula de Navy para BF
         if ($peso && $altura && $pescoco && $cintura) {
             if ($genero === 'M') {
                 $circ_abd = $abdomen ?: $cintura;
@@ -74,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $massa_magra = $peso - $massa_gorda;
         }
 
-        // Inserir Avaliação (Ainda em memória da transação)
+        // Inserção no Banco
         $sql = "INSERT INTO avaliacoes (
             aluno_id, registrado_por, data_avaliacao, idade, genero, peso_kg, altura_cm,
             pescoco, ombro, torax_inspirado, torax_relaxado,
@@ -96,73 +130,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $avaliacao_id = $pdo->lastInsertId();
 
-        // ---------------------------------------------------------
-        // B. PROCESSAMENTO DE UPLOAD (AQUI QUE A GENTE PEGA O ERRO)
-        // ---------------------------------------------------------
-        
-        // Verifica e cria pasta
-        if (!is_dir($upload_dir)) {
-            if (!mkdir($upload_dir, 0777, true)) {
-                throw new Exception("Erro interno: Falha ao criar pasta de uploads.");
-            }
-        }
+        // --- UPLOAD DE FOTOS ---
+        if (!is_dir($upload_dir)) { mkdir($upload_dir, 0777, true); }
 
         if (!empty($_FILES['fotos']['name'][0])) {
-            $total_fotos = count($_FILES['fotos']['name']);
+            $total = count($_FILES['fotos']['name']);
+            for ($i = 0; $i < $total; $i++) {
+                $name = $_FILES['fotos']['name'][$i];
+                $tmp  = $_FILES['fotos']['tmp_name'][$i];
+                $error = $_FILES['fotos']['error'][$i];
+                $size = $_FILES['fotos']['size'][$i];
 
-            for ($i = 0; $i < $total_fotos; $i++) {
-                $nome_original = $_FILES['fotos']['name'][$i];
-                $tmp_name      = $_FILES['fotos']['tmp_name'][$i];
-                $error_code    = $_FILES['fotos']['error'][$i];
-                $size          = $_FILES['fotos']['size'][$i];
-
-                // 1. Verifica Erros do PHP (Tamanho, Interrupção, etc)
-                if ($error_code !== UPLOAD_ERR_OK) {
-                    if ($error_code === UPLOAD_ERR_NO_FILE) continue; // Campo vazio, ok
-
-                    $msg_php = "Erro desconhecido";
-                    switch ($error_code) {
-                        case UPLOAD_ERR_INI_SIZE:   $msg_php = "A foto '$nome_original' excede o limite do servidor (upload_max_filesize)."; break;
-                        case UPLOAD_ERR_FORM_SIZE:  $msg_php = "A foto '$nome_original' excede o limite do formulário."; break;
-                        case UPLOAD_ERR_PARTIAL:    $msg_php = "O upload da foto '$nome_original' foi interrompido."; break;
-                        case UPLOAD_ERR_NO_TMP_DIR: $msg_php = "Pasta temporária ausente no servidor."; break;
-                    }
-                    // Lança exceção para CANCELAR TUDO
-                    throw new Exception($msg_php);
+                if ($error !== UPLOAD_ERR_OK) {
+                    if ($error === UPLOAD_ERR_NO_FILE) continue;
+                    throw new Exception("Erro no upload da foto: $name");
                 }
 
-                // 2. Valida Extensão
-                $ext = strtolower(pathinfo($nome_original, PATHINFO_EXTENSION));
-                if (!in_array($ext, ALLOWED_EXTS)) {
-                    throw new Exception("A foto '$nome_original' tem um formato inválido (.$ext). Use JPG, PNG ou WEBP.");
-                }
+                $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+                if (!in_array($ext, ALLOWED_EXTS)) throw new Exception("Formato inválido: $name");
+                if ($size > MAX_FILE_SIZE) throw new Exception("Foto muito grande: $name");
 
-                // 3. Valida Tamanho Manual (Backup)
-                if ($size > MAX_FILE_SIZE) {
-                    throw new Exception("A foto '$nome_original' é muito grande (" . round($size/1024/1024, 2) . "MB). O limite é 10MB.");
-                }
+                $new_name = 'av_' . $avaliacao_id . '_' . uniqid() . '.' . $ext;
+                $dest = $upload_dir . $new_name;
 
-                // 4. Move o Arquivo
-                $novo_nome = 'av_' . $avaliacao_id . '_' . uniqid() . '.' . $ext;
-                $caminho_final = $upload_dir . $novo_nome;
-
-                if (move_uploaded_file($tmp_name, $caminho_final)) {
-                    // Adiciona à lista para apagar caso dê erro depois
-                    $arquivos_para_apagar[] = $caminho_final;
-
-                    // Salva no Banco (Memória da Transação)
-                    $caminho_db = 'avaliacoes/' . $novo_nome;
-                    $stmt_f = $pdo->prepare("INSERT INTO avaliacoes_arquivos (avaliacao_id, tipo, caminho_ou_url) VALUES (?, 'foto', ?)");
-                    $stmt_f->execute([$avaliacao_id, $caminho_db]);
+                if (move_uploaded_file($tmp, $dest)) {
+                    $arquivos_para_apagar[] = $dest; // Salva na lista de rollback
+                    $db_path = 'avaliacoes/' . $new_name;
+                    $pdo->prepare("INSERT INTO avaliacoes_arquivos (avaliacao_id, tipo, caminho_ou_url) VALUES (?, 'foto', ?)")->execute([$avaliacao_id, $db_path]);
                 } else {
-                    throw new Exception("Falha ao salvar o arquivo '$nome_original' no disco. Verifique as permissões da pasta.");
+                    throw new Exception("Falha ao salvar arquivo no disco.");
                 }
             }
         }
 
-        // ---------------------------------------------------------
-        // C. VÍDEOS
-        // ---------------------------------------------------------
+        // --- LINKS DE VÍDEO ---
         if (!empty($_POST['videos_links'])) {
             $links = explode(',', $_POST['videos_links']);
             foreach ($links as $l) {
@@ -173,36 +174,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // ---------------------------------------------------------
-        // SUCESSO TOTAL: CONFIRMA TUDO
-        // ---------------------------------------------------------
         $pdo->commit();
-        
-        $back_url = ($registrado_por === 'admin') 
-            ? "../admin.php?pagina=aluno_avaliacoes&id=$aluno_id&msg=sucesso" 
-            : "../usuario.php?pagina=avaliacoes&msg=sucesso";
-            
-        header("Location: $back_url");
+        header("Location: $redirect_url");
         exit;
 
     } catch (Exception $e) {
-        // ---------------------------------------------------------
-        // ERRO DETECTADO: DESFAZ TUDO (ROLLBACK)
-        // ---------------------------------------------------------
-        $pdo->rollBack(); // Apaga o registro da avaliação do banco
-
-        // Apaga as fotos que já tinham subido (Limpeza física)
-        foreach ($arquivos_para_apagar as $arquivo) {
-            if (file_exists($arquivo)) {
-                unlink($arquivo);
-            }
+        $pdo->rollBack();
+        
+        // Limpa arquivos físicos se deu erro no banco
+        foreach ($arquivos_para_apagar as $arq) {
+            if (file_exists($arq)) unlink($arq);
         }
 
-        // Avisa o usuário e volta para a tela anterior
-        echo "<script>
-                alert('NÃO FOI POSSÍVEL SALVAR A AVALIAÇÃO!\\n\\nMotivo: " . addslashes($e->getMessage()) . "\\n\\nNenhuma alteração foi feita.');
-                window.history.back();
-              </script>";
+        echo "<script>alert('ERRO: " . addslashes($e->getMessage()) . "'); window.history.back();</script>";
         exit;
     }
 }

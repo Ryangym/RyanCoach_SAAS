@@ -650,200 +650,225 @@ switch ($pagina) {
         break;
 
     case 'aluno_historico':
-        require_once '../config/db_connect.php';
-        
-        // Pega o ID do aluno via URL (admin navegando)
-        $aluno_id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT);
-        $data_ref = $_GET['data_ref'] ?? null;
+    require_once '../config/db_connect.php';
+    
+    // Pega o ID do aluno via URL (admin navegando)
+    $aluno_id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT);
+    $data_ref = $_GET['data_ref'] ?? null;
 
-        if (!$aluno_id) { echo "Aluno não identificado."; break; }
+    if (!$aluno_id) { 
+        echo "<div class='alert-box'>Aluno não identificado.</div>"; 
+        break; 
+    }
 
-        // Busca nome/foto do aluno para mostrar no topo (Contexto do Admin)
-        $stmt_aluno = $pdo->prepare("SELECT nome, foto FROM usuarios WHERE id = ?");
-        $stmt_aluno->execute([$aluno_id]);
-        $dados_aluno = $stmt_aluno->fetch(PDO::FETCH_ASSOC);
-        $foto_aluno = $dados_aluno['foto'] ?? 'assets/img/user-default.png';
+    // Busca nome/foto do aluno para mostrar no topo (Contexto do Admin)
+    $stmt_aluno = $pdo->prepare("SELECT nome, foto FROM usuarios WHERE id = ?");
+    $stmt_aluno->execute([$aluno_id]);
+    $dados_aluno = $stmt_aluno->fetch(PDO::FETCH_ASSOC);
+    
+    // Define valores padrão se não encontrar (Evita erro "Undefined variable")
+    $nome_aluno = $dados_aluno['nome'] ?? 'Aluno Desconhecido';
+    $foto_aluno = $dados_aluno['foto'] ?? 'assets/img/user-default.png';
 
-        // --- MODO 1: DETALHES DO TREINO (DATA ESPECÍFICA) ---
-        if ($data_ref) {
-            // 1. Infos Gerais
-            $sql_info = "SELECT DISTINCT t.nome as nome_treino, td.letra 
+    // --- MODO 1: DETALHES DO TREINO (DATA ESPECÍFICA) ---
+    if ($data_ref) {
+        // 1. Infos Gerais
+        $sql_info = "SELECT DISTINCT t.nome as nome_treino, td.letra 
+                     FROM treino_historico th
+                     JOIN treinos t ON th.treino_id = t.id
+                     JOIN treino_divisoes td ON th.divisao_id = td.id
+                     WHERE th.aluno_id = :uid AND th.data_treino = :dt";
+        $stmt = $pdo->prepare($sql_info);
+        $stmt->execute(['uid' => $aluno_id, 'dt' => $data_ref]);
+        $info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // 2. Busca Detalhes
+        $sql_detalhes = "SELECT th.*, e.nome_exercicio, s.categoria 
                          FROM treino_historico th
-                         JOIN treinos t ON th.treino_id = t.id
-                         JOIN treino_divisoes td ON th.divisao_id = td.id
-                         WHERE th.aluno_id = :uid AND th.data_treino = :dt";
-            $stmt = $pdo->prepare($sql_info);
-            $stmt->execute(['uid' => $aluno_id, 'dt' => $data_ref]);
-            $info = $stmt->fetch(PDO::FETCH_ASSOC);
+                         JOIN exercicios e ON th.exercicio_id = e.id
+                         LEFT JOIN series s ON COALESCE(th.serie_id, th.serie_numero) = s.id 
+                         WHERE th.aluno_id = :uid AND th.data_treino = :dt
+                         ORDER BY e.ordem ASC, th.id ASC";
+        $stmt = $pdo->prepare($sql_detalhes);
+        $stmt->execute(['uid' => $aluno_id, 'dt' => $data_ref]);
+        $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 2. Busca Detalhes
-            $sql_detalhes = "SELECT th.*, e.nome_exercicio, s.categoria 
-                             FROM treino_historico th
-                             JOIN exercicios e ON th.exercicio_id = e.id
-                             LEFT JOIN series s ON th.serie_numero = s.id 
-                             WHERE th.aluno_id = :uid AND th.data_treino = :dt
-                             ORDER BY e.ordem ASC, th.id ASC";
-            $stmt = $pdo->prepare($sql_detalhes);
-            $stmt->execute(['uid' => $aluno_id, 'dt' => $data_ref]);
-            $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // 3. Agrupamento
-            $treino_agrupado = [];
-            foreach ($registros as $reg) {
-                $id_ex = $reg['exercicio_id'];
-                if (!isset($treino_agrupado[$id_ex])) {
-                    $treino_agrupado[$id_ex] = [
-                        'nome' => $reg['nome_exercicio'],
-                        'series' => []
-                    ];
-                }
-                $treino_agrupado[$id_ex]['series'][] = $reg;
+        // 3. Agrupamento
+        $treino_agrupado = [];
+        foreach ($registros as $reg) {
+            $id_ex = $reg['exercicio_id'];
+            if (!isset($treino_agrupado[$id_ex])) {
+                $treino_agrupado[$id_ex] = [
+                    'nome' => $reg['nome_exercicio'],
+                    'series' => []
+                ];
             }
+            $treino_agrupado[$id_ex]['series'][] = $reg;
+        }
 
-            // RENDERIZAÇÃO (Visual Idêntico ao do Usuário)
-            echo '<section id="admin-historico-detalhe" class="fade-in">
-                    
-                    <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px;">
+        // RENDERIZAÇÃO DETALHES
+        echo '<section id="admin-historico-detalhe" class="fade-in">
+                
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+                    <div style="display:flex; align-items:center; gap:15px;">
                         <button onclick="carregarConteudo(\'aluno_historico&id='.$aluno_id.'\')" style="background:none; border:none; color:#fff; font-size:1.2rem; cursor:pointer;">
                             <i class="fa-solid fa-arrow-left"></i>
                         </button>
                         <div>
                             <span style="color:#888; font-size:0.8rem; text-transform:uppercase;">Visualizando</span>
-                            <h2 style="margin:0; color:#fff; font-size:1.2rem;">TREINO '.$info['letra'].'</h2>
+                            <h2 style="margin:0; color:#fff; font-size:1.2rem;">TREINO '.($info['letra'] ?? '?').'</h2>
                         </div>
                     </div>
 
-                    <div style="margin-bottom:20px; padding:15px; background:rgba(255,186,66,0.1); border-radius:8px; border:1px solid var(--gold); display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <strong style="color:var(--gold); display:block;">'.$info['nome_treino'].'</strong>
-                            <span style="color:#ccc; font-size:0.8rem;">'.date('d/m/Y \à\s H:i', strtotime($data_ref)).'</span>
-                            <span style="color:#fff; font-size:0.8rem;E display:block;">Aluno: '.$dados_aluno['nome'].'</span>
-                        </div>
-                        <i class="fa-solid fa-calendar-check" style="color:var(--gold); font-size:1.5rem;"></i>
+                    <div style="display:flex; gap:10px;">
+                        <button id="btn-editar-hist-adm" onclick="alternarEdicaoHistoricoAdm(\''.$aluno_id.'\')" style="width:40px; height:40px; border-radius:50%; background:rgba(255, 186, 66, 0.1); border:1px solid var(--gold); color:var(--gold); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.3s;">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button onclick="deletarHistoricoAdm(\''.$data_ref.'\', \''.$aluno_id.'\')" style="width:40px; height:40px; border-radius:50%; background:rgba(255,66,66,0.1); border:1px solid #ff4242; color:#ff4242; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.3s;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
                     </div>
+                </div>
 
-                    <div class="history-details-list">';
-                    
-                    if (empty($treino_agrupado)) {
-                        echo '<p style="text-align:center; color:#666;">Nenhum dado encontrado.</p>';
-                    }
-
-                    foreach ($treino_agrupado as $ex_id => $dados) {
-                        echo '<div class="hist-exercise-group" style="background:#141414; border:1px solid #252525; border-radius:12px; margin-bottom:12px; overflow:hidden;">
-                                <div class="hist-ex-header" style="background:rgba(255,255,255,0.03); padding:12px 15px; border-bottom:1px solid #2a2a2a; display:flex; align-items:center; gap:10px;">
-                                    <i class="fa-solid fa-dumbbell" style="color:var(--gold);"></i>
-                                    <span style="color:#fff; font-weight:700;">'.$dados['nome'].'</span>
-                                </div>
-                                
-                                <table class="hist-sets-table" style="width:100%; border-collapse:collapse; text-align:center;">
-                                    <thead>
-                                        <tr style="background:rgba(0,0,0,0.2); color:#555; font-size:0.65rem; text-transform:uppercase;">
-                                            <th style="padding:10px;">#</th>
-                                            <th style="padding:10px;">TIPO</th>
-                                            <th style="padding:10px;">KG</th>
-                                            <th style="padding:10px;">REPS</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>';
-                                    
-                                    $contador_serie = 1;
-                                    foreach ($dados['series'] as $serie) {
-                                        $cat = $serie['categoria'] ? $serie['categoria'] : 'work';
-                                        
-                                        // Badge Colors (Inline para garantir visual igual)
-                                        $bgBadge = 'rgba(255,255,255,0.1)';
-                                        $colorBadge = '#ccc';
-                                        if($cat=='warmup') { $bgBadge='rgba(255,215,0,0.1)'; $colorBadge='#FFD700'; }
-                                        if($cat=='work')   { $bgBadge='rgba(255,66,66,0.1)'; $colorBadge='#ff5e5e'; }
-                                        if($cat=='feeder') { $bgBadge='rgba(135,206,235,0.1)'; $colorBadge='#87CEEB'; }
-
-                                        echo '<tr style="border-bottom:1px solid #1f1f1f;">
-                                                <td style="padding:10px; color:#666; font-weight:bold;">'.$contador_serie.'</td>
-                                                <td style="padding:10px;">
-                                                    <span style="font-size:0.6rem; padding:3px 8px; border-radius:12px; font-weight:800; background:'.$bgBadge.'; color:'.$colorBadge.'; border:1px solid '.$colorBadge.'">'.strtoupper($cat).'</span>
-                                                </td>
-                                                <td style="padding:10px; color:#fff; font-weight:bold;">'.($serie['carga_kg']*1).'</td>
-                                                <td style="padding:10px; color:#fff;">'.$serie['reps_realizadas'].'</td>
-                                              </tr>';
-                                        $contador_serie++;
-                                    }
-
-                        echo '      </tbody>
-                                </table>
-                              </div>';
-                    }
-
-            echo '  </div>
-                  </section>';
-            break;
-        }
-
-        // --- MODO 2: LISTA DE DATAS (TIMELINE) ---
-        $sql_lista = "SELECT th.data_treino, t.nome as nome_treino, td.letra
-                      FROM treino_historico th
-                      JOIN treinos t ON th.treino_id = t.id
-                      JOIN treino_divisoes td ON th.divisao_id = td.id
-                      WHERE th.aluno_id = :uid
-                      GROUP BY th.data_treino
-                      ORDER BY th.data_treino DESC";
-        $stmt = $pdo->prepare($sql_lista);
-        $stmt->execute(['uid' => $aluno_id]);
-        $historico = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo '<section id="admin-historico-lista" class="fade-in">
-                <header class="dash-header">
-                    <div style="display:flex; align-items:center; gap:15px; margin-bottom:10px;">
-                        <img src="'.$foto_aluno.'" style="width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid var(--gold);">
-                        <div>
-                            <h1 style="font-size:1.5rem; margin:0;">HISTÓRICO <span class="highlight-text">DO ALUNO</span></h1>
-                            <p class="text-desc" style="margin:0;">'.$dados_aluno['nome'].'</p>
-                        </div>
+                <div style="margin-bottom:20px; padding:15px; background:rgba(255,186,66,0.1); border-radius:8px; border:1px solid var(--gold); display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="color:var(--gold); display:block;">'.($info['nome_treino'] ?? 'Treino').'</strong>
+                        <span style="color:#ccc; font-size:0.8rem;">'.date('d/m/Y \à\s H:i', strtotime($data_ref)).'</span>
+                        <span style="color:#fff; font-size:0.8rem; display:block; margin-top:5px;">Aluno: '.$nome_aluno.'</span>
                     </div>
-                </header>';
+                    <i class="fa-solid fa-calendar-check" style="color:var(--gold); font-size:1.5rem;"></i>
+                </div>
 
-        if (empty($historico)) {
-            echo '<div class="empty-state" style="text-align:center; padding:50px 20px; color:#666;">
-                    <i class="fa-solid fa-clock-rotate-left" style="font-size:3rem; margin-bottom:15px; opacity:0.5;"></i>
-                    <h2>Nenhum treino registrado</h2>
-                    <p>O aluno ainda não registrou atividades.</p>
-                  </div>';
-        } else {
-            echo '<div class="history-list" style="display:flex; flex-direction:column; gap:12px; padding-bottom:90px;">';
-            
-            foreach ($historico as $h) {
-                $data_obj = new DateTime($h['data_treino']);
-                $dia = $data_obj->format('d');
-                $mes = strftime('%b', $data_obj->getTimestamp());
+                <div class="history-details-list-adm">';
                 
-                $meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-                $mes_txt = $meses[(int)$data_obj->format('m') - 1];
-                $hora = $data_obj->format('H:i');
+                if (empty($treino_agrupado)) {
+                    echo '<p style="text-align:center; color:#666;">Nenhum dado encontrado.</p>';
+                }
 
-                // Aqui usamos o ID do aluno na navegação
-                echo '<div class="history-card" onclick="carregarConteudo(\'aluno_historico&id='.$aluno_id.'&data_ref='.$h['data_treino'].'\')" 
-                           style="background:linear-gradient(145deg, #1a1a1a, #111); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:18px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; position:relative; overflow:hidden;">
-                        
-                        <div style="position:absolute; left:0; top:0; bottom:0; width:5px; background:linear-gradient(to bottom, var(--gold), #b8860b);"></div>
-                        
-                        <div class="hist-date-box" style="padding-right:15px; margin-right:15px; border-right:1px solid rgba(255,255,255,0.1); text-align:center; min-width:65px; margin-left:10px;">
-                            <span class="hist-day" style="display:block; font-size:1.5rem; font-weight:800; color:#fff; line-height:1;">'.$dia.'</span>
-                            <span class="hist-month" style="display:block; font-size:0.7rem; text-transform:uppercase; color:var(--gold); font-weight:bold; margin-top:2px;">'.$mes_txt.'</span>
-                        </div>
-                        
-                        <div class="hist-info" style="flex:1;">
-                            <span class="hist-title" style="display:block; font-size:1.05rem; font-weight:700; color:#fff; margin-bottom:2px;">Treino '.$h['letra'].'</span>
-                            <span class="hist-sub" style="font-size:0.8rem; color:#777;">'.$h['nome_treino'].' • '.$hora.'</span>
-                        </div>
-                        
-                        <i class="fa-solid fa-chevron-right hist-arrow" style="color:#444;"></i>
-                      </div>';
-            }
-            
-            echo '</div>';
-        }
+                foreach ($treino_agrupado as $ex_id => $dados) {
+                    echo '<div class="hist-exercise-group" style="background:#141414; border:1px solid #252525; border-radius:12px; margin-bottom:12px; overflow:hidden;">
+                            <div class="hist-ex-header" style="background:rgba(255,255,255,0.03); padding:12px 15px; border-bottom:1px solid #2a2a2a; display:flex; align-items:center; gap:10px;">
+                                <i class="fa-solid fa-dumbbell" style="color:var(--gold);"></i>
+                                <span style="color:#fff; font-weight:700;">'.$dados['nome'].'</span>
+                            </div>
+                            
+                            <table class="hist-sets-table" style="width:100%; border-collapse:collapse; text-align:center;">
+                                <thead>
+                                    <tr style="background:rgba(0,0,0,0.2); color:#555; font-size:0.65rem; text-transform:uppercase;">
+                                        <th style="padding:10px;">#</th>
+                                        <th style="padding:10px;">TIPO</th>
+                                        <th style="padding:10px;">KG</th>
+                                        <th style="padding:10px;">REPS</th>
+                                    </tr>
+                                </thead>
+                                <tbody>';
+                                
+                                foreach ($dados['series'] as $serie) {
+                                    $cat = $serie['categoria'] ? strtolower($serie['categoria']) : 'work';
+                                    $num_ordem = $serie['numero_serie'] > 0 ? $serie['numero_serie'] : '-';
+                                    $id_hist = $serie['id'];
+
+                                    // Badge Colors
+                                    $bgBadge = 'rgba(255,255,255,0.1)'; $colorBadge = '#ccc';
+                                    if($cat=='warmup') { $bgBadge='rgba(255,215,0,0.1)'; $colorBadge='#FFD700'; }
+                                    if($cat=='work')   { $bgBadge='rgba(255,66,66,0.1)'; $colorBadge='#ff5e5e'; }
+                                    if($cat=='feeder') { $bgBadge='rgba(135,206,235,0.1)'; $colorBadge='#87CEEB'; }
+
+                                    echo '<tr style="border-bottom:1px solid #1f1f1f;">
+                                            <td style="padding:10px; color:#666; font-weight:bold;">'.$num_ordem.'</td>
+                                            <td style="padding:10px;">
+                                                <span style="font-size:0.6rem; padding:3px 8px; border-radius:12px; font-weight:800; background:'.$bgBadge.'; color:'.$colorBadge.'; border:1px solid '.$colorBadge.'">'.strtoupper($cat).'</span>
+                                            </td>
+                                            
+                                            <td class="editable-cell-adm" data-id="'.$id_hist.'" data-type="carga" style="padding:10px;">
+                                                <span class="view-val" style="color:#fff; font-weight:bold;">'.($serie['carga_kg']*1).'</span>
+                                                <input type="number" step="0.1" class="edit-input" value="'.($serie['carga_kg']*1).'" style="display:none; width:60px; background:#222; border:1px solid #444; color:#fff; padding:5px; border-radius:4px; text-align:center;">
+                                            </td>
+
+                                            <td class="editable-cell-adm" data-id="'.$id_hist.'" data-type="reps" style="padding:10px;">
+                                                <span class="view-val" style="color:#fff;">'.$serie['reps_realizadas'].'</span>
+                                                <input type="number" class="edit-input" value="'.$serie['reps_realizadas'].'" style="display:none; width:50px; background:#222; border:1px solid #444; color:#fff; padding:5px; border-radius:4px; text-align:center;">
+                                            </td>
+                                          </tr>';
+                                }
+
+                    echo '      </tbody>
+                            </table>
+                          </div>';
+                }
+
+        echo '  </div>
+              </section>';
         
-        echo '</section>';
-        break;
+        break; // Fim do modo Detalhes
+    }
+
+    // --- MODO 2: LISTA DE DATAS (TIMELINE) ---
+    $sql_lista = "SELECT th.data_treino, t.nome as nome_treino, td.letra
+                  FROM treino_historico th
+                  LEFT JOIN treinos t ON th.treino_id = t.id
+                  LEFT JOIN treino_divisoes td ON th.divisao_id = td.id
+                  WHERE th.aluno_id = :uid
+                  GROUP BY th.data_treino
+                  ORDER BY th.data_treino DESC";
+                  
+    $stmt = $pdo->prepare($sql_lista);
+    $stmt->execute(['uid' => $aluno_id]);
+    $historico = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    echo '<section id="admin-historico-lista" class="fade-in">
+            <header class="dash-header">
+                <div style="display:flex; align-items:center; gap:15px; margin-bottom:10px;">
+                    <img src="'.$foto_aluno.'" style="width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid var(--gold);">
+                    <div>
+                        <h1 style="font-size:1.5rem; margin:0;">HISTÓRICO <span class="highlight-text">DO ALUNO</span></h1>
+                        <p class="text-desc" style="margin:0;">'.$nome_aluno.'</p>
+                    </div>
+                </div>
+            </header>';
+
+    if (empty($historico)) {
+        echo '<div class="empty-state" style="text-align:center; padding:50px 20px; color:#666;">
+                <i class="fa-solid fa-clock-rotate-left" style="font-size:3rem; margin-bottom:15px; opacity:0.5;"></i>
+                <h2>Nenhum treino registrado</h2>
+                <p>O aluno ainda não registrou atividades.</p>
+              </div>';
+    } else {
+        echo '<div class="history-list" style="display:flex; flex-direction:column; gap:12px; padding-bottom:90px;">';
+        
+        foreach ($historico as $h) {
+            $data_obj = new DateTime($h['data_treino']);
+            $dia = $data_obj->format('d');
+            $meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            $mes_txt = $meses[(int)$data_obj->format('m') - 1];
+            $hora = $data_obj->format('H:i');
+            $treino_nome = $h['nome_treino'] ? $h['nome_treino'] : 'Treino Arquivado';
+            $letra = $h['letra'] ? $h['letra'] : '?';
+
+            // Link corrigido para passar ID
+            echo '<div class="history-card" onclick="carregarConteudo(\'aluno_historico&id='.$aluno_id.'&data_ref='.$h['data_treino'].'\')" 
+                       style="background:linear-gradient(145deg, #1a1a1a, #111); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:18px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; position:relative; overflow:hidden;">
+                    
+                    <div style="position:absolute; left:0; top:0; bottom:0; width:5px; background:linear-gradient(to bottom, var(--gold), #b8860b);"></div>
+                    
+                    <div class="hist-date-box" style="padding-right:15px; margin-right:15px; border-right:1px solid rgba(255,255,255,0.1); text-align:center; min-width:65px; margin-left:10px;">
+                        <span class="hist-day" style="display:block; font-size:1.5rem; font-weight:800; color:#fff; line-height:1;">'.$dia.'</span>
+                        <span class="hist-month" style="display:block; font-size:0.7rem; text-transform:uppercase; color:var(--gold); font-weight:bold; margin-top:2px;">'.$mes_txt.'</span>
+                    </div>
+                    
+                    <div class="hist-info" style="flex:1;">
+                        <span class="hist-title" style="display:block; font-size:1.05rem; font-weight:700; color:#fff; margin-bottom:2px;">Treino '.$letra.'</span>
+                        <span class="hist-sub" style="font-size:0.8rem; color:#777;">'.$treino_nome.' • '.$hora.'</span>
+                    </div>
+                    
+                    <i class="fa-solid fa-chevron-right hist-arrow" style="color:#444;"></i>
+                  </div>';
+        }
+        echo '</div>';
+    }
+    
+    echo '</section>';
+    break;
 
     case 'treinos_editor':
         require_once '../config/db_connect.php';

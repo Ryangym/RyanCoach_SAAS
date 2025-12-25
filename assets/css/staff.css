@@ -306,22 +306,6 @@
     justify-content: flex-end;
 }
 
-.btn-action-icon {
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.2);
-    color: #ccc;
-    min-width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: 0.3s;
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.btn-action-icon:hover { background: #fff; color: #000; }
-
 /* Botões Específicos */
 .btn-confirm { border-color: #00ff00; color: #00ff00; }
 .btn-confirm:hover { background: #00ff00; color: #000; box-shadow: 0 0 10px #00ff00; }
@@ -329,5 +313,3 @@
 .btn-undo { border-color: #ff9900; color: #ff9900; }
 .btn-undo:hover { background: #ff9900; color: #000; }
 
-.btn-delete { border-color: #ff4242; color: #ff4242; }
-.btn-delete:hover { background: #ff4242; color: #fff; box-shadow: 0 0 10px rgba(255, 66, 66, 0.4); }

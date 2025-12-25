@@ -727,55 +727,45 @@ switch ($pagina) {
 
     
     case 'historico':
-        require_once '../config/db_connect.php';
-        $aluno_id = $_SESSION['user_id'];
-        
-        // Verifica se foi pedido o detalhe de uma data específica
-        $data_ref = $_GET['data_ref'] ?? null;
+    require_once '../config/db_connect.php';
+    $aluno_id = $_SESSION['user_id'];
+    $data_ref = $_GET['data_ref'] ?? null;
 
-        // --- MODO 1: DETALHES DO TREINO (QUANDO CLICA) ---
-        if ($data_ref) {
-            // 1. Infos Gerais
-            $sql_info = "SELECT DISTINCT t.nome as nome_treino, td.letra 
+    // --- MODO 1: DETALHES DO TREINO ---
+    if ($data_ref) {
+        // Infos Gerais
+        $stmt = $pdo->prepare("SELECT DISTINCT t.nome as nome_treino, td.letra 
+                     FROM treino_historico th
+                     JOIN treinos t ON th.treino_id = t.id
+                     JOIN treino_divisoes td ON th.divisao_id = td.id
+                     WHERE th.aluno_id = :uid AND th.data_treino = :dt");
+        $stmt->execute(['uid' => $aluno_id, 'dt' => $data_ref]);
+        $info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Detalhes
+        $stmt = $pdo->prepare("SELECT th.*, e.nome_exercicio, s.categoria 
                          FROM treino_historico th
-                         JOIN treinos t ON th.treino_id = t.id
-                         JOIN treino_divisoes td ON th.divisao_id = td.id
-                         WHERE th.aluno_id = :uid AND th.data_treino = :dt";
-            $stmt = $pdo->prepare($sql_info);
-            $stmt->execute(['uid' => $aluno_id, 'dt' => $data_ref]);
-            $info = $stmt->fetch(PDO::FETCH_ASSOC);
+                         JOIN exercicios e ON th.exercicio_id = e.id
+                         LEFT JOIN series s ON COALESCE(th.serie_id, th.serie_numero) = s.id 
+                         WHERE th.aluno_id = :uid AND th.data_treino = :dt
+                         ORDER BY e.ordem ASC, th.id ASC");
+        $stmt->execute(['uid' => $aluno_id, 'dt' => $data_ref]);
+        $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 2. Busca Detalhes Completos (CORREÇÃO AQUI)
-            // Usamos COALESCE para priorizar th.serie_id. Se for nulo, tenta th.serie_numero
-            $sql_detalhes = "SELECT th.*, e.nome_exercicio, s.categoria 
-                             FROM treino_historico th
-                             JOIN exercicios e ON th.exercicio_id = e.id
-                             LEFT JOIN series s ON COALESCE(th.serie_id, th.serie_numero) = s.id 
-                             WHERE th.aluno_id = :uid AND th.data_treino = :dt
-                             ORDER BY e.ordem ASC, th.id ASC";
-                             
-            $stmt = $pdo->prepare($sql_detalhes);
-            $stmt->execute(['uid' => $aluno_id, 'dt' => $data_ref]);
-            $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // 3. AGRUPAMENTO
-            $treino_agrupado = [];
-            foreach ($registros as $reg) {
-                $id_ex = $reg['exercicio_id'];
-                
-                if (!isset($treino_agrupado[$id_ex])) {
-                    $treino_agrupado[$id_ex] = [
-                        'nome' => $reg['nome_exercicio'],
-                        'series' => []
-                    ];
-                }
-                $treino_agrupado[$id_ex]['series'][] = $reg;
+        // Agrupamento
+        $treino_agrupado = [];
+        foreach ($registros as $reg) {
+            $id_ex = $reg['exercicio_id'];
+            if (!isset($treino_agrupado[$id_ex])) {
+                $treino_agrupado[$id_ex] = ['nome' => $reg['nome_exercicio'], 'series' => []];
             }
+            $treino_agrupado[$id_ex]['series'][] = $reg;
+        }
 
-            // --- RENDERIZAÇÃO ---
-            echo '<section class="fade-in">
-                    <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px;">
-                        <button onclick="carregarConteudo(\'historico\')" style="background:none; border:none; color:#fff; font-size:1.2rem;">
+        echo '<section class="fade-in">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <button onclick="carregarConteudo(\'historico\')" style="background:none; border:none; color:#fff; font-size:1.2rem; cursor:pointer;">
                             <i class="fa-solid fa-arrow-left"></i>
                         </button>
                         <div>
@@ -783,116 +773,127 @@ switch ($pagina) {
                             <h2 style="margin:0; color:#fff; font-size:1.2rem;">TREINO '.($info['letra'] ?? '?').'</h2>
                         </div>
                     </div>
-
-                    <div style="margin-bottom:20px; padding:15px; background:rgba(255,186,66,0.1); border-radius:8px; border:1px solid var(--gold); display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <strong style="color:var(--gold); display:block;">'.($info['nome_treino'] ?? 'Treino').'</strong>
-                            <span style="color:#ccc; font-size:0.8rem;">'.date('d/m/Y \à\s H:i', strtotime($data_ref)).'</span>
-                        </div>
-                        <i class="fa-solid fa-calendar-check" style="color:var(--gold); font-size:1.5rem;"></i>
-                    </div>
-
-                    <div class="history-details-list">';
                     
-                    if (empty($treino_agrupado)) {
-                        echo '<p style="text-align:center; color:#666;">Nenhum dado detalhado encontrado.</p>';
-                    }
+                    <div style="display:flex; gap:10px;">
+                        <button id="btn-editar-hist" onclick="alternarEdicaoHistorico()" style="width:40px; height:40px; border-radius:50%; background:rgba(255, 186, 66, 0.1); border:1px solid var(--gold); color:var(--gold); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.3s;">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button onclick="deletarHistorico(\''.$data_ref.'\')" style="width:40px; height:40px; border-radius:50%; background:rgba(255,66,66,0.1); border:1px solid #ff4242; color:#ff4242; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.3s;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
 
-                    foreach ($treino_agrupado as $ex_id => $dados) {
-                        echo '<div class="hist-exercise-group">
-                                <div class="hist-ex-header">
-                                    <i class="fa-solid fa-dumbbell"></i>
-                                    <span>'.$dados['nome'].'</span>
-                                </div>
+                <div style="margin-bottom:20px; padding:15px; background:rgba(255,186,66,0.1); border-radius:8px; border:1px solid var(--gold); display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="color:var(--gold); display:block;">'.($info['nome_treino'] ?? 'Treino').'</strong>
+                        <span style="color:#ccc; font-size:0.8rem;">'.date('d/m/Y \à\s H:i', strtotime($data_ref)).'</span>
+                    </div>
+                    <i class="fa-solid fa-calendar-check" style="color:var(--gold); font-size:1.5rem;"></i>
+                </div>
+
+                <div class="history-details-list">';
+                
+                if (empty($treino_agrupado)) echo '<p style="text-align:center; color:#666;">Nenhum dado encontrado.</p>';
+
+                foreach ($treino_agrupado as $ex_id => $dados) {
+                    echo '<div class="hist-exercise-group">
+                            <div class="hist-ex-header">
+                                <i class="fa-solid fa-dumbbell"></i>
+                                <span>'.$dados['nome'].'</span>
+                            </div>
+                            
+                            <table class="hist-sets-table">
+                                <thead>
+                                    <tr>
+                                        <th width="15%">#</th>
+                                        <th width="25%">TIPO</th>
+                                        <th width="30%">KG</th>
+                                        <th width="30%">REPS</th>
+                                    </tr>
+                                </thead>
+                                <tbody>';
                                 
-                                <table class="hist-sets-table">
-                                    <thead>
-                                        <tr>
-                                            <th width="15%">#</th>
-                                            <th width="35%">TIPO</th>
-                                            <th width="25%">KG</th>
-                                            <th width="25%">REPS</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>';
-                                    
-                                    foreach ($dados['series'] as $serie) {
-                                        // Categoria
-                                        $cat = $serie['categoria'] ? strtolower($serie['categoria']) : 'work';
-                                        
-                                        // Ordem (Usa numero_serie se existir, senão usa contador manual)
-                                        $num_ordem = $serie['numero_serie'] > 0 ? $serie['numero_serie'] : '-';
+                                foreach ($dados['series'] as $serie) {
+                                    $cat = $serie['categoria'] ? strtolower($serie['categoria']) : 'work';
+                                    $num = $serie['numero_serie'] > 0 ? $serie['numero_serie'] : '-';
+                                    $id_hist = $serie['id'];
 
-                                        echo '<tr>
-                                                <td style="color:#666; font-weight:bold;">#'.$num_ordem.'</td>
-                                                <td><span class="badge-set-type '.$cat.'">'.strtoupper($cat).'</span></td>
-                                                <td style="color:#fff; font-weight:bold;">'.($serie['carga_kg']*1).'</td>
-                                                <td style="color:#fff;">'.$serie['reps_realizadas'].'</td>
-                                              </tr>';
-                                    }
+                                    echo '<tr>
+                                            <td style="color:#666; font-weight:bold;">#'.$num.'</td>
+                                            <td><span class="badge-set-type '.$cat.'">'.strtoupper($cat).'</span></td>
+                                            
+                                            <td class="editable-cell" data-id="'.$id_hist.'" data-type="carga">
+                                                <span class="view-val" style="color:#fff; font-weight:bold;">'.($serie['carga_kg']*1).'</span>
+                                                <input type="number" step="0.1" class="edit-input" value="'.($serie['carga_kg']*1).'" style="display:none; width:60px; background:#222; border:1px solid #444; color:#fff; padding:5px; border-radius:4px;">
+                                            </td>
 
-                        echo '      </tbody>
-                                </table>
-                              </div>';
-                    }
-
-            echo '  </div>
-                  </section>';
-            
-            break;
-        }
-
-        // --- MODO 2: LISTA (IGUAL AO ANTERIOR) ---
-        $sql_lista = "SELECT th.data_treino, t.nome as nome_treino, td.letra
-                      FROM treino_historico th
-                      LEFT JOIN treinos t ON th.treino_id = t.id
-                      LEFT JOIN treino_divisoes td ON th.divisao_id = td.id
-                      WHERE th.aluno_id = :uid
-                      GROUP BY th.data_treino
-                      ORDER BY th.data_treino DESC";
-                      
-        $stmt = $pdo->prepare($sql_lista);
-        $stmt->execute(['uid' => $aluno_id]);
-        $historico = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo '<section id="historico-lista" class="fade-in">
-                <header class="dash-header">
-                    <h1>MEU <span class="highlight-text">HISTÓRICO</span></h1>
-                </header>';
-
-        if (empty($historico)) {
-            echo '<div class="empty-state">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                    <h2>Nenhum treino registrado</h2>
-                    <p>Realize seu primeiro treino para ver o histórico.</p>
-                  </div>';
-        } else {
-            echo '<div class="history-list">';
-            foreach ($historico as $h) {
-                $data_obj = new DateTime($h['data_treino']);
-                $dia = $data_obj->format('d');
-                $meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-                $mes_txt = $meses[(int)$data_obj->format('m') - 1];
-                $hora = $data_obj->format('H:i');
-                $treino_nome = $h['nome_treino'] ? $h['nome_treino'] : 'Treino Arquivado';
-                $letra = $h['letra'] ? $h['letra'] : '?';
-
-                echo '<div class="history-card" onclick="carregarConteudo(\'historico&data_ref='.$h['data_treino'].'\')">
-                        <div class="hist-date-box">
-                            <span class="hist-day">'.$dia.'</span>
-                            <span class="hist-month">'.$mes_txt.'</span>
-                        </div>
-                        <div class="hist-info">
-                            <span class="hist-title">Treino '.$letra.'</span>
-                            <span class="hist-sub">'.$treino_nome.' • '.$hora.'</span>
-                        </div>
-                        <i class="fa-solid fa-chevron-right hist-arrow"></i>
-                      </div>';
-            }
-            echo '</div>';
-        }
-        echo '</section>';
+                                            <td class="editable-cell" data-id="'.$id_hist.'" data-type="reps">
+                                                <span class="view-val" style="color:#fff;">'.$serie['reps_realizadas'].'</span>
+                                                <input type="number" class="edit-input" value="'.$serie['reps_realizadas'].'" style="display:none; width:50px; background:#222; border:1px solid #444; color:#fff; padding:5px; border-radius:4px;">
+                                            </td>
+                                          </tr>';
+                                }
+                    echo '      </tbody>
+                            </table>
+                          </div>';
+                }
+        echo '  </div>
+              </section>';
         break;
+    }
+
+    // --- MODO 2: LISTA (HISTÓRICO GERAL) ---
+    $sql_lista = "SELECT th.data_treino, t.nome as nome_treino, td.letra
+                  FROM treino_historico th
+                  LEFT JOIN treinos t ON th.treino_id = t.id
+                  LEFT JOIN treino_divisoes td ON th.divisao_id = td.id
+                  WHERE th.aluno_id = :uid
+                  GROUP BY th.data_treino
+                  ORDER BY th.data_treino DESC";
+                  
+    $stmt = $pdo->prepare($sql_lista);
+    $stmt->execute(['uid' => $aluno_id]);
+    $historico = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    echo '<section id="historico-lista" class="fade-in">
+            <header class="dash-header">
+                <h1>MEU <span class="highlight-text">HISTÓRICO</span></h1>
+            </header>';
+
+    if (empty($historico)) {
+        echo '<div class="empty-state">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <h2>Nenhum treino registrado</h2>
+                <p>Realize seu primeiro treino para ver o histórico.</p>
+              </div>';
+    } else {
+        echo '<div class="history-list">';
+        foreach ($historico as $h) {
+            $data_obj = new DateTime($h['data_treino']);
+            $dia = $data_obj->format('d');
+            $meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            $mes_txt = $meses[(int)$data_obj->format('m') - 1];
+            $hora = $data_obj->format('H:i');
+            $treino_nome = $h['nome_treino'] ? $h['nome_treino'] : 'Treino Arquivado';
+            $letra = $h['letra'] ? $h['letra'] : '?';
+
+            echo '<div class="history-card" onclick="carregarConteudo(\'historico&data_ref='.$h['data_treino'].'\')">
+                    <div class="hist-date-box">
+                        <span class="hist-day">'.$dia.'</span>
+                        <span class="hist-month">'.$mes_txt.'</span>
+                    </div>
+                    <div class="hist-info">
+                        <span class="hist-title">Treino '.$letra.'</span>
+                        <span class="hist-sub">'.$treino_nome.' • '.$hora.'</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right hist-arrow"></i>
+                  </div>';
+        }
+        echo '</div>';
+    }
+    echo '</section>';
+    break;
 
 
 

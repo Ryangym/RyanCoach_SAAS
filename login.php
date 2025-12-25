@@ -27,8 +27,8 @@
                     <label for="reg-email">Email</label>
                 </div>
                 <div class="input-group">
-                    <input type="tel" id="reg-phone" name="telefone" placeholder=" " required />
-                    <label for="reg-phone">Telefone</label>
+                    <input type="tel" id="reg-phone" name="telefone" placeholder=" " maxlength="15" required />
+                    <label for="reg-phone">Telefone (Whatsapp)</label>
                 </div>
                 <div class="input-group">
                     <input type="password" name="senha" placeholder=" " required>
@@ -86,6 +86,9 @@
     </div>
 
     <script>
+        // ---------------------------------------------------------------
+        // 1. LÓGICA DE ALTERNÂNCIA DE TELAS (SIGN IN / SIGN UP)
+        // ---------------------------------------------------------------
         document.addEventListener('DOMContentLoaded', () => {
             const container = document.getElementById('container');
             
@@ -93,80 +96,138 @@
             const signUpButton = document.getElementById('signUp');
             const signInButton = document.getElementById('signIn');
 
-            // Links de texto do Mobile
+            // Links de texto do Mobile (Verifica se existem antes de usar)
             const signUpLinkMobile = document.getElementById('signUpMobile');
             const signInLinkMobile = document.getElementById('signInMobile');
 
             const showSignUp = () => {
-                container.classList.add('active');
+                if(container) container.classList.add('active');
             };
 
             const showSignIn = () => {
-                container.classList.remove('active');
+                if(container) container.classList.remove('active');
             };
 
-            // Listeners para Desktop
-            signUpButton.addEventListener('click', showSignUp);
-            signInButton.addEventListener('click', showSignIn);
+            // Listeners para Desktop (Com verificação)
+            if (signUpButton) signUpButton.addEventListener('click', showSignUp);
+            if (signInButton) signInButton.addEventListener('click', showSignIn);
 
-            // Listeners para Mobile
-            signUpLinkMobile.addEventListener('click', (e) => {
-                e.preventDefault();
-                showSignUp();
-            });
-            signInLinkMobile.addEventListener('click', (e) => {
-                e.preventDefault();
-                showSignIn();
-            });
+            // Listeners para Mobile (Só adiciona se o elemento existir no HTML)
+            if (signUpLinkMobile) {
+                signUpLinkMobile.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showSignUp();
+                });
+            }
+
+            if (signInLinkMobile) {
+                signInLinkMobile.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showSignIn();
+                });
+            }
         });
 
-    function fazerLogin(event) {
-        event.preventDefault(); // <--- ISSO IMPEDE A TELA PRETA (submit padrão)
+        // ---------------------------------------------------------------
+        // 2. FUNÇÃO DE LOGIN AJAX
+        // ---------------------------------------------------------------
+        function fazerLogin(event) {
+            event.preventDefault(); // Impede o reload da página
 
-        const form = document.getElementById('formLogin');
-        const formData = new FormData(form);
-        const btn = form.querySelector('button[type="submit"]');
-        
-        // Efeito visual no botão
-        const textoOriginal = btn.innerHTML;
-        btn.innerHTML = 'Entrando...';
-        btn.disabled = true;
+            const form = document.getElementById('formLogin');
+            const formData = new FormData(form);
+            const btn = form.querySelector('button[type="submit"]');
+            
+            // Efeito visual no botão
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Entrando...';
+            btn.disabled = true;
 
-        fetch('actions/auth_login.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                // O PHP mandou o link certo, o JS obedece
-                window.location.href = data.redirect;
-            } else {
-                alert(data.message); // Mostra erro (senha errada, etc)
+            fetch('actions/auth_login.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    window.location.href = data.redirect;
+                } else {
+                    alert(data.message);
+                    btn.innerHTML = textoOriginal;
+                    btn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro de conexão com o servidor.');
                 btn.innerHTML = textoOriginal;
                 btn.disabled = false;
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            alert('Erro de conexão.');
-            btn.innerHTML = textoOriginal;
-            btn.disabled = false;
-        });
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const refCode = urlParams.get('ref'); // Pega ?ref=CODIGO
-        if (refCode) {
-            const input = document.getElementById('input-cupom');
-            if (input) {
-                input.value = refCode;
-                input.readOnly = true; // Trava para não editar
-            }
+            });
         }
-    });
 
+        // ---------------------------------------------------------------
+        // 3. PREENCHER CÓDIGO DE CUPOM VIA URL
+        // ---------------------------------------------------------------
+        document.addEventListener("DOMContentLoaded", function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const refCode = urlParams.get('ref'); // Pega ?ref=CODIGO
+            if (refCode) {
+                const input = document.getElementById('input-cupom');
+                if (input) {
+                    input.value = refCode;
+                    input.readOnly = true; // Trava para não editar
+                }
+            }
+        });
+
+        // ---------------------------------------------------------------
+        // 4. MÁSCARA E VALIDAÇÃO DO TELEFONE
+        // ---------------------------------------------------------------
+        document.addEventListener("DOMContentLoaded", function() {
+            const phoneInput = document.getElementById('reg-phone');
+
+            // SÓ RODA SE O CAMPO EXISTIR NA TELA
+            if (phoneInput) { 
+                const form = phoneInput.closest('form'); 
+
+                // Máscara Automática
+                phoneInput.addEventListener('input', function (e) {
+                    let value = e.target.value.replace(/\D/g, ''); 
+                    
+                    if (value.length > 11) value = value.slice(0, 11);
+
+                    if (value.length > 2) {
+                        value = `(${value.substring(0, 2)}) ${value.substring(2)}`;
+                    }
+                    
+                    if (value.length > 7) {
+                        value = `${value.substring(0, 10)} ${value.substring(10)}`;
+                    }
+
+                    e.target.value = value;
+                });
+
+                // Validação ao Enviar
+                if (form) { 
+                    form.addEventListener('submit', function(e) {
+                        const rawValue = phoneInput.value.replace(/\D/g, ''); 
+
+                        if (rawValue.length < 11) {
+                            e.preventDefault(); 
+                            
+                            alert("Por favor, digite o número completo com DDD (Ex: 11 91234 5678).");
+                            
+                            phoneInput.focus();
+                            phoneInput.style.borderBottom = "2px solid red";
+                            
+                            phoneInput.addEventListener('input', () => {
+                                phoneInput.style.borderBottom = ""; 
+                            }, { once: true });
+                        }
+                    });
+                }
+            }
+        });
     </script>
 </body>
 </html>

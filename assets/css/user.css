@@ -7,13 +7,13 @@
    3.  COMPONENTES GERAIS (Botões, Inputs, Animações)
    4.  MÓDULO: PERFIL DE USUÁRIO
    5.  MÓDULO: TREINOS (Visualização e Timeline)
-   *.  MÓDULO: HISTÓRICO DE TREINOS 
-   6.  MÓDULO: EDITOR DE TREINOS (Admin/Coach)
-   7.  MÓDULO: DIETA (Timeline e Cards)
-   8.  MÓDULO: AVALIAÇÃO FÍSICA (Histórico, Gráficos e Tabelas)
-   9.  MÓDULO: MENU E HUB
-   10. MODAIS (Popups Gerais e Específicos)
-   11. RESPONSIVIDADE (Ajustes Mobile)
+   6.  MÓDULO: HISTÓRICO DE TREINOS 
+   7.  MÓDULO: EDITOR DE TREINOS (Admin/Coach)
+   8.  MÓDULO: DIETA (Timeline e Cards)
+   9.  MÓDULO: AVALIAÇÃO FÍSICA (Histórico, Gráficos e Tabelas)
+   10.  MÓDULO: MENU E HUB
+   11. MODAIS (Popups Gerais e Específicos)
+   12. RESPONSIVIDADE (Ajustes Mobile)
    ========================================================================== */
 
 /* ---------------FONTES---------------------- */
@@ -588,7 +588,7 @@ section {
 .focus-obs { color: #888; font-style: italic; font-size: 0.85rem; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); }
 
 /* ==========================================================================
-   *. MÓDULO: HISTÓRICO DE TREINOS
+   6. MÓDULO: HISTÓRICO DE TREINOS
    ========================================================================== */
 
 .history-list { display: flex; flex-direction: column; gap: 12px; padding-bottom: 90px; }
@@ -671,7 +671,7 @@ section {
 .badge-set-type.top { color: #fff; background: linear-gradient(135deg, #ff0000 0%, #aa0000 100%);border: none;box-shadow: 0 2px 8px rgba(255, 0, 0, 0.4); }
 
 /* ==========================================================================
-   6. MÓDULO: EDITOR DE TREINOS (ADMIN/COACH)
+   7. MÓDULO: EDITOR DE TREINOS (ADMIN/COACH)
    ========================================================================== */
 .timeline-wrapper {
     overflow-x: auto;
@@ -740,6 +740,9 @@ section {
 .ex-info h4 { color: #fff; font-size: 1.1rem; margin-bottom: 5px; font-family: 'Roboto', sans-serif; }
 .ex-meta { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: block; }
 
+.btn-delete { border-color: #ff4242; color: #ff4242; }
+.btn-delete:hover { background: #ff4242; color: #fff; box-shadow: 0 0 10px rgba(255, 66, 66, 0.4); }
+
 .sets-container { display: flex; gap: 8px; flex-wrap: wrap; }
 .set-tag {
     padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold;
@@ -779,7 +782,7 @@ section {
 .input-hint { font-size: 0.8rem; color: #666; margin-top: 5px; }
 
 /* ==========================================================================
-   7. MÓDULO: DIETA
+   8. MÓDULO: DIETA
    ========================================================================== */
 .timeline-diet { display: flex; flex-direction: column; gap: 20px; padding-bottom: 100px; }
 
@@ -830,7 +833,7 @@ section {
 .diet-divider span { background: #1a1a1a; padding: 0 10px; color: #666; font-size: 0.7rem; font-weight: bold; position: relative; z-index: 1; }
 
 /* ==========================================================================
-   8. MÓDULO: AVALIAÇÃO FÍSICA (Dashboard e Lista)
+   9. MÓDULO: AVALIAÇÃO FÍSICA (Dashboard e Lista)
    ========================================================================== */
 .greeting-clean {
     font-size: clamp(1.5rem, 5vw, 2.2rem); margin-bottom: 5px; color: #fff;
@@ -998,7 +1001,7 @@ section {
 }
 
 /* ==========================================================================
-   9. MÓDULO: MENU E HUB DE NAVEGAÇÃO
+   10. MÓDULO: MENU E HUB DE NAVEGAÇÃO
    ========================================================================== */
 .menu-profile-header {
     background: linear-gradient(135deg, #1f1f1f 0%, #161616 100%);
@@ -1044,7 +1047,7 @@ section {
 .setting-item.logout .st-left i, .setting-item.logout .st-left span { color: #ff4242; }
 
 /* ==========================================================================
-   10. MODAIS (POPUPS)
+   11. MODAIS (POPUPS)
    ========================================================================== */
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
@@ -1149,7 +1152,7 @@ section {
 @keyframes zoomInModal { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 /* ==========================================================================
-   11. RESPONSIVIDADE (MOBILE - 768px ou menos)
+   12. RESPONSIVIDADE (MOBILE - 768px ou menos)
    ========================================================================== */
 @media (max-width: 768px) {
     body { flex-direction: column; }

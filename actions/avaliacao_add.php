@@ -5,9 +5,10 @@ require_once '../config/db_connect.php';
 // --- CONFIGURAÇÕES ---
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+// Caminho absoluto para salvar
 $upload_dir = __DIR__ . '/../assets/uploads/avaliacoes/';
 
-// --- 1. VERIFICAÇÃO DE SEGURANÇA (Tamanho do Post) ---
+// --- 1. VERIFICAÇÃO DE SEGURANÇA ---
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && empty($_POST) && empty($_FILES) && $_SERVER['CONTENT_LENGTH'] > 0) {
     echo "<script>alert('ERRO: Arquivos excedem o limite do servidor.'); window.history.back();</script>";
     exit;
@@ -19,22 +20,23 @@ if (!isset($_SESSION['user_id'])) { die("Acesso negado"); }
 $tipo_conta = $_SESSION['tipo_conta'] ?? '';
 $meu_id = $_SESSION['user_id'];
 
-// Valida tipos permitidos estritos
+// Valida tipos permitidos
 if (!in_array($tipo_conta, ['admin', 'coach', 'atleta'])) {
     die("Tipo de conta inválido ou não autorizado.");
 }
 
-// LÓGICA DE QUEM É O ALUNO E PARA ONDE VOLTA
+// LÓGICA DE QUEM É O ALUNO E QUEM ESTÁ REGISTRANDO
+// $registrado_por_id: Deve ser o ID do usuário logado (seja ele admin, coach ou atleta)
+$registrado_por_id = $meu_id; 
+
 if ($tipo_conta === 'atleta') {
     // 1. Atleta se auto-avaliando
     $aluno_id = $meu_id;
-    $registrado_por = 'atleta'; 
     $redirect_url = "../usuario.php?pagina=avaliacoes&msg=sucesso";
 
 } else {
     // 2. Admin ou Coach avaliando alguém
     $aluno_id = filter_input(INPUT_POST, 'aluno_id', FILTER_SANITIZE_NUMBER_INT);
-    $registrado_por = $tipo_conta; // 'admin' ou 'coach'
     
     if (!$aluno_id) die("Erro: ID do aluno não fornecido.");
 
@@ -67,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $idade = filter_input(INPUT_POST, 'idade', FILTER_SANITIZE_NUMBER_INT);
         $obs = $_POST['observacoes'] ?? '';
 
-        // Helper para limpar floats
+        // Helper para limpar floats (Aceita virgula e ponto)
         function getFloat($key) {
             if (empty($_POST[$key])) return null;
             return (float) str_replace(',', '.', $_POST[$key]);
@@ -108,9 +110,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $massa_magra = $peso - $massa_gorda;
         }
 
-        // Inserção no Banco
+        // Inserção no Banco (CORREÇÃO: Campo registrado_por_id)
         $sql = "INSERT INTO avaliacoes (
-            aluno_id, registrado_por, data_avaliacao, idade, genero, peso_kg, altura_cm,
+            aluno_id, registrado_por_id, data_avaliacao, idade, genero, peso_kg, altura_cm,
             pescoco, ombro, torax_inspirado, torax_relaxado,
             braco_dir_relaxado, braco_esq_relaxado, braco_dir_contraido, braco_esq_contraido,
             antebraco_dir, antebraco_esq, cintura, abdomen, quadril,
@@ -120,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
-            $aluno_id, $registrado_por, $data, $idade, $genero, $peso, $altura,
+            $aluno_id, $registrado_por_id, $data, $idade, $genero, $peso, $altura,
             $pescoco, getFloat('ombro'), getFloat('torax_inspirado'), getFloat('torax_relaxado'),
             getFloat('braco_dir_relaxado'), getFloat('braco_esq_relaxado'), getFloat('braco_dir_contraido'), getFloat('braco_esq_contraido'),
             getFloat('antebraco_dir'), getFloat('antebraco_esq'), $cintura, $abdomen, $quadril,
@@ -150,11 +152,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!in_array($ext, ALLOWED_EXTS)) throw new Exception("Formato inválido: $name");
                 if ($size > MAX_FILE_SIZE) throw new Exception("Foto muito grande: $name");
 
+                // Gera nome único para evitar sobrescrever
                 $new_name = 'av_' . $avaliacao_id . '_' . uniqid() . '.' . $ext;
                 $dest = $upload_dir . $new_name;
 
                 if (move_uploaded_file($tmp, $dest)) {
-                    $arquivos_para_apagar[] = $dest; // Salva na lista de rollback
+                    $arquivos_para_apagar[] = $dest; // Salva para caso precise desfazer
+                    // Caminho relativo para salvar no banco (pasta 'avaliacoes/' já dentro de assets/uploads)
                     $db_path = 'avaliacoes/' . $new_name;
                     $pdo->prepare("INSERT INTO avaliacoes_arquivos (avaliacao_id, tipo, caminho_ou_url) VALUES (?, 'foto', ?)")->execute([$avaliacao_id, $db_path]);
                 } else {
@@ -185,6 +189,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($arquivos_para_apagar as $arq) {
             if (file_exists($arq)) unlink($arq);
         }
+
+        // Log de erro para debug (opcional)
+        error_log("Erro Avaliação Add: " . $e->getMessage());
 
         echo "<script>alert('ERRO: " . addslashes($e->getMessage()) . "'); window.history.back();</script>";
         exit;

@@ -62,7 +62,7 @@ switch ($pagina) {
         echo '
             <section id="admin-dash">
                 <header class="dash-header">
-                    <h1>OLÁ, <span class="highlight-text">'.strtoupper($primeiro_nome).'.</span></h1>
+                    <h1>OLÁ, <span class="highlight-text" style="color: var(--color-coach);"> '.strtoupper($primeiro_nome).'.</span></h1>
                     <p style="color: #888;">Painel do Treinador</p>
                 </header>
 

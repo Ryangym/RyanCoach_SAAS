@@ -100,16 +100,19 @@
     gap: 1rem;
 }
 
+
 /* Ícones dos Cards */
 .icon-box {
     width: 50px;
     height: 50px;
+    background: rgba(255, 186, 66, 0.1); /* Fundo dourado suave */
     border-radius: 12px;
     display: flex;
     justify-content: center;
     align-items: center;
+    color: var(--gold);
     font-size: 1.5rem;
-    transition: transform 0.3s;
+    border: 1px solid rgba(255, 186, 66, 0.2);
 }
 
 /* Variações de Cores dos Ícones */
@@ -195,7 +198,7 @@
 }
 
 .table-avatar {
-    width: 35px;
+    min-width: 35px;
     height: 35px;
     border-radius: 50%;
     object-fit: cover;

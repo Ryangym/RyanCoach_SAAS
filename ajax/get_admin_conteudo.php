@@ -1194,7 +1194,7 @@ switch ($pagina) {
                                         $dataExibicao = date('d/m/y', strtotime($dataShow));
                                         $foto = !empty($t['foto_pagador']) ? $t['foto_pagador'] : 'assets/img/user-default.png';
                                         $nomePagador = $t['nome_pagador'] ?: 'Desconhecido';
-                                        $tipoConta = $t['tipo_conta'] == 'coach' ? '<span style="color:var(--color-admin); font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
+                                        $tipoConta = $t['tipo_conta'] == 'coach' ? '<span style="color:var(--color-coach); font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
 
                                         echo '<tr>
                                             <td><div class="user-cell"><img src="'.$foto.'" class="table-avatar"><span>'.$nomePagador.'</span></div></td>
@@ -1229,7 +1229,7 @@ switch ($pagina) {
                                         $dataExibicao = date('d/m/y', strtotime($dataShow));
                                         $foto = !empty($t['foto_pagador']) ? $t['foto_pagador'] : 'assets/img/user-default.png';
                                         $nomePagador = $t['nome_pagador'] ?: 'Desconhecido';
-                                        $tipoConta = $t['tipo_conta'] == 'coach' ? '<span style="color: var(--color-admin); font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
+                                        $tipoConta = $t['tipo_conta'] == 'coach' ? '<span style="color: var(--color-coach); font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
                                         
                                         // Na Global mostra o Coach
                                         $infoCoach = '';
@@ -1270,7 +1270,7 @@ switch ($pagina) {
                 <div class="modal-content" style="overflow:visible;"> 
                     <button class="modal-close" onclick="document.getElementById(\'modalLancamentoAdm\').style.display=\'none\'">&times;</button>
                     
-                    <h3 class="section-title" style="color: var(--color-admin); margin-bottom: 20px; text-align: center;">
+                    <h3 class="section-title" style="color: var(--gold); margin-bottom: 20px; text-align: center;">
                         <i class="fa-solid fa-cash-register"></i> Lançamento Admin
                     </h3>
                     
@@ -1302,7 +1302,7 @@ switch ($pagina) {
                             <div style="flex:1;"><label class="input-label">Vencimento</label><input type="date" name="data_vencimento" class="admin-input" required value="'.date('Y-m-d').'"></div>
                             <div style="flex:1;"><label class="input-label">Status</label><select name="status" class="admin-input"><option value="pago">Pago</option><option value="pendente">Pendente</option></select></div>
                         </div>
-                        <button type="submit" class="btn-gold" style="width:100%; padding:15px; background: var(--color-admin); border:none;">REGISTRAR (ADMIN)</button>
+                        <button type="submit" class="btn-gold" style="width:100%; padding:15px; background: var(--gold); border:none;">REGISTRAR (ADMIN)</button>
                     </form>
                 </div>
             </div>
@@ -1625,10 +1625,22 @@ switch ($pagina) {
     
     $foto = $user['foto'] ? $user['foto'] : 'assets/img/user-default.png';
 
+    // --- LÓGICA DE CORES BASEADA EM 'tipo_conta' ---
+    $tipo = $user['tipo_conta']; // Coluna correta do banco
+
+    if ($tipo === 'coach') {
+        $corTema = 'var(--color-coach)'; 
+        $sombraBtn = 'rgba(0, 230, 118, 0.3)'; // Sombra Verde
+    } else {
+        // Padrão para admin
+        $corTema = 'var(--color-admin)';
+        $sombraBtn = 'rgba(255, 66, 66, 0.3)'; // Sombra Vermelha
+    }
+
     echo '
         <section id="perfil-section">
             <header class="dash-header">
-                <h1>MEU <span class="highlight-text" style="color: var(--color-admin);">PERFIL</span></h1>
+                <h1>MEU <span class="highlight-text" style="color: '.$corTema.';">PERFIL</span></h1>
             </header>
 
             <div class="glass-card" style="max-width: 800px; margin: 0 auto;">
@@ -1636,8 +1648,9 @@ switch ($pagina) {
                     
                     <div class="profile-photo-section">
                         <div class="photo-wrapper">
-                            <img src="'.$foto.'" alt="Foto Perfil" id="preview-img" style="border: 3px solid var(--color-admin);">
-                            <label for="foto-upload" class="upload-btn-float" style="background: var(--color-admin); color: #fff;">
+                            <img src="'.$foto.'" alt="Foto Perfil" id="preview-img" style="border: 3px solid '.$corTema.';">
+                            
+                            <label for="foto-upload" class="upload-btn-float" style="background: '.$corTema.'; color: #fff;">
                                 <i class="fa-solid fa-camera"></i>
                             </label>
                             <input type="file" name="foto" id="foto-upload" style="display: none;" accept="image/*" onchange="previewImage(this)">
@@ -1663,8 +1676,8 @@ switch ($pagina) {
                     <hr class="form-divider">
 
                     <div>
-                        <h3 class="password-section-title" style="color: var(--color-admin);">Segurança</h3>
-                        <p class="password-section-desc">Preencha apenas se quiser alterar sua senha de administrador.</p>
+                        <h3 class="password-section-title" style="color: '.$corTema.';">Segurança</h3>
+                        <p class="password-section-desc">Preencha apenas se quiser alterar sua senha de acesso.</p>
                     </div>
 
                     <div class="input-grid">
@@ -1679,7 +1692,7 @@ switch ($pagina) {
                     </div>
 
                     <div style="text-align: center; margin-top: 30px; margin-bottom: 10px;">
-                        <button type="submit" class="btn-gold" style="background: var(--color-admin); color: #fff; border: none; box-shadow: 0 4px 15px rgba(255, 66, 66, 0.3);">
+                        <button type="submit" class="btn-gold" style="background: '.$corTema.'; color: #fff; border: none; box-shadow: 0 4px 15px '.$sombraBtn.';">
                             <i class="fa-solid fa-floppy-disk" style="margin-right: 8px;"></i> SALVAR ALTERAÇÕES
                         </button>
                     </div>

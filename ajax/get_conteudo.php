@@ -1015,11 +1015,17 @@ switch ($pagina) {
                 </header>';
 
         if (empty($avaliacoes)) {
-            echo '<div class="empty-state-modern">
-                    <div class="icon-pulse"><i class="fa-solid fa-weight-scale"></i></div>
-                    <h2>Comece sua Jornada</h2>
-                    <p>Registre sua primeira avaliação para acompanhar sua evolução.</p>
-                  </div>';
+            echo '<div class="empty-state">
+                    <div class="empty-icon-circle">
+                        <i class="fa-solid fa-weight-scale"></i>
+                    </div>
+                    <h2 style="color: #fff; font-family: Orbitron, sans-serif; font-size: 1.5rem; margin: 0 0 10px 0; letter-spacing: 1px;">
+                        Comece sua Jornada
+                    </h2>
+                    <p style="color: #888; font-size: 0.95rem; margin: 0; max-width: 350px; line-height: 1.5;">
+                        Registre sua primeira avaliação para acompanhar sua evolução.
+                    </p>
+                </div>';
         } else {
 
             // --- LISTA ACCORDION ---
@@ -1211,12 +1217,23 @@ switch ($pagina) {
                 </header>';
 
         if (count($historico) < 2) {
-            echo '<div class="empty-state-modern">
-                    <div class="icon-pulse"><i class="fa-solid fa-chart-line"></i></div>
-                    <h2>Dados Insuficientes</h2>
-                    <p>Registre pelo menos 2 avaliações para desbloquear a análise comparativa.</p>
-                    <button class="btn-gold" style="margin-top:20px;" onclick="carregarConteudo(\'avaliacoes\')">REGISTRAR AGORA</button>
-                  </div>';
+            echo '<div class="empty-state">
+                    <div class="empty-icon-circle">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    
+                    <h2 style="color: #fff; font-family: Orbitron, sans-serif; font-size: 1.3rem; margin: 0 0 10px 0; letter-spacing: 1px;">
+                        Dados Insuficientes
+                    </h2>
+                    
+                    <p style="color: #999; font-size: 0.9rem; margin: 0; max-width: 400px; line-height: 1.5;">
+                        Registre pelo menos 2 avaliações para desbloquear a análise comparativa.
+                    </p>
+                    
+                    <button onclick="carregarConteudo(\'avaliacoes\')" class="btn-gold" style="margin-top:20px;">
+                        REGISTRAR AGORA
+                    </button>
+            </div>';
         } else {
             
             // --- GRÁFICO MASTER ---
@@ -2140,6 +2157,9 @@ switch ($pagina) {
                     </div>
                     <div class="menu-card" onclick="carregarConteudo(\'gerar_pdf\')">
                         <div class="mc-icon" style="background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid #555;"><i class="fa-solid fa-print"></i></div><span>Relatórios</span>
+                    </div>
+                    <div class="menu-card" onclick="carregarConteudo(\'novo_treino\')">
+                        <div class="mc-icon" style="background: rgba(150, 50, 255, 0.1); color: #a855f7; border: 1px solid #a855f7;"><i class="fa-solid fa-pen-to-square"></i></div><span>Novo Treino</span>
                     </div>
                 </div>
 

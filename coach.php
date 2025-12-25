@@ -19,9 +19,10 @@ if ($_SESSION['tipo_conta'] !== 'personal' && $_SESSION['tipo_conta'] !== 'coach
 <head>
     <title>Área do Coach</title>
     
-    <link rel="stylesheet" href="assets/css/menu.css">
-    <link rel="stylesheet" href="assets/css/usuario.css"> 
+    <link rel="stylesheet" href="assets/css/user.css"> 
     <link rel="stylesheet" href="assets/css/admin.css">
+    <link rel="stylesheet" href="assets/css/pdf.css">
+
 
     <?php include 'includes/head_main.php'; ?>
 </head>

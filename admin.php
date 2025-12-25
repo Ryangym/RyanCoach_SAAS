@@ -14,9 +14,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['tipo_conta'] !== 'admin') {
 <head>
     <title>Administrador - Ryan Coach</title>
     
-    <link rel="stylesheet" href="assets/css/menu.css">
-    <link rel="stylesheet" href="assets/css/usuario.css"> 
-    <link rel="stylesheet" href="assets/css/admin.css">
+    <link rel="stylesheet" href="assets/css/user.css"> 
+    <link rel="stylesheet" href="assets/css/staff.css">
+    <link rel="stylesheet" href="assets/css/pdf.css">
 
     <?php include 'includes/head_main.php'; ?>
 </head>

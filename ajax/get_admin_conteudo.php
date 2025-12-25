@@ -55,7 +55,7 @@ switch ($pagina) {
         echo '
             <section id="admin-dash">
                 <header class="dash-header">
-                    <h1>OLÁ, <span class="highlight-text" style="color: #00a8ff;">'.strtoupper($primeiro_nome).'.</span></h1>
+                    <h1>OLÁ, <span class="highlight-text" style="color: var(--color-admin);">'.strtoupper($primeiro_nome).'.</span></h1>
                     <p style="color: #888;">Painel de Controle Master</p>
                 </header>
 
@@ -64,7 +64,7 @@ switch ($pagina) {
                     <div class="glass-card">
                         <div class="card-label">CLIENTES (PERSONAIS)</div>
                         <div class="card-body">
-                            <div class="icon-box" style="color: #00a8ff; border-color: rgba(0, 168, 255, 0.3); background: rgba(0, 168, 255, 0.1);">
+                            <div class="icon-box" style="color: var(--color-coach); border-color: var(--color-coach); background: var(--bg-coach);">
                                 <i class="fa-solid fa-briefcase"></i>
                             </div>
                             <div class="info-box">
@@ -119,7 +119,7 @@ switch ($pagina) {
                     <div class="glass-card" style="padding: 0; overflow: hidden;">
                         <div style="padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
                             <h3 style="color: #fff; font-family: Orbitron; font-size: 1rem; margin:0;">
-                                <i class="fa-solid fa-user-tie" style="color: #00a8ff; margin-right: 10px;"></i> NOVOS PERSONAIS
+                                <i class="fa-solid fa-user-tie" style="color: var(--color-coach); margin-right: 10px;"></i> NOVOS PERSONAIS
                             </h3>
                             <button class="btn-gold" style="padding: 5px 10px; font-size: 0.7rem; background: transparent; border: 1px solid #333; color: #888;" onclick="carregarConteudo(\'alunos\')">VER TODOS</button>
                         </div>
@@ -135,10 +135,10 @@ switch ($pagina) {
                                 echo '
                                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; margin-bottom: 5px; background: rgba(255,255,255,0.02); border-radius: 8px; transition: 0.3s; cursor: pointer;" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.02)\'">
                                     <div style="display: flex; align-items: center; gap: 12px;">
-                                        <img src="'.$foto.'" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #00a8ff;">
+                                        <img src="'.$foto.'" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--color-coach);">
                                         <div>
                                             <h4 style="color: #fff; font-size: 0.9rem; margin: 0;">'.$c['nome'].'</h4>
-                                            <span style="color: #00a8ff; font-size: 0.7rem; font-weight: bold;">'.$badge.'</span>
+                                            <span style="color: var(--color-coach); font-size: 0.7rem; font-weight: bold;">'.$badge.'</span>
                                         </div>
                                     </div>
                                     <span style="color: #666; font-size: 0.75rem;">'.$data.'</span>
@@ -230,11 +230,11 @@ switch ($pagina) {
                                     
                                     // --- LÓGICA DE BADGES ATUALIZADA ---
                                     if ($a['tipo_conta'] === 'admin') {
-                                        $nivelTag = '<span class="status-badge" style="background:rgba(0, 168, 255, 0.1); color:#00a8ff; border:1px solid #00a8ff;">ADMIN</span>';
+                                        $nivelTag = '<span class="status-badge" style="background:var(--bg-admin); color:var(--color-admin); border:1px solid var(--color-admin);">ADMIN</span>';
                                     } elseif ($a['tipo_conta'] === 'personal' || $a['tipo_conta'] === 'coach') {
-                                        $nivelTag = '<span class="status-badge" style="background:rgba(255,66,66,0.2); color:#ff4242; border:1px solid #ff4242;">COACH</span>';
+                                        $nivelTag = '<span class="status-badge" style="background:var(--bg-coach); color:var(--color-coach); border:1px solid var(--color-coach);">COACH</span>';
                                     } else {
-                                        $nivelTag = '<span class="status-badge" style="background:rgba(218,165,32,0.2); color:var(--gold); border:1px solid var(--gold);">ALUNO</span>';
+                                        $nivelTag = '<span class="status-badge" style="background:var(--bg-atleta); color:var(--color-atleta); border:1px solid var(--color-atleta);">ATLETA</span>';
                                     }
                                     
                                     $zap_clean = preg_replace('/[^0-9]/', '', $a['telefone']);
@@ -1141,7 +1141,7 @@ switch ($pagina) {
                             </button>
                         </div>
 
-                        <button class="btn-gold" onclick="document.getElementById(\'modalLancamentoAdm\').style.display=\'flex\'" style="background: #00a8ff; color: #fff; border: none;">
+                        <button class="btn-gold" onclick="document.getElementById(\'modalLancamentoAdm\').style.display=\'flex\'" style="background: var(--gold); border: none;">
                             <i class="fa-solid fa-plus"></i> NOVO LANÇAMENTO
                         </button>
                     </div>
@@ -1169,7 +1169,7 @@ switch ($pagina) {
                                         $dataExibicao = date('d/m/y', strtotime($dataShow));
                                         $foto = !empty($t['foto_pagador']) ? $t['foto_pagador'] : 'assets/img/user-default.png';
                                         $nomePagador = $t['nome_pagador'] ?: 'Desconhecido';
-                                        $tipoConta = $t['tipo_conta'] == 'coach' ? '<span style="color:#00a8ff; font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
+                                        $tipoConta = $t['tipo_conta'] == 'coach' ? '<span style="color:var(--color-admin); font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
 
                                         echo '<tr>
                                             <td><div class="user-cell"><img src="'.$foto.'" class="table-avatar"><span>'.$nomePagador.'</span></div></td>
@@ -1204,7 +1204,7 @@ switch ($pagina) {
                                         $dataExibicao = date('d/m/y', strtotime($dataShow));
                                         $foto = !empty($t['foto_pagador']) ? $t['foto_pagador'] : 'assets/img/user-default.png';
                                         $nomePagador = $t['nome_pagador'] ?: 'Desconhecido';
-                                        $tipoConta = $t['tipo_conta'] == 'coach' ? '<span style="color:#00a8ff; font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
+                                        $tipoConta = $t['tipo_conta'] == 'coach' ? '<span style="color: var(--color-admin); font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
                                         
                                         // Na Global mostra o Coach
                                         $infoCoach = '';
@@ -1245,7 +1245,7 @@ switch ($pagina) {
                 <div class="modal-content" style="overflow:visible;"> 
                     <button class="modal-close" onclick="document.getElementById(\'modalLancamentoAdm\').style.display=\'none\'">&times;</button>
                     
-                    <h3 class="section-title" style="color: #00a8ff; margin-bottom: 20px; text-align: center;">
+                    <h3 class="section-title" style="color: var(--color-admin); margin-bottom: 20px; text-align: center;">
                         <i class="fa-solid fa-cash-register"></i> Lançamento Admin
                     </h3>
                     
@@ -1261,7 +1261,7 @@ switch ($pagina) {
                                     $ft = !empty($u['foto']) ? $u['foto'] : 'assets/img/user-default.png';
                                     $nomeSafe = addslashes($u['nome']);
                                     $tipoLabel = strtoupper($u['tipo_conta']);
-                                    $corTipo = ($u['tipo_conta'] == 'coach' || $u['tipo_conta'] == 'personal') ? '#00a8ff' : '#888';
+                                    $corTipo = ($u['tipo_conta'] == 'coach' || $u['tipo_conta'] == 'personal') ? 'var(--color-coach)' : '#888';
                                     echo '<div class="dropdown-item" style="padding:10px; border-bottom:1px solid #333; cursor:pointer; display:flex; align-items:center; gap:10px;" onclick="selecionarUsuarioAdm('.$u['id'].', \''.$nomeSafe.'\')">
                                             <img src="'.$ft.'" style="width:30px; height:30px; border-radius:50%; object-fit:cover;">
                                             <div><span style="display:block; color:#fff;">'.$u['nome'].'</span><span style="display:block; font-size:0.7rem; color:'.$corTipo.';">'.$tipoLabel.'</span></div>
@@ -1277,7 +1277,7 @@ switch ($pagina) {
                             <div style="flex:1;"><label class="input-label">Vencimento</label><input type="date" name="data_vencimento" class="admin-input" required value="'.date('Y-m-d').'"></div>
                             <div style="flex:1;"><label class="input-label">Status</label><select name="status" class="admin-input"><option value="pago">Pago</option><option value="pendente">Pendente</option></select></div>
                         </div>
-                        <button type="submit" class="btn-gold" style="width:100%; padding:15px; background: #00a8ff; border:none;">REGISTRAR (ADMIN)</button>
+                        <button type="submit" class="btn-gold" style="width:100%; padding:15px; background: var(--color-admin); border:none;">REGISTRAR (ADMIN)</button>
                     </form>
                 </div>
             </div>
@@ -1415,7 +1415,7 @@ switch ($pagina) {
                                         $ex_json = htmlspecialchars(json_encode($ex_data), ENT_QUOTES, 'UTF-8');
 
                                         echo '
-                                        <div class="exercise-card">
+                                        <div class="exercise-card-edit">
                                             <div class="ex-info">
                                                 <span class="ex-meta">'.strtoupper($ex['tipo_mecanica']).'</span>
                                                 <h4>'.$ex['nome_exercicio'].'</h4>
@@ -1591,83 +1591,78 @@ switch ($pagina) {
         break;
 
     case 'perfil':
-        require_once '../config/db_connect.php';
-        if(session_status() === PHP_SESSION_NONE) session_start();
-        
-        $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = :id");
-        $stmt->execute(['id' => $_SESSION['user_id']]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        $foto = $user['foto'] ? $user['foto'] : 'assets/img/user-default.png';
+    require_once '../config/db_connect.php';
+    if(session_status() === PHP_SESSION_NONE) session_start();
+    
+    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = :id");
+    $stmt->execute(['id' => $_SESSION['user_id']]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $foto = $user['foto'] ? $user['foto'] : 'assets/img/user-default.png';
 
-        echo '
-            <section id="perfil-admin">
-                <header class="dash-header">
-                    <h1>CONFIGURAÇÕES DO <span class="highlight-text">ADMIN</span></h1>
-                </header>
+    echo '
+        <section id="perfil-section">
+            <header class="dash-header">
+                <h1>MEU <span class="highlight-text" style="color: var(--color-admin);">PERFIL</span></h1>
+            </header>
 
-                <div class="glass-card profile-admin">
-                    <form action="actions/update_profile.php" method="POST" enctype="multipart/form-data">
-                        
-                        <div class="admin-profile-layout">
-                            
-                            <div class="profile-photo-section">
-                                <div class="photo-wrapper">
-                                    <img src="'.$foto.'" id="admin-preview">
-                                    <label for="admin-upload" class="upload-btn-float">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </label>
-                                    <input type="file" name="foto" id="admin-upload" style="display: none;" onchange="previewImageAdmin(this)">
-                                </div>
-                                <h3 style="margin-top: 15px; color: #fff; text-align: center; margin-bottom: 5px;">'.$user['nome'].'</h3>
-                                <span class="status-badge" style="background: rgba(255,66,66,0.2); color: #ff4242;">MASTER ADMIN</span>
-                            </div>
-
-                            <div class="profile-form-section">
-                                <h3 class="section-title" style="font-size: 1.1rem; margin-bottom: 15px;">Dados de Acesso</h3>
-                                
-                                <div class="form-profile">
-                                    <div class="input-grid">
-                                        <div>
-                                            <label class="input-label">Nome Admin</label>
-                                            <input type="text" name="nome" value="'.$user['nome'].'" class="input-field">
-                                        </div>
-                                        <div>
-                                            <label class="input-label">Telefone</label>
-                                            <input type="text" name="telefone" value="'.$user['telefone'].'" class="input-field">
-                                        </div>
-                                    </div>
-                                    
-                                    <div style="margin-bottom: 15px;">
-                                        <label class="input-label">Email</label>
-                                        <input type="email" name="email" value="'.$user['email'].'" class="input-field">
-                                    </div>
-
-                                    <hr class="form-divider">
-
-                                    <h3 class="password-section-title" style="color: #ff4242; margin-bottom: 15px;">Segurança</h3>
-                                    <div class="input-grid">
-                                        <div>
-                                            <label class="input-label">Nova Senha</label>
-                                            <input type="password" name="nova_senha" class="input-field" placeholder="********">
-                                        </div>
-                                        <div>
-                                            <label class="input-label">Confirmar</label>
-                                            <input type="password" name="confirma_senha" class="input-field" placeholder="********">
-                                        </div>
-                                    </div>
-
-                                    <div style="text-align: right; margin-top: 20px;">
-                                        <button type="submit" class="btn-gold" style="background: #ff4242; color: #fff; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold;">ATUALIZAR PERFIL</button>
-                                    </div>
-                                </div>
-                            </div>
+            <div class="glass-card" style="max-width: 800px; margin: 0 auto;">
+                <form action="actions/update_profile.php" method="POST" enctype="multipart/form-data" class="form-profile">
+                    
+                    <div class="profile-photo-section">
+                        <div class="photo-wrapper">
+                            <img src="'.$foto.'" alt="Foto Perfil" id="preview-img" style="border: 3px solid var(--color-admin);">
+                            <label for="foto-upload" class="upload-btn-float" style="background: var(--color-admin); color: #fff;">
+                                <i class="fa-solid fa-camera"></i>
+                            </label>
+                            <input type="file" name="foto" id="foto-upload" style="display: none;" accept="image/*" onchange="previewImage(this)">
                         </div>
-                    </form>
-                </div>
-            </section>
-        ';
-        break;
+                    </div>
+
+                    <div class="input-grid">
+                        <div>
+                            <label class="input-label">Nome de Exibição</label>
+                            <input type="text" name="nome" value="'.$user['nome'].'" class="input-field" required>
+                        </div>
+                        <div>
+                            <label class="input-label">Telefone</label>
+                            <input type="text" name="telefone" value="'.$user['telefone'].'" class="input-field">
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 15px;">
+                        <label class="input-label">E-mail de Acesso</label>
+                        <input type="email" name="email" value="'.$user['email'].'" class="input-field" required>
+                    </div>
+
+                    <hr class="form-divider">
+
+                    <div>
+                        <h3 class="password-section-title" style="color: var(--color-admin);">Segurança</h3>
+                        <p class="password-section-desc">Preencha apenas se quiser alterar sua senha de administrador.</p>
+                    </div>
+
+                    <div class="input-grid">
+                        <div>
+                            <label class="input-label">Nova Senha</label>
+                            <input type="password" name="nova_senha" class="input-field" placeholder="********">
+                        </div>
+                        <div>
+                            <label class="input-label">Confirmar Senha</label>
+                            <input type="password" name="confirma_senha" class="input-field" placeholder="********">
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 30px; margin-bottom: 10px;">
+                        <button type="submit" class="btn-gold" style="background: var(--color-admin); color: #fff; border: none; box-shadow: 0 4px 15px rgba(255, 66, 66, 0.3);">
+                            <i class="fa-solid fa-floppy-disk" style="margin-right: 8px;"></i> SALVAR ALTERAÇÕES
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    ';
+    break;
 
     case 'dieta_editor':
         require_once '../config/db_connect.php';
@@ -1930,10 +1925,10 @@ switch ($pagina) {
                 
                 <div class="menu-profile-header" onclick="carregarConteudo(\'perfil\')" style="background: linear-gradient(135deg, #1a1a1a 0%, #000 100%); margin-bottom: 25px; padding: 20px; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.1);">
                     <div style="display: flex; align-items: center; gap: 15px;">
-                        <img src="'.$foto.'" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #00a8ff;">
+                        <img src="'.$foto.'" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--color-admin);">
                         <div>
                             <h3 style="margin: 0 0 5px 0; color: #fff; font-size: 1.1rem;">'.$admin['nome'].'</h3>
-                            <span class="usuario-level" style="color: #00a8ff; background: rgba(0, 168, 255, 0.1);">SUPER ADMIN</span>
+                            <span class="usuario-level" style="color: var(--color-admin); background: var(--bg-admin);">SUPER ADMIN</span>
                         </div>
                     </div>
                     <i class="fa-solid fa-chevron-right" style="color: #666;"></i>
@@ -1979,8 +1974,8 @@ switch ($pagina) {
 
                     <div class="setting-item" onclick="window.location.href=\'actions/logout.php\'" style="padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
                         <div style="display: flex; gap: 15px; align-items: center;">
-                            <i class="fa-solid fa-right-from-bracket" style="color: #ff4242;"></i>
-                            <span style="color: #ff4242;">Sair do Sistema</span>
+                            <i class="fa-solid fa-right-from-bracket" style="color: var(--color-admin);"></i>
+                            <span style="color: var(--color-admin);">Sair do Sistema</span>
                         </div>
                     </div>
 

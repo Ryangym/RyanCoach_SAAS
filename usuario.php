@@ -47,8 +47,9 @@ if ($dados_usuario['data_expiracao_plano']) {
 <head>
     <title>Usuário - Ryan Coach</title>
     
-    <link rel="stylesheet" href="assets/css/menu.css">
-    <link rel="stylesheet" href="assets/css/usuario.css">
+    <link rel="stylesheet" href="assets/css/user.css">
+    <link rel="stylesheet" href="assets/css/atleta.css">
+    <link rel="stylesheet" href="assets/css/pdf.css">
 
     <?php include 'includes/head_main.php'; ?>
 
@@ -64,92 +65,94 @@ if ($dados_usuario['data_expiracao_plano']) {
         </main>
 
     <script>
-        // Função Global de Navegação
-        window.carregarConteudo = async function(pagina) {
-            const area = document.getElementById('conteudo');
-            const botoes = document.querySelectorAll('#main-aside button');
+//----------------- Função Global de Navegação --------------------------
+    window.carregarConteudo = async function(pagina) {
+        const area = document.getElementById('conteudo');
+        const botoes = document.querySelectorAll('#main-aside button');
 
-            // Feedback Visual
-            area.innerHTML = '<div class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
-            area.classList.add('loading');
+        // Feedback Visual
+        area.innerHTML = '<div class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
+        area.classList.add('loading');
 
-            try {
-                // Requisição Limpa
-                const req = await fetch(`ajax/get_conteudo.php?pagina=${pagina}`);
-                if (!req.ok) throw new Error('Erro na rede');
+        try {
+            // Requisição Limpa
+            const req = await fetch(`ajax/get_conteudo.php?pagina=${pagina}`);
+            if (!req.ok) throw new Error('Erro na rede');
                 
-                const html = await req.text();
+            const html = await req.text();
                 
-                area.innerHTML = html;
-                area.classList.remove('loading');
+            area.innerHTML = html;
+            area.classList.remove('loading');
 
-                // Atualiza Menu Lateral
-                // Pega só o nome da página (antes do &)
-                const base = pagina.split('&')[0];
-                botoes.forEach(btn => {
-                    if (btn.dataset.pagina === base) btn.classList.add('active');
-                    else btn.classList.remove('active');
-                });
-
-            } catch (err) {
-                console.error(err);
-                area.innerHTML = '<p class="error">Erro ao carregar.</p>';
-            }
-        };
-
-        // Inicialização
-        document.addEventListener('DOMContentLoaded', () => {
-            carregarConteudo('dashboard'); // Ou 'treinos' se preferir iniciar lá
-
-            // Listener do Menu Lateral
-            document.getElementById('main-aside').addEventListener('click', (e) => {
-                const btn = e.target.closest('button');
-                if (btn && btn.dataset.pagina) {
-                    if (btn.dataset.pagina === 'logout') window.location.href = 'actions/logout.php';
-                    else carregarConteudo(btn.dataset.pagina);
-                }
+            // Atualiza Menu Lateral
+            // Pega só o nome da página (antes do &)
+            const base = pagina.split('&')[0];
+            botoes.forEach(btn => {
+                if (btn.dataset.pagina === base) btn.classList.add('active');
+                else btn.classList.remove('active');
             });
-        });
 
-        // Preview de Imagem (Perfil)
-        window.previewImage = function(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = document.getElementById('preview-img');
-                    if (img) img.src = e.target.result;
-                }
-                reader.readAsDataURL(input.files[0]);
+        } 
+        catch (err) {
+            console.error(err);
+            area.innerHTML = '<p class="error">Erro ao carregar.</p>';
+        }
+    };
+    
+    // TELA INICIAL AO ABRIR A PAGINA (DASHBOARD)
+    document.addEventListener('DOMContentLoaded', () => {
+        carregarConteudo('dashboard'); // Ou 'treinos' se preferir iniciar lá
+
+        // Listener do Menu Lateral
+        document.getElementById('main-aside').addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (btn && btn.dataset.pagina) {
+                if (btn.dataset.pagina === 'logout') window.location.href = 'actions/logout.php';
+                else carregarConteudo(btn.dataset.pagina);
             }
-        };
+        });
+    });
+
+    // LÓGICA DE Preview de Imagem (Perfil)
+    window.previewImage = function(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = document.getElementById('preview-img');
+                if (img) img.src = e.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    };
         
-        // Função de Abas (Global para funcionar no HTML injetado)
-        window.abrirTreino = function(evt, id) {
-            const contents = document.getElementsByClassName("treino-content");
-            for (let i = 0; i < contents.length; i++) contents[i].style.display = "none";
+    // Função de Abas (Global para funcionar no HTML injetado)
+    window.abrirTreino = function(evt, id) {
+        const contents = document.getElementsByClassName("treino-content");
+        for (let i = 0; i < contents.length; i++) contents[i].style.display = "none";
             
-            const tabs = document.getElementsByClassName("tab-btn");
-            for (let i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+        const tabs = document.getElementsByClassName("tab-btn");
+        for (let i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
             
-            document.getElementById(id).style.display = "block";
-            evt.currentTarget.classList.add("active");
-        };
+        document.getElementById(id).style.display = "block";
+        evt.currentTarget.classList.add("active");
+    };
+
+    function abrirTreino(evt, divName) {
+        var i, content, tablinks;
+        content = document.getElementsByClassName("treino-content");
+        for (i = 0; i < content.length; i++) {
+            content[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tab-btn");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(divName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
     </script>
-    <script>
-            function abrirTreino(evt, divName) {
-                var i, content, tablinks;
-                content = document.getElementsByClassName("treino-content");
-                for (i = 0; i < content.length; i++) {
-                    content[i].style.display = "none";
-                }
-                tablinks = document.getElementsByClassName("tab-btn");
-                for (i = 0; i < tablinks.length; i++) {
-                    tablinks[i].className = tablinks[i].className.replace(" active", "");
-                }
-                document.getElementById(divName).style.display = "block";
-                evt.currentTarget.className += " active";
-            }
-        </script>
+    
+<!-- ----------------- HTML CRONÔMETRO ------------------------------->
 
     <div id="float-timer" class="timer-widget" style="display: none;">
         
@@ -169,6 +172,8 @@ if ($dados_usuario['data_expiracao_plano']) {
             </button>
         </div>
     </div>
+
+<!-- ----------------- HTML SELEÇÃO ENTRE TREINO E HISTÓRICO ------------------------------->
 
     <div id="modalTreinoOpcoes" class="modal-overlay" style="display: none;">
         <div class="modal-content selection-modal">
@@ -190,7 +195,6 @@ if ($dados_usuario['data_expiracao_plano']) {
 
             <div id="step-list" style="display: none;">
                 <div class="modal-header-row">
-                    <button class="btn-back" onclick="voltarStepType()"><i class="fa-solid fa-arrow-left"></i></button>
                     <h3 class="modal-title">QUAL PLANEJAMENTO?</h3>
                 </div>
                 <div id="lista-treinos-container" class="treinos-list-scroll">
@@ -201,7 +205,8 @@ if ($dados_usuario['data_expiracao_plano']) {
     </div>
 
     <script>
-        // --- LÓGICA DO MODAL DE TREINOS ---
+
+// --- LÓGICA DO MODAL DE TREINOS ---
     
     function abrirModalTreinos() {
         document.getElementById('modalTreinoOpcoes').style.display = 'flex';
@@ -276,6 +281,10 @@ if ($dados_usuario['data_expiracao_plano']) {
         }
     }
     </script>
+
+<!-- ------------------------------------------------------>
+<!--------------- HTML MODAL DE AVALIAÇÃO ----------------->
+
 
     <div id="modalNovaAvaliacao" class="modal-overlay" style="display: none;">
     <div class="modal-content">
@@ -436,7 +445,11 @@ if ($dados_usuario['data_expiracao_plano']) {
 </div>
 
     <script>
-    // Abre o modal. 
+
+// ---------------------------------------------------------------
+// ---------------------------------------------------------------
+// 1. LÓGICA DE AVALIAÇÃO (MODAIS, UPLOADS, GRÁFICOS)
+
     // Se passar 'idAluno', é o admin abrindo para um aluno específico.
     function abrirModalAvaliacao(idAluno = null) {
         if (idAluno) {
@@ -450,7 +463,7 @@ if ($dados_usuario['data_expiracao_plano']) {
     }
 
     
-   // --- LÓGICA DE UPLOAD BLINDADA ---
+    // LÓGICA DE UPLOAD BLINDADA 
     
     // Configurações
     const TARGET_SIZE = 2 * 1024 * 1024; // Tenta comprimir se maior que 2MB
@@ -611,41 +624,40 @@ if ($dados_usuario['data_expiracao_plano']) {
     </div>
 
     <script>
-        function abrirModalAvaliacoes() {
-            document.getElementById('modalAvaliacaoOpcoes').style.display = 'flex';
-        }
+    function abrirModalAvaliacoes() {
+        document.getElementById('modalAvaliacaoOpcoes').style.display = 'flex';
+    }
 
-        function fecharModalAvaliacoes() {
-            document.getElementById('modalAvaliacaoOpcoes').style.display = 'none';
-        }
+    function fecharModalAvaliacoes() {
+        document.getElementById('modalAvaliacaoOpcoes').style.display = 'none';
+    }
 
-        function irParaAvaliacoes() {
-            fecharModalAvaliacoes();
-            carregarConteudo('avaliacoes');
-        }
+    function irParaAvaliacoes() {
+        fecharModalAvaliacoes();
+        carregarConteudo('avaliacoes');
+    }
 
-        function irParaProgresso() {
-            fecharModalAvaliacoes();
-            carregarConteudo('progresso');
-        }
+    function irParaProgresso() {
+        fecharModalAvaliacoes();
+        carregarConteudo('progresso');
+    }
 
-        // Fecha ao clicar fora
-        window.onclick = function(event) {
-            const m1 = document.getElementById('modalTreinoOpcoes');
-            const m2 = document.getElementById('modalAvaliacaoOpcoes');
-            if (event.target == m1) fecharModalTreinos();
-            if (event.target == m2) fecharModalAvaliacoes();
-        }
-    </script>
-    <script>
-        window.toggleAccordion = function(id) {
+    // Fecha ao clicar fora
+    window.onclick = function(event) {
+        const m1 = document.getElementById('modalTreinoOpcoes');
+        const m2 = document.getElementById('modalAvaliacaoOpcoes');
+        if (event.target == m1) fecharModalTreinos();
+        if (event.target == m2) fecharModalAvaliacoes();
+    }
+
+    // LÓGICA ABERTURA E FECHAMENTO DOS CARDS DE AVALIAÇÃO
+    window.toggleAccordion = function(id) {
         const card = document.getElementById(id);
         if (!card) return;
 
-        // SELETOR CORRIGIDO: Agora busca pela classe certa
         const body = card.querySelector(".accordion-body");
         const arrow = card.querySelector(".accordion-arrow");
-        
+            
         if (body.style.display === "none" || body.style.display === "") {
             body.style.display = "block";
             card.classList.add("active");
@@ -656,9 +668,10 @@ if ($dados_usuario['data_expiracao_plano']) {
             if(arrow) arrow.style.transform = "rotate(0deg)"; // Volta a setinha
         }
     };
-    </script>
-    <script>
-    // --- LÓGICA DO DASHBOARD PROGRESSO (FIXED) ---
+    
+    // ---------------------------------------------------------------
+    // 1. LÓGICA DE PROGRESSO GRÁFICO MASTER
+    // ---------------------------------------------------------------
 
     // 1. Trocar Tabelas
     window.switchTable = function(tabName, btn) {
@@ -762,9 +775,11 @@ if ($dados_usuario['data_expiracao_plano']) {
             }
         });
     }
-    </script>
-    <script>
-        // --- LÓGICA DE CHECK DA DIETA ---
+
+    // ---------------------------------------------------------------
+    // 1. LÓGICA DE MARCAR REFEIÇÕES COMO CONCLUÍDAS
+    // ---------------------------------------------------------------
+
     async function toggleRefeicao(refeicaoId, btn) {
         // 1. Efeito Visual Imediato (UX Rápida)
         const card = document.getElementById('ref_' + refeicaoId);
@@ -797,10 +812,10 @@ if ($dados_usuario['data_expiracao_plano']) {
             alert("Erro de conexão. Tente novamente.");
         }
     }
-    </script>
-    
-    <script>
-    // --- LÓGICA DO CRONÔMETRO ---
+
+    // ---------------------------------------------------------------
+    // 1. LÓGICA DO CRONÔMETRO FLUTUANTE
+    // ---------------------------------------------------------------
     let timerInterval;
     let seconds = 0;
     let isRunning = false;
@@ -929,11 +944,13 @@ if ($dados_usuario['data_expiracao_plano']) {
     function setTranslate(xPos, yPos, el) {
         el.style.transform = "translate3d(" + xPos + "px, " + yPos + "px, 0)";
     }
-</script>
 
-<script>
-    // --- LÓGICA DE FICHA COMPLETA ---
+    // ---------------------------------------------------------------
+    // 2. LÓGICA DE GERAR FICHA COMPLETA EM PDF
+    // ---------------------------------------------------------------
 
+
+    // MODAIS DE SELEÇÃO DE CORES E GERAÇÃO DE PDF
     function abrirModalPDFCompleto() {
         document.getElementById('modalPDFConfig').style.display = 'flex';
     }
@@ -1201,12 +1218,7 @@ if ($dados_usuario['data_expiracao_plano']) {
         };
     }
 
-
-
-
-
-
-    // ---------------------------------------------------------------
+        // ---------------------------------------------------------------
         // 3. EDITOR DE TREINOS (CRIAÇÃO)
         // ---------------------------------------------------------------
 
@@ -1358,7 +1370,45 @@ if ($dados_usuario['data_expiracao_plano']) {
             seriesArray.splice(index, 1);
             renderSetsList();
         }
+        // --- RENOMEAR DIVISÃO (TREINO A, B, C) ---
+        function renomearDivisao(idDivisao, letra, nomeAtual) {
+            // Pergunta o novo nome (Pode usar SweetAlert se tiver, aqui uso prompt nativo pra ser simples)
+            const novoNome = prompt(`Qual o foco do TREINO ${letra}? (Ex: Peito e Tríceps)`, nomeAtual);
 
+            if (novoNome !== null) { // Se não cancelou
+                // Mostra carregando (opcional)
+                const label = document.getElementById(`label_nome_div_${idDivisao}`);
+                const textoOriginal = label.innerText;
+                label.innerText = "Salvando...";
+
+                fetch('actions/treino_rename_divisao.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: idDivisao, nome: novoNome })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Atualiza na tela imediatamente
+                        label.innerText = novoNome ? novoNome.toUpperCase() : "SEM NOME DEFINIDO";
+                        
+                        // Feedback visual rápido
+                        label.style.color = "#28a745"; // Verde
+                        setTimeout(() => label.style.color = "#666", 1000);
+                    } else {
+                        alert("Erro ao salvar: " + (data.message || "Erro desconhecido"));
+                        label.innerText = textoOriginal;
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert("Erro de conexão.");
+                    label.innerText = textoOriginal;
+                });
+            }
+        }
+
+        // -----------------------------------
         // --- MODAL PERIODIZAÇÃO (Semana) ---
         function openMicroModal(micro, treinoId) {
         document.getElementById('micro_id').value = micro.id;
@@ -1389,13 +1439,18 @@ if ($dados_usuario['data_expiracao_plano']) {
             }
         }
 
+        // ---------------------------------------------------------------
+        // 5. VINCULAR COACH
+        // ---------------------------------------------------------------
+
         function abrirModalVincular() {
-                        document.getElementById("modalVincularCoach").style.display = "flex";
-                    }
-                    function fecharModalVincular() {
-                        document.getElementById("modalVincularCoach").style.display = "none";
-                    }
-</script>
+            document.getElementById("modalVincularCoach").style.display = "flex";
+        }
+        function fecharModalVincular() {
+            document.getElementById("modalVincularCoach").style.display = "none";
+        }
+    </script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="assets/js/script.js"></script>

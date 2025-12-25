@@ -1,0 +1,436 @@
+/* =========================================
+   MODAL DE PDF PREMIUM & SELETOR DE CORES
+   ========================================= */
+
+.pdf-action-card {
+    background: linear-gradient(145deg, #2b2b2b, #1a1a1a);
+    border: 1px solid var(--gold); /* Dourado */
+    border-radius: 15px;
+    padding: 25px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    margin-bottom: 20px; /* Espaço caso tenha algo em baixo */
+}
+
+.pdf-action-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(255, 186, 66, 0.15); /* Brilho dourado suave */
+    border-color: #ffe082;
+}
+
+.pdf-action-card i {
+    font-size: 2.5rem;
+    color: var(--gold);
+    margin-bottom: 5px;
+}
+
+.pdf-action-card h4 {
+    color: #fff;
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.pdf-action-card p {
+    color: #aaa;
+    font-size: 0.85rem;
+    margin: 0;
+}
+/* Fundo Escuro do Modal */
+/* .modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.85); 
+    backdrop-filter: blur(5px);
+    z-index: 10000; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+} */
+
+/* O Cartão do Modal (Vidro) */
+.modal-content-premium {
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid var(--gold);
+    border-radius: 20px;
+    padding: 30px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 0 40px rgba(255, 186, 66, 0.15);
+    text-align: center;
+    position: relative;
+    animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalPop {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* Título e Labels */
+
+.input-label {
+    color: #ccc;
+    display: block;
+    text-align: left;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Input Bonito */
+.modal-input {
+    width: 100%;
+    background: #111;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 12px 15px;
+    border-radius: 10px;
+    font-size: 1rem;
+    margin-bottom: 20px;
+    transition: 0.3s;
+}
+.modal-input:focus {
+    border-color: var(--gold);
+    outline: none;
+    box-shadow: 0 0 10px rgba(255, 186, 66, 0.2);
+}
+
+/* --- SELETOR DE CORES (BOLINHAS) --- */
+.color-options-container {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-bottom: 30px;
+    padding: 10px;
+    background: #111;
+    border-radius: 15px;
+    border: 1px solid #333;
+}
+
+.color-pick {
+    width: 35px;       /* Tamanho fixo */
+    height: 35px;      /* Tamanho fixo */
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent; /* Borda invisível base */
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+
+.color-pick:hover {
+    transform: scale(1.15);
+}
+
+/* Estado Ativo (Selecionado) */
+.color-pick.active {
+    border-color: #fff; /* Borda branca */
+    box-shadow: 0 0 15px rgba(255,255,255,0.6);
+    transform: scale(1.1);
+}
+/* Checkmark interno no ativo */
+.color-pick.active::after {
+    content: '✓';
+    color: #fff;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+/* Botões de Ação */
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.btn-cancel {
+    background: transparent;
+    border: 1px solid #555;
+    color: #888;
+    padding: 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+    width: 100%;
+}
+.btn-cancel:hover { border-color: #fff; color: #fff; }
+
+@media (max-width: 768px) {
+    
+    /* 1. Aumenta o tamanho do Modal para caber na tela pequena */
+    #modalPDFConfig .modal-content-premium {
+        width: 95% !important;
+        max-width: 95% !important;
+        padding: 20px !important;
+        max-height: 90vh; /* Evita cortar se for muito alto */
+        overflow-y: auto; /* Permite rolagem */
+    }
+}
+
+/* --- FOLHA A4 --- */
+.pdf-sheet {
+    background: #000000;
+    font-family: 'Helvetica', 'Arial', sans-serif; /* Fonte técnica */
+    padding: 0px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+
+/* --- BLOCOS DE TREINO (A, B, C...) --- */
+.workout-block {
+    margin-bottom: 30px;
+    border: 2px solid #000; /* Borda grossa externa */
+}
+
+.wb-header {
+    /* Cor de fundo definida via JS */
+    color: #fff;
+    padding: 8px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    border-bottom: 2px solid #000;
+    -webkit-print-color-adjust: exact;
+}
+.wb-letter { font-size: 18px; text-transform: uppercase; }
+.wb-name { font-size: 14px; opacity: 0.9; text-transform: uppercase;}
+
+
+/* =========================================
+   ESTILO PDF - BLOCOS E SÉRIES
+   ========================================= */
+
+#pdf-container-treinos{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 20px;
+}
+/* Bloco do Dia */
+.day-block {
+    flex: 30%;
+    margin-bottom: 25px; /* Espaço entre dias */
+    background: #ffffff00;
+    border-radius: 4px; /* Leve arredondado */
+    overflow: hidden;
+}
+
+/* Cabeçalho do Dia (Segunda...) */
+.day-header {
+    /* Cor de fundo vem do JS */
+    color: #fff;
+    padding: 1px;
+    font-weight: 400;
+    -webkit-print-color-adjust: exact;
+}
+.day-subheader{
+    margin: 10px 0px;
+}
+.day-title { font-size: 13px; font-family: 'Times New Roman', Times, serif; }
+.day-subtitle { font-size: 14px; font-weight:bold; font-family: 'Times New Roman', Times, serif; }
+
+/* Linha do Exercício */
+.ex-row {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    background: transparent; /* Fundo transparente agora */
+}
+.ex-row:last-child { border-bottom: none; }
+
+
+/* Lado Esquerdo (Nome) */
+.ex-info-side {
+    color: white;
+    padding: 3px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%; /* Ocupa quase metade */
+}
+.ex-text {
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.1;
+}
+
+/* Lado Direito (Séries) */
+.ex-sets-side {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Caixinha da Série (Badge) */
+.set-box {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px;
+    color: white;
+    min-width: 55px;
+    text-align: center;
+}
+
+/* Cores Opcionais para Tipos (Visual Clean) */
+/* .type-warmup { background: #eee; border-color: #999; color: #555; }
+.type-feeder { background: #e3f2fd; border-color: #2196f3; color: #0d47a1; }
+.type-top    { background: #000; border-color: #000; color: #fff; }
+.type-work   { background: #fff; border-color: #000; }
+.type-falha  { background: #ffebee; border-color: #ef5350; color: #c62828; } */
+
+.video-mark { font-size: 8px; vertical-align: middle; color: #666; margin-left: 3px; }
+
+.sheet-footer {
+    text-align: center;
+    font-size: 9px;
+    color: #888;
+    margin-top: 30px;
+    border-top: 1px solid #ccc;
+    padding-top: 10px;
+}
+/* =========================================
+   PREVIEW DE PDF (ESTILO LEITOR NATIVO)
+   ========================================= */
+
+/* Fundo do Leitor (Overlay) */
+.pdf-viewer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #2e2e2e; /* Cinza escuro padrão Adobe */
+    z-index: 99999;
+    overflow: auto; /* Permite rolagem total quando der zoom */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centraliza a folha */
+    padding: 80px 20px 40px 20px; /* Espaço para barra superior e folga */
+    box-sizing: border-box;
+    /* Melhora rolagem no iOS */
+    -webkit-overflow-scrolling: touch; 
+}
+
+/* Barra de Ferramentas Flutuante */
+.pdf-toolbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    box-sizing: border-box;
+    z-index: 100000;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.pdf-toolbar-title {
+    color: #fff;
+    font-weight: bold;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.pdf-toolbar-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Botões do Preview */
+.btn-preview-action {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-preview-action:active {
+    transform: scale(0.95);
+    background: rgba(255,255,255,0.2);
+}
+
+.btn-preview-close {
+    background: #ff4444;
+    border-color: #ff4444;
+    color: white;
+}
+
+/* A Mágica: Força a largura A4 real */
+.preview-mode-active {
+    width: 794px !important;  /* Largura A4 em pixels (96dpi) */
+    min-width: 794px !important;
+    max-width: 794px !important;
+    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    transform-origin: top center; /* O Zoom acontece a partir do topo */
+    transition: transform 0.3s ease; /* Animação suave do zoom */
+}
+
+
+
+
+/* =========================================
+   CSS FEITO MANUAL DAS FICHAS EM PDF
+   ========================================= */
+
+
+/* --- CABEÇALHO DO DOCUMENTO --- */
+.sheet-header {
+    display: flex;
+    background-color: #dbdada00;
+}
+
+.sh-logo img { height: 60px;}
+
+#render-aluno-nome {
+    font-family: "Lobster", sans-serif;
+    font-size: 42px;
+    margin: 0 0 5px 0;
+    font-weight: 400;
+    color: white;
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+.sheet-header h1{
+    margin-left: auto;
+    margin-right: auto;
+}
+.sh-meta {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    font-size: 9px;
+    color: #444; }
+
+.sh-meta span { margin-left: 5px; color: white; font-size: 10px; letter-spacing: 0.8px; font-family: 'Orbitron', sans-serif; }

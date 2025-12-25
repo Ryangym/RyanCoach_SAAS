@@ -9,16 +9,16 @@ $primeiro_nome = strtoupper($partes_nome[0]);
 $tipo_conta = $_SESSION['tipo_conta'] ?? 'coach'; // Pega da sessão
 
 if ($tipo_conta === 'admin') {
-    // Estilo ADMIN (Azul)
+    // Estilo ADMIN (VERMELHO)
     $titulo_nivel = 'SUPER ADMIN';
-    $cor_destaque = '#00a8ff'; // Azul vibrante
-    $bg_badge = 'rgba(0, 168, 255, 0.1)'; // Azul transparente
-    $menu_action = 'admin_menu'; // Caso você tenha um menu específico para admin
-} else {
-    // Estilo COACH (Vermelho Padrão)
-    $titulo_nivel = 'MASTER COACH';
     $cor_destaque = '#ff4242'; // Vermelho padrão
     $bg_badge = 'rgba(255, 66, 66, 0.1)'; // Vermelho transparente
+    $menu_action = 'admin_menu'; 
+} else {
+    // Estilo COACH (AZUL)
+    $titulo_nivel = 'MASTER COACH';
+    $cor_destaque = '#00a8ff'; 
+    $bg_badge = 'rgba(0, 168, 255, 0.1)'; // Azul transparente
     $menu_action = 'coach_menu';
 }
 ?>
@@ -71,11 +71,6 @@ if ($tipo_conta === 'admin') {
             <span>Financeiro</span>
         </button>
 
-        <!-- <button data-pagina="perfil" onclick="carregarConteudo('perfil')" class="desktop-only">
-            <i class="fa-solid fa-gear"></i>
-            <span>Configurações</span>
-        </button> -->
-
         <button onclick="carregarConteudo('<?php echo $menu_action; ?>')" class="mobile-only">
             <i class="fa-solid fa-bars"></i>
             <span>Menu</span>
@@ -94,11 +89,3 @@ if ($tipo_conta === 'admin') {
     </div>
 
 </aside>
-
-<!-- <style>
-    .mobile-only { display: none !important; }
-    @media (max-width: 768px) {
-        .desktop-only { display: none !important; }
-        .mobile-only { display: flex !important; }
-    }
-</style> -->

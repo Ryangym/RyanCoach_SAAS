@@ -1,0 +1,333 @@
+/* ==========================================================================
+   RYAN COACH - STAFF STYLE
+   ==========================================================================
+   1. UTILITÁRIOS & CORES
+   2. FORMULÁRIOS & INPUTS
+   3. DASHBOARD (CARDS & GRIDS)
+   4. TABELAS & LISTAS
+   5. MODAIS (POPUPS)
+   6. BOTÕES & AÇÕES
+   ========================================================================== */
+
+/* ==========================================================================
+   1. UTILITÁRIOS & CORES
+   ========================================================================== */
+.text-desc { color: #888; margin-top: -0.5rem; margin-bottom: 1.5rem; }
+.text-success { color: #00ff00; }
+.text-danger { color: #ff4242; }
+.text-gold { color: var(--gold); }
+
+/* Badges de Status (Etiquetas) */
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+.status-badge.pago {
+    background: rgba(0, 255, 0, 0.15);
+    color: #00ff00;
+    border: 1px solid rgba(0, 255, 0, 0.2);
+}
+
+.status-badge.pendente {
+    background: rgba(255, 66, 66, 0.15);
+    color: #ff4242;
+    border: 1px solid rgba(255, 66, 66, 0.2);
+}
+
+/* ==========================================================================
+   2. FORMULÁRIOS & INPUTS
+   ========================================================================== */
+.admin-input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.admin-input, .admin-select {
+    background: #111;
+    border: 1px solid #333;
+    color: #fff;
+    padding: 10px;
+    border-radius: 5px;
+    width: 100%;
+    font-family: 'Roboto', sans-serif;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.admin-input:focus, .admin-select:focus {
+    border-color: var(--gold);
+}
+
+/* Header de Seção (com botão de ação) */
+.section-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+/* ==========================================================================
+   3. DASHBOARD (CARDS & GRIDS)
+   ========================================================================== */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+/* Cards de Informação */
+.card-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.card-body {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Ícones dos Cards */
+.icon-box {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    transition: transform 0.3s;
+}
+
+/* Variações de Cores dos Ícones */
+.icon-box.gold { 
+    background: rgba(255, 186, 66, 0.1); 
+    color: var(--gold); 
+    border: 1px solid rgba(255, 186, 66, 0.2); 
+}
+.icon-box.success { 
+    background: rgba(0, 255, 0, 0.1); 
+    color: #00ff00; 
+    border: 1px solid #00ff00; 
+}
+.icon-box.danger { 
+    background: rgba(255, 66, 66, 0.1); 
+    color: #ff4242; 
+    border: 1px solid #ff4242; 
+}
+
+.info-box h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    margin-bottom: 0.3rem;
+    color: #fff;
+}
+
+.info-box p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* ==========================================================================
+   4. TABELAS & LISTAS
+   ========================================================================== */
+.table-responsive {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #ddd;
+    min-width: 600px;
+}
+
+.th-admin-table {
+    text-align: left;
+    padding: 15px;
+    color: var(--gold);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+}
+
+.admin-table td {
+    padding: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+#th-acao { text-align: right; }
+
+@media (max-width: 1100px) {
+    #th-acao { text-align: center; }
+}
+
+/* Componentes da Tabela */
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-avatar-mini {
+    width: 30px;
+    height: 30px;
+    background: #333;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #ccc;
+}
+
+.table-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--gold);
+    margin-right: 10px;
+}
+
+/* Paginação */
+.pagination {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.page-btn {
+    background: transparent;
+    border: 1px solid #333;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.page-btn:hover, .page-btn.active {
+    background: var(--gold);
+    color: #000;
+    border-color: var(--gold);
+    font-weight: bold;
+}
+
+/* ==========================================================================
+   5. MODAIS (POPUPS)
+   ========================================================================== */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+    padding: 20px;
+}
+
+.modal-content {
+    background: #1a1a1a;
+    border: 1px solid var(--gold);
+    border-radius: 15px;
+    width: 100%;
+    max-width: 600px;
+    padding: 30px;
+    position: relative;
+    box-shadow: 0 0 30px rgba(255, 186, 66, 0.2);
+    animation: modalPop 0.3s ease;
+    margin: 5% auto;
+}
+
+.modal-close {
+    position: absolute;
+    top: 15px; right: 20px;
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.modal-close:hover { color: #fff; }
+
+@keyframes modalPop {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* Responsividade do Modal */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95% !important;
+        max-height: 85vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 20px auto;
+        padding: 20px 15px;
+    }
+
+    .modal-close {
+        font-size: 2rem;
+        color: #ff4242;
+    }
+
+    /* Modal de Exercício Específico */
+    #modalExercicio .modal-content { display: flex; flex-direction: column; }
+    #modalExercicio .row-flex { flex-direction: column; gap: 10px; }
+    #modalExercicio .set-inputs-row { display: grid !important; grid-template-columns: 1fr 1fr; gap: 10px !important; }
+    #modalExercicio .btn-add-set-mobile { grid-column: 1 / -1; width: 100%; margin-top: 5px; }
+}
+
+/* ==========================================================================
+   6. BOTÕES & AÇÕES
+   ========================================================================== */
+.ex-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn-action-icon {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #ccc;
+    min-width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: 0.3s;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn-action-icon:hover { background: #fff; color: #000; }
+
+/* Botões Específicos */
+.btn-confirm { border-color: #00ff00; color: #00ff00; }
+.btn-confirm:hover { background: #00ff00; color: #000; box-shadow: 0 0 10px #00ff00; }
+
+.btn-undo { border-color: #ff9900; color: #ff9900; }
+.btn-undo:hover { background: #ff9900; color: #000; }
+
+.btn-delete { border-color: #ff4242; color: #ff4242; }
+.btn-delete:hover { background: #ff4242; color: #fff; box-shadow: 0 0 10px rgba(255, 66, 66, 0.4); }

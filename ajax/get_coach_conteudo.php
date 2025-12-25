@@ -189,7 +189,7 @@ switch ($pagina) {
                                     echo '<tr>
                                         <td><div class="user-cell"><img src="'.$foto.'" class="table-avatar"><div><span style="display:block; font-weight:bold; color:#fff;">'.$a['nome'].'</span><span style="font-size:0.8rem; color:#666;">'.$a['email'].'</span></div></div></td>
                                         <td><div style="display:flex; align-items:center; gap:10px;"><a href="'.$zap.'" target="_blank" class="btn-action-icon btn-confirm"><i class="fa-brands fa-whatsapp"></i></a><span style="color:#ccc;">'.$a['telefone'].'</span></div></td>
-                                        <td style="text-align: right;"><button class="btn-gold" style="padding: 8px 20px; font-size: 0.75rem;" onclick=\'abrirPainelAluno('.$dados_json.')\'><i class="fa-solid fa-gear"></i> OPÇÕES</button></td>
+                                        <td style="text-align: right;"><button class="btn-gold" style="padding: 8px 20px; font-size: 0.75rem;" onclick=\'abrirPainelAluno('.$dados_json.')\'><i class="fa-solid fa-gear"></i> GERENCIAR</button></td>
                                     </tr>';
                                 }
                             } else { echo '<tr><td colspan="3" style="text-align:center; padding:30px;">Nenhum aluno encontrado.</td></tr>'; }
@@ -210,10 +210,9 @@ switch ($pagina) {
                         <span id="hub-email" style="color:#888; font-size:0.9rem;">email</span>
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                        <div class="menu-card" onclick="hubAcao(\'historico\')" style="background:#1f1f1f; padding:15px; border-radius:10px; text-align:center; cursor:pointer; border:1px solid #333;"><i class="fa-solid fa-dumbbell" style="font-size:1.5rem; color:var(--gold); margin-bottom:5px;"></i><span style="display:block; font-size:0.8rem; color:#ccc;">Histórico</span></div>
-                        <div class="menu-card" onclick="hubAcao(\'avaliacao_lista\')" style="background:#1f1f1f; padding:15px; border-radius:10px; text-align:center; cursor:pointer; border:1px solid #333;"><i class="fa-solid fa-ruler-combined" style="font-size:1.5rem; color:#00e676; margin-bottom:5px;"></i><span style="display:block; font-size:0.8rem; color:#ccc;">Avaliações</span></div>
-                        <div class="menu-card" onclick="hubAcao(\'dieta_editor\')" style="background:#1f1f1f; padding:15px; border-radius:10px; text-align:center; cursor:pointer; border:1px solid #333;"><i class="fa-solid fa-utensils" style="font-size:1.5rem; color:#ff4242; margin-bottom:5px;"></i><span style="display:block; font-size:0.8rem; color:#ccc;">Dieta</span></div>
-                        <div class="menu-card" onclick="hubAcao(\'editar\')" style="background:#1f1f1f; padding:15px; border-radius:10px; text-align:center; cursor:pointer; border:1px solid #333;"><i class="fa-solid fa-user-pen" style="font-size:1.5rem; color:#fff; margin-bottom:5px;"></i><span style="display:block; font-size:0.8rem; color:#ccc;">Editar</span></div>
+                        <div class="menu-card" onclick="hubAcao(\'historico\')" style="background:#1f1f1f; padding:15px; border-radius:10px; text-align:center; cursor:pointer; border:1px solid #333;"><i class="fa-solid fa-dumbbell" style="font-size:1.5rem; color:var(--gold); margin-bottom:5px;"></i><span style="display:block; font-size:0.8rem; color:#ccc;">Histórico de Treinos</span></div>
+                        <div class="menu-card" onclick="hubAcao(\'avaliacao_lista\')" style="background:#1f1f1f; padding:15px; border-radius:10px; text-align:center; cursor:pointer; border:1px solid #333;"><i class="fa-solid fa-ruler-combined" style="font-size:1.5rem; color:#00e676; margin-bottom:5px;"></i><span style="display:block; font-size:0.8rem; color:#ccc;">Avaliações Físicas</span></div>
+                        <div class="menu-card" onclick="hubAcao(\'dieta_editor\')" style="background:#1f1f1f; padding:15px; border-radius:10px; text-align:center; cursor:pointer; border:1px solid #333;"><i class="fa-solid fa-utensils" style="font-size:1.5rem; color:#ff4242; margin-bottom:5px;"></i><span style="display:block; font-size:0.8rem; color:#ccc;">Planejamento de Dieta</span></div>
                     </div>
                 </div>
             </div>
@@ -616,10 +615,10 @@ switch ($pagina) {
                 
                 <div class="menu-profile-header" onclick="carregarConteudo(\'perfil\')" style="background: linear-gradient(135deg, #1a1a1a 0%, #000 100%); margin-bottom: 25px; padding: 20px; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.1);">
                     <div style="display: flex; align-items: center; gap: 15px;">
-                        <img src="'.$foto.'" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff4242;">
+                        <img src="'.$foto.'" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--color-coach);">
                         <div>
                             <h3 style="margin: 0 0 5px 0; color: #fff; font-size: 1.1rem;">'.$coach['nome'].'</h3>
-                            <span class="usuario-level" style="color: #ff4242; background: rgba(255, 66, 66, 0.1);">MASTER COACH</span>
+                            <span class="usuario-level" style="color: var(--color-coach); background: var(--bg-coach);">MASTER COACH</span>
                         </div>
                     </div>
                     <i class="fa-solid fa-chevron-right" style="color: #666;"></i>

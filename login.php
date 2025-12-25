@@ -42,9 +42,6 @@
 
                 <button type="submit" class="btn-submit">Cadastrar</button>
                 
-                <p class="form-bottom-text mobile-only">
-                    Já é membro? <a href="#" class="form-link" id="signInMobile">Faça Login</a>
-                </p>
             </form>
         </div>
 
@@ -64,9 +61,6 @@
                 <a href="#" class="form-link forgot-pass">Esqueceu sua senha?</a>
                 <button type="submit" class="btn-submit">Entrar</button>
 
-                <p class="form-bottom-text mobile-only">
-                    Não tem conta? <a href="#" class="form-link" id="signUpMobile">Cadastre-se</a>
-                </p>
             </form>
         </div>
 

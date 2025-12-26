@@ -67,37 +67,57 @@ if ($dados_usuario['data_expiracao_plano']) {
     <script>
 //----------------- Função Global de Navegação --------------------------
     window.carregarConteudo = async function(pagina) {
-        const area = document.getElementById('conteudo');
-        const botoes = document.querySelectorAll('#main-aside button');
+    const area = document.getElementById('conteudo');
+    const botoes = document.querySelectorAll('#main-aside button');
 
-        // Feedback Visual
-        area.innerHTML = '<div class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
-        area.classList.add('loading');
+    // Feedback Visual
+    area.innerHTML = '<div class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
+    area.classList.add('loading');
 
-        try {
-            // Requisição Limpa
-            const req = await fetch(`ajax/get_conteudo.php?pagina=${pagina}`);
-            if (!req.ok) throw new Error('Erro na rede');
-                
-            const html = await req.text();
-                
-            area.innerHTML = html;
-            area.classList.remove('loading');
+    try {
+        // Requisição Limpa
+        const req = await fetch(`ajax/get_conteudo.php?pagina=${pagina}`);
+        if (!req.ok) throw new Error('Erro na rede');
+            
+        const html = await req.text();
+            
+        area.innerHTML = html;
+        area.classList.remove('loading');
 
-            // Atualiza Menu Lateral
-            // Pega só o nome da página (antes do &)
-            const base = pagina.split('&')[0];
-            botoes.forEach(btn => {
-                if (btn.dataset.pagina === base) btn.classList.add('active');
-                else btn.classList.remove('active');
-            });
-
-        } 
-        catch (err) {
-            console.error(err);
-            area.innerHTML = '<p class="error">Erro ao carregar.</p>';
+        // --- 1. LÓGICA DE RESTAURAÇÃO DE ABA (NOVO) ---
+        // Verifica se tem aba salva na memória do navegador
+        const lastTab = localStorage.getItem('lastActiveTab');
+        
+        // Se existe aba salva E o elemento existe na nova tela carregada
+        if (lastTab && document.getElementById(lastTab)) {
+            // Chama a função openTab (verifique se ela está acessível neste escopo)
+            if (typeof openTab === 'function') {
+                openTab(null, lastTab);
+            }
         }
-    };
+
+        const scripts = area.querySelectorAll("script");
+        scripts.forEach(s => {
+            const newScript = document.createElement("script");
+            if (s.src) newScript.src = s.src;
+            else newScript.textContent = s.textContent;
+            document.body.appendChild(newScript);
+        });
+
+        // Atualiza Menu Lateral
+        const base = pagina.split('&')[0];
+        botoes.forEach(btn => {
+            // Verifica se o dataset existe antes de comparar
+            if (btn.dataset.pagina === base) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+
+    } 
+    catch (err) {
+        console.error(err);
+        area.innerHTML = '<p class="error">Erro ao carregar.</p>';
+    }
+};
     
     // TELA INICIAL AO ABRIR A PAGINA (DASHBOARD)
     document.addEventListener('DOMContentLoaded', () => {
@@ -683,11 +703,23 @@ if (dragItem) {
    ========================================================================== */
 
 function abrirModalVincular() {
-    document.getElementById("modalVincularCoach").style.display = "flex";
+    const modal = document.getElementById("modalVincularCoach");
+    if (modal) {
+        // Mover para o body para garantir que fixed posicione relativo à viewport
+        document.body.appendChild(modal); 
+        
+        // Exibir e travar scroll
+        modal.style.display = "flex";
+        document.body.style.overflow = "hidden"; 
+    }
 }
 
 function fecharModalVincular() {
-    document.getElementById("modalVincularCoach").style.display = "none";
+    const modal = document.getElementById("modalVincularCoach");
+    if (modal) {
+        modal.style.display = "none";
+        document.body.style.overflow = ""; // Restaurar scroll
+    }
 }
 
 /* ==========================================================================

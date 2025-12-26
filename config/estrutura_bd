@@ -132,6 +132,7 @@ CREATE TABLE exercicios (
   video_url VARCHAR(255),
   observacao_exercicio VARCHAR(255),
   ordem INT NOT NULL,
+  agrupamento_hash VARCHAR(50) DEFAULT NULL,
   FOREIGN KEY (divisao_id) REFERENCES treino_divisoes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -144,6 +145,8 @@ CREATE TABLE series (
   descanso_fixo VARCHAR(50),
   carga_prevista VARCHAR(50),
   rpe_previsto INT,
+  tecnica VARCHAR(50) DEFAULT 'normal',
+  tecnica_valor VARCHAR(50) DEFAULT NULL, 
   FOREIGN KEY (exercicio_id) REFERENCES exercicios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

@@ -54,113 +54,406 @@ window.addEventListener('click', function(e) {
    2. PAINEL DO TREINO (ABAS, EXERCÍCIOS E PERIODIZAÇÃO)
    ========================================================================== */
 
-// Gerenciamento de Abas (A, B, C)
+// Gerenciamento de Abas (A, B, C) com memória
 function openTab(evt, divName) {
     var i, content, tablinks;
+
+    // 1. Esconde todos os conteúdos
     content = document.getElementsByClassName("division-content");
-    for (i = 0; i < content.length; i++) { content[i].className = content[i].className.replace(" active", ""); }
+    for (i = 0; i < content.length; i++) {
+        content[i].className = content[i].className.replace(" active", "");
+    }
+
+    // 2. Remove classe 'active' de todos os botões
     tablinks = document.getElementsByClassName("div-tab-btn");
-    for (i = 0; i < tablinks.length; i++) { tablinks[i].className = tablinks[i].className.replace(" active", ""); }
-    document.getElementById(divName).className += " active";
-    evt.currentTarget.className += " active";
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+
+    // 3. Mostra o conteúdo atual
+    var targetDiv = document.getElementById(divName);
+    if(targetDiv) {
+        targetDiv.className += " active";
+    }
+
+    // 4. Ativa o botão clicado
+    // Se a função foi chamada por clique (evt existe)
+    if (evt && evt.currentTarget) {
+        evt.currentTarget.className += " active";
+    } else {
+        // Se foi chamada via código (restauração), precisamos achar o botão manualmente
+        // Procura o botão que tem o onclick correspondente
+        for (i = 0; i < tablinks.length; i++) {
+            if(tablinks[i].getAttribute('onclick').includes(divName)) {
+                tablinks[i].className += " active";
+                break;
+            }
+        }
+    }
+
+    // 5. SALVA NO LOCALSTORAGE (O Pulo do Gato)
+    // Salva apenas se for um clique real do usuário
+    if(evt) {
+        localStorage.setItem('lastActiveTab', divName);
+    }
 }
 
-// --- MODAL EXERCÍCIO (Com Lista de Séries) ---
-let seriesArray = [];
+/* ==========================================================================
+   GESTÃO DE EXERCÍCIOS (SINGLE / BI-SET / TRI-SET) - VERSÃO FINAL OTIMIZADA
+   ========================================================================== */
 
-// Função para ABRIR NOVO (Limpa tudo)
+// Estado Global
+let exerciseState = []; // Array que guarda os objetos {nome, mecanica, series: []}
+let activeTabIndex = 0; // Qual aba está visível (0, 1 ou 2)
+let currentMode = 'single'; // single, biset, triset
+
+// --- 1. INICIALIZAÇÃO ---
+
 function openExercicioModal(divId, treinoId) {
-    // Reseta formulário e variáveis
     document.getElementById("formExercicio").reset();
-    document.getElementById("formExercicio").action = "actions/treino_add_exercicio.php"; // Ação de Adicionar
     document.getElementById("modal_divisao_id").value = divId;
     document.getElementById("modal_treino_id").value = treinoId;
-    document.getElementById("modal_exercicio_id").value = ""; // Limpa ID
+    document.getElementById("modal_exercicio_id").value = ""; 
     
     document.querySelector("#modalExercicio .section-title").innerText = "Novo Exercício";
-    document.querySelector("#modalExercicio .btn-gold[type='submit']").innerText = "SALVAR EXERCÍCIO";
-
-    seriesArray = [];
-    renderSetsList();
     
+    // GARANTE QUE O BOTÃO VOLTE AO ORIGINAL
+    const btnSave = document.getElementById("btn-save-modal");
+    if(btnSave) {
+        btnSave.innerText = "SALVAR TUDO";
+    }
+
+    initBlockState('single');
     document.getElementById("modalExercicio").style.display = "flex";
 }
 
-// Função para ABRIR EDIÇÃO (Preenche tudo)
-function editarExercicio(exData, treinoId, divId) {
-    // Preenche campos simples
-    document.getElementById("formExercicio").action = "actions/treino_edit_exercicio.php"; // Ação de Editar
-    document.getElementById("modal_divisao_id").value = divId;
-    document.getElementById("modal_treino_id").value = treinoId;
-    document.getElementById("modal_exercicio_id").value = exData.id;
+function initBlockState(mode) {
+    currentMode = mode;
+    activeTabIndex = 0;
     
-    document.querySelector("input[name='nome_exercicio']").value = exData.nome_exercicio;
-    document.querySelector("select[name='tipo_mecanica']").value = exData.tipo_mecanica;
-    document.querySelector("input[name='video_url']").value = exData.video_url || "";
-    document.querySelector("input[name='observacao']").value = exData.observacao_exercicio || "";
-
-    // Muda Título do Modal
-    document.querySelector("#modalExercicio .section-title").innerText = "Editar Exercício";
-    document.querySelector("#modalExercicio .btn-gold[type='submit']").innerText = "ATUALIZAR EXERCÍCIO";
-
-    // Preenche as Séries
-    seriesArray = [];
-    if (exData.series && exData.series.length > 0) {
-        exData.series.forEach(s => {
-            seriesArray.push({
-                qtd: s.quantidade,
-                tipo: s.categoria,
-                reps: s.reps_fixas || "",
-                desc: s.descanso_fixo || "",
-                rpe: s.rpe_previsto || ""
-            });
+    // Define quantidade baseada no modo
+    const count = (mode === 'triset') ? 3 : (mode === 'biset') ? 2 : 1;
+    
+    // Cria estrutura vazia
+    exerciseState = [];
+    for(let i=0; i<count; i++) {
+        exerciseState.push({
+            nome: '', mecanica: 'livre', video: '', obs: '', series: []
         });
     }
-    renderSetsList();
+    
+    // Atualiza UI
+    updateTabButtons();
+    loadDataToInputs(0); // Carrega o primeiro
+}
 
-    document.getElementById("modalExercicio").style.display = "flex";
+// --- 2. NAVEGAÇÃO DE ABAS ---
+
+function switchTab(newIndex) {
+    if (newIndex === activeTabIndex) return;
+    
+    // 1. Salva o que está na tela no array antes de sair
+    saveInputsToData(activeTabIndex);
+    
+    // 2. Carrega os dados da nova aba
+    activeTabIndex = newIndex;
+    loadDataToInputs(newIndex);
+    
+    // 3. Atualiza botões visuais
+    updateTabButtons();
+}
+
+function updateTabButtons() {
+    const container = document.getElementById("exercise-tabs-container");
+    const modeBtns = document.querySelectorAll(".btn-type-select");
+    
+    // 1. Remove classe ativa de todos
+    modeBtns.forEach(b => b.classList.remove('active'));
+
+    // 2. Define qual botão iluminar
+    // Se for 'edit_single', iluminamos o botão 'single'. Se não, usa o próprio nome.
+    const targetMode = (currentMode === 'edit_single') ? 'single' : currentMode;
+    
+    // 3. Tenta encontrar o botão
+    const activeBtn = document.getElementById(`btn-mode-${targetMode}`);
+    
+    // 4. Adiciona classe ativa (COM SEGURANÇA)
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+
+    // 5. Lógica de mostrar/esconder abas
+    // Se for single ou edit_single, esconde as abas
+    if (currentMode === 'single' || currentMode === 'edit_single') {
+        if(container) container.style.display = 'none';
+        return;
+    }
+
+    // Renderiza abas A / B / C
+    if(container) {
+        container.style.display = 'flex';
+        container.innerHTML = '';
+        const labels = ['Exercício A', 'Exercício B', 'Exercício C'];
+        
+        exerciseState.forEach((_, idx) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.innerText = labels[idx];
+            btn.style.cssText = `flex:1; padding:8px; border:1px solid #333; cursor:pointer; background: ${idx === activeTabIndex ? 'rgba(255, 186, 66, 0.1)' : 'transparent'}; color: ${idx === activeTabIndex ? 'var(--gold)' : '#888'}; border-bottom: ${idx === activeTabIndex ? '2px solid var(--gold)' : '1px solid #333'}`;
+            
+            btn.onclick = () => switchTab(idx);
+            container.appendChild(btn);
+        });
+    }
+}
+
+// --- 3. MANIPULAÇÃO DE DADOS (DOM <-> MEMÓRIA) ---
+
+function saveInputsToData(index) {
+    if (!exerciseState[index]) return;
+
+    // Pega valores dos inputs
+    exerciseState[index].nome = document.getElementById("inp_nome").value;
+    exerciseState[index].mecanica = document.getElementById("inp_mecanica").value;
+    exerciseState[index].video = document.getElementById("inp_video").value;
+    exerciseState[index].obs = document.getElementById("inp_obs").value;
+    
+    // Nota: As séries já são salvas diretamente no exerciseState[index].series pelas funções addSetToList/removeSet
+}
+
+function loadDataToInputs(index) {
+    const data = exerciseState[index];
+    if (!data) return;
+
+    // Joga valores nos inputs
+    document.getElementById("inp_nome").value = data.nome;
+    document.getElementById("inp_mecanica").value = data.mecanica;
+    document.getElementById("inp_video").value = data.video;
+    document.getElementById("inp_obs").value = data.obs;
+    
+    // Atualiza a lista visual de séries
+    renderSetsList(index);
+    
+    // Reseta inputs de adição de série
+    document.getElementById("set_tipo").value = 'work';
+    toggleTechniqueFields();
+}
+
+// --- 4. LÓGICA DE SÉRIES ---
+
+function toggleTechniqueFields() {
+    const tipo = document.getElementById("set_tipo").value;
+    document.getElementById("div_drops").style.display = (tipo === 'dropset') ? 'block' : 'none';
+    document.getElementById("div_pause").style.display = (tipo === 'restpause') ? 'block' : 'none';
+    document.getElementById("div_cluster").style.display = (tipo === 'clusterset') ? 'block' : 'none';
+}
+
+// --- CORREÇÃO NA LÓGICA DE SÉRIES ---
+function addSetToList() {
+    // 1. Pega os valores crus dos inputs
+    const qtd = document.getElementById("set_qtd").value;
+    const tipoSelecionado = document.getElementById("set_tipo").value; // Ex: 'dropset'
+    let reps = document.getElementById("set_reps").value;
+    const desc = document.getElementById("set_desc").value;
+    const rpe = document.getElementById("set_rpe").value;
+    
+    // 2. Variáveis Finais para o Banco de Dados
+    let categoriaFinal = tipoSelecionado; // Por padrão, é o que foi selecionado
+    let tecnicaFinal = 'normal';
+    let valorTecnica = '';
+
+    // 3. TRADUÇÃO: Se for técnica, define categoria como 'work' e preenche a técnica
+    if (tipoSelecionado === 'dropset') {
+        categoriaFinal = 'work'; // DB só aceita ENUM('work', etc)
+        tecnicaFinal = 'dropset';
+        valorTecnica = document.getElementById("set_drops_qtd").value;
+    } 
+    else if (tipoSelecionado === 'restpause') {
+        categoriaFinal = 'work';
+        tecnicaFinal = 'restpause';
+        valorTecnica = document.getElementById("set_rest_time").value;
+    } 
+    else if (tipoSelecionado === 'clusterset') {
+        categoriaFinal = 'work';
+        tecnicaFinal = 'clusterset';
+        const b = document.getElementById("set_cluster_blocos").value || 1;
+        const r = document.getElementById("set_cluster_reps").value || 1;
+        const p = document.getElementById("set_cluster_rest").value || 10;
+        valorTecnica = `${b}|${r}|${p}`;
+        
+        // Formata visualmente as reps para cluster (ex: 4x3)
+        // Mas mantém o campo reps original se o usuário digitou algo
+        if(!reps) reps = `${b}x${r}`; 
+    }
+
+    // 4. Adiciona ao Array Global (Só se tiver quantidade)
+    if (qtd > 0) {
+        exerciseState[activeTabIndex].series.push({
+            qtd: qtd, 
+            tipo: categoriaFinal, // Vai enviar 'work' em vez de 'dropset'
+            reps: reps, 
+            desc: desc, 
+            rpe: rpe, 
+            tecnica: tecnicaFinal, // Vai enviar 'dropset' aqui
+            tecnica_valor: valorTecnica 
+        });
+        
+        renderSetsList(activeTabIndex);
+    }
+}
+
+function renderSetsList(index) {
+    const listDiv = document.getElementById("temp-sets-list");
+    const series = exerciseState[index].series;
+    
+    listDiv.innerHTML = "";
+    
+    if (series.length === 0) {
+        listDiv.innerHTML = "<div style='text-align:center; color:#666; padding:10px;'>Nenhuma série.</div>";
+        return;
+    }
+
+    series.forEach((s, sIdx) => {
+        let label = s.tipo.toUpperCase();
+        if (s.tecnica !== 'normal') label += ` <span style="color:var(--gold)">(${s.tecnica})</span>`;
+        
+        listDiv.innerHTML += `
+            <div style="display:flex; justify-content:space-between; padding:5px; border-bottom:1px solid #333;">
+                <span><b>${s.qtd}x</b> ${label} <small>(${s.reps})</small></span>
+                <span style="color:#ff4d4d; cursor:pointer;" onclick="removeSet(${index}, ${sIdx})">&times;</span>
+            </div>
+        `;
+    });
+}
+
+function removeSet(exIndex, setIndex) {
+    exerciseState[exIndex].series.splice(setIndex, 1);
+    // Só renderiza se for a aba atual
+    if (exIndex === activeTabIndex) renderSetsList(exIndex);
+}
+
+// --- 5. FUNÇÃO DE SALVAR (NOVO NOME, SEM CONFLITO) ---
+
+function salvarBlocoExercicios() {
+    // 1. Salva estado atual da tela para a memória
+    saveInputsToData(activeTabIndex);
+    
+    // 2. Validação
+    for(let i=0; i<exerciseState.length; i++) {
+        if (!exerciseState[i].nome || exerciseState[i].nome.trim() === "") {
+            alert(`O nome do Exercício ${i+1} é obrigatório.`);
+            switchTab(i);
+            return;
+        }
+    }
+
+    // 3. Pega o ID (Importante para edição)
+    const exId = document.getElementById("modal_exercicio_id").value;
+
+    // 4. Monta Payload JSON (Adicionando o exercicio_id)
+    const payload = {
+        divisao_id: document.getElementById("modal_divisao_id").value,
+        treino_id: document.getElementById("modal_treino_id").value,
+        exercicio_id: exId, // <--- CRUCIAL: Envia o ID para o PHP saber quem atualizar
+        mode: currentMode,
+        exercises: exerciseState
+    };
+
+    console.log("Enviando:", payload);
+
+    // 5. Define a URL dinamicamente
+    const url = (currentMode === 'edit_single' && exId) 
+        ? 'actions/treino_edit_exercicio.php' 
+        : 'actions/treino_add_exercicio.php';
+
+    const btn = document.querySelector("#modalExercicio .btn-gold:last-child");
+    const originalText = btn.innerText;
+    btn.innerText = "SALVANDO...";
+    btn.disabled = true;
+
+    // 6. Envia JSON puro
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.status === 'success') {
+            closeExercicioModal();
+            if(typeof carregarConteudo === 'function') {
+                carregarConteudo('treino_painel&id=' + payload.treino_id);
+            } else {
+                location.reload();
+            }
+        } else {
+            alert("Erro: " + data.message);
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Erro de conexão.");
+    })
+    .finally(() => {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    });
 }
 
 function closeExercicioModal() {
     document.getElementById("modalExercicio").style.display = "none";
 }
 
-function addSetToList() {
-    const qtd = document.getElementById("set_qtd").value;
-    const tipo = document.getElementById("set_tipo").value;
-    const reps = document.getElementById("set_reps").value;
-    const desc = document.getElementById("set_desc").value;
-    const rpe = document.getElementById("set_rpe").value;
+// --- MODO EDIÇÃO (ADAPTADO PARA A NOVA ESTRUTURA) ---
+function editarExercicio(exData, treinoId, divId) {
+    // 1. Configura Estado Global
+    currentMode = 'edit_single'; 
+    activeTabIndex = 0;
 
-    if(qtd > 0) {
-        seriesArray.push({ qtd, tipo, reps, desc, rpe });
-        renderSetsList();
-    }
-}
-
-function renderSetsList() {
-    const listDiv = document.getElementById("temp-sets-list");
-    const jsonInput = document.getElementById("series_json_input");
-    listDiv.innerHTML = "";
+    // 2. Preenche IDs Ocultos
+    document.getElementById("modal_divisao_id").value = divId;
+    document.getElementById("modal_treino_id").value = treinoId;
+    document.getElementById("modal_exercicio_id").value = exData.id;
     
-    if(seriesArray.length === 0) {
-        listDiv.innerHTML = "<p style='color:#666; font-size:0.8rem; text-align:center; margin-top:10px;'>Nenhuma série adicionada.</p>";
-    } else {
-        seriesArray.forEach((s, index) => {
-            listDiv.innerHTML += `
-                <div class="temp-set-item">
-                    <span><strong>${s.qtd}x</strong> ${s.tipo.toUpperCase()} (${s.reps} reps)</span>
-                    <span style="color:#ff4242; cursor:pointer;" onclick="removeSet(${index})"><i class="fa-solid fa-times"></i></span>
-                </div>
-            `;
+    // 3. Popula a Memória
+    exerciseState = [{
+        nome: exData.nome_exercicio,
+        mecanica: exData.tipo_mecanica,
+        video: exData.video_url || "",
+        obs: exData.observacao_exercicio || "",
+        series: []
+    }];
+
+    // 4. Popula Séries
+    if (exData.series && exData.series.length > 0) {
+        exData.series.forEach(s => {
+            exerciseState[0].series.push({
+                qtd: s.quantidade,
+                tipo: s.categoria, 
+                reps: s.reps_fixas || "",
+                desc: s.descanso_fixo || "",
+                rpe: s.rpe_previsto || "",
+                tecnica: s.tecnica || "normal", 
+                tecnica_valor: s.tecnica_valor || ""
+            });
         });
     }
-    jsonInput.value = JSON.stringify(seriesArray);
-}
+    
+    // 5. Atualiza Interface
+    updateTabButtons(); 
+    loadDataToInputs(0); 
 
-function removeSet(index) {
-    seriesArray.splice(index, 1);
-    renderSetsList();
+    // 6. Ajusta Títulos e Botão (AGORA COM SEGURANÇA PELO ID)
+    document.querySelector("#modalExercicio .section-title").innerText = "Editar Exercício";
+    
+    const btnSave = document.getElementById("btn-save-modal");
+    if (btnSave) {
+        btnSave.innerText = "ATUALIZAR";
+        // Não precisamos mudar o onclick, pois ambos usam salvarBlocoExercicios
+        // O PHP saberá se é update pelo 'modal_exercicio_id' preenchido
+    }
+
+    document.getElementById("modalExercicio").style.display = "flex";
 }
 
 function renomearDivisao(idDivisao, letra, nomeAtual) {

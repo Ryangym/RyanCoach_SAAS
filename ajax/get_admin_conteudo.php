@@ -1393,11 +1393,41 @@ switch ($pagina) {
                     $firstContent = true;
                     foreach ($divisoes as $div) {
                         $display = $firstContent ? 'active' : '';
-                        
+
+                        // 1. Busca todos os exercícios ordenados
                         $sqlEx = "SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC";
                         $stmtEx = $pdo->prepare($sqlEx);
                         $stmtEx->execute([$div['id']]);
-                        $exercicios = $stmtEx->fetchAll(PDO::FETCH_ASSOC);
+                        $exercicios_raw = $stmtEx->fetchAll(PDO::FETCH_ASSOC);
+
+                        // 2. LÓGICA DE AGRUPAMENTO (O GRANDE TRUQUE)
+                        $lista_final = [];
+                        $grupos_temp = []; // Auxiliar para mapear hash -> índice no array final
+
+                        foreach ($exercicios_raw as $ex) {
+                            $hash = $ex['agrupamento_hash'];
+
+                            if ($hash) {
+                                // É parte de um Bi-set/Tri-set
+                                if (!isset($grupos_temp[$hash])) {
+                                    // Cria o grupo na lista final se não existir
+                                    $idx = count($lista_final);
+                                    $lista_final[$idx] = [
+                                        'tipo' => 'grupo',
+                                        'itens' => []
+                                    ];
+                                    $grupos_temp[$hash] = $idx;
+                                }
+                                // Adiciona o exercício dentro do grupo correspondente
+                                $lista_final[$grupos_temp[$hash]]['itens'][] = $ex;
+                            } else {
+                                // É exercício único (Single)
+                                $lista_final[] = [
+                                    'tipo' => 'single',
+                                    'itens' => [$ex] // Array com 1 item para facilitar o loop de renderização
+                                ];
+                            }
+                        }
 
                         echo '
                         <div id="div_'.$div['letra'].'" class="division-content '.$display.'">
@@ -1406,21 +1436,16 @@ switch ($pagina) {
                                 <div>
                                     <div style="display:flex; align-items:center; gap: 10px;">
                                         <h3 style="color:#fff; margin:0; font-size: 1.2rem;">TREINO '.$div['letra'].'</h3>
-                                        
                                         <button onclick="renomearDivisao('.$div['id'].', \''.$div['letra'].'\', \''.($div['nome'] ?? '').'\')" 
-                                                style="background: transparent; border: none; color: #666; cursor: pointer; font-size: 0.9rem; transition: color 0.3s;"
-                                                onmouseover="this.style.color=\'var(--gold)\'" 
-                                                onmouseout="this.style.color=\'#666\'"
+                                                style="background: transparent; border: none; color: #666; cursor: pointer; font-size: 0.9rem;"
                                                 title="Editar Nome do Treino">
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </button>
                                     </div>
-                                    
                                     <span id="label_nome_div_'.$div['id'].'" style="color:var(--gold); font-size: 0.9rem; font-weight: bold; text-transform: uppercase; display: block; margin-top: 2px;">
                                         '.($div['nome'] ? $div['nome'] : 'SEM NOME DEFINIDO').'
                                     </span>
                                 </div>
-
                                 <button class="btn-gerenciar" onclick="openExercicioModal('.$div['id'].', '.$treino_id.')">
                                     <i class="fa-solid fa-plus"></i> ADD EXERCÍCIO
                                 </button>
@@ -1428,45 +1453,109 @@ switch ($pagina) {
 
                             <div class="exercise-list">';
                                 
-                                if (count($exercicios) > 0) {
-                                    foreach ($exercicios as $ex) {
-                                        $sqlSeries = "SELECT * FROM series WHERE exercicio_id = ?";
-                                        $stmtSeries = $pdo->prepare($sqlSeries);
-                                        $stmtSeries->execute([$ex['id']]);
-                                        $series = $stmtSeries->fetchAll(PDO::FETCH_ASSOC);
-                                        
-                                        $ex_data = $ex;
-                                        $ex_data['series'] = $series;
-                                        $ex_json = htmlspecialchars(json_encode($ex_data), ENT_QUOTES, 'UTF-8');
-
-                                        echo '
-                                        <div class="exercise-card-edit">
-                                            <div class="ex-info">
-                                                <span class="ex-meta">'.strtoupper($ex['tipo_mecanica']).'</span>
-                                                <h4>'.$ex['nome_exercicio'].'</h4>
-                                                <div class="sets-container">';
-                                                    foreach ($series as $s) {
-                                                        $infoReps = $s['reps_fixas'] ? "(".$s['reps_fixas'].")" : "";
-                                                        echo '<span class="set-tag '.$s['categoria'].'">'.$s['quantidade'].'x '.strtoupper($s['categoria']).' '.$infoReps.'</span>';
-                                                    }
-                                            echo '  </div>
-                                            </div>
-                                            <div class="ex-actions">
-                                                <button class="btn-action-icon" onclick=\'editarExercicio('.$ex_json.', '.$treino_id.', '.$div['id'].')\'>
-                                                    <i class="fa-solid fa-pen"></i>
-                                                </button>
-                                                
-                                                <button class="btn-action-icon btn-delete" onclick="deletarExercicio('.$ex['id'].', '.$treino_id.')">
-                                                    <i class="fa-solid fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>';
-                                    }
-                                } else {
+                                if (empty($lista_final)) {
                                     echo '<p style="text-align:center; color:#666; padding:30px;">Nenhum exercício cadastrado.</p>';
+                                } else {
+                                    
+                                    // 3. LOOP DE EXIBIÇÃO
+                                    foreach ($lista_final as $bloco) {
+                                        
+                                        // Se for Grupo, abre a div de estilo (Bi-set)
+                                        if ($bloco['tipo'] === 'grupo') {
+                                            $qtd = count($bloco['itens']);
+                                            $labelGrupo = ($qtd === 2) ? 'BI-SET' : (($qtd === 3) ? 'TRI-SET' : 'GRUPO');
+                                            
+                                            echo '<div class="agrupamento-wrapper">';
+                                            echo '<span class="agrupamento-badge">'.$labelGrupo.'</span>';
+                                        }
+
+                                        // Loop interno (Renderiza os cards)
+                                        // Se for Single, roda 1 vez. Se for Grupo, roda N vezes.
+                                        foreach ($bloco['itens'] as $ex) {
+                                            
+                                            // Busca Séries
+                                            $sqlSeries = "SELECT * FROM series WHERE exercicio_id = ?";
+                                            $stmtSeries = $pdo->prepare($sqlSeries);
+                                            $stmtSeries->execute([$ex['id']]);
+                                            $series = $stmtSeries->fetchAll(PDO::FETCH_ASSOC);
+                                            
+                                            // Prepara JSON para o botão editar
+                                            $ex_data = $ex;
+                                            $ex_data['series'] = $series;
+                                            $ex_json = htmlspecialchars(json_encode($ex_data), ENT_QUOTES, 'UTF-8');
+
+                                            // RENDERIZAÇÃO DO CARD (Seu código original, mantido)
+                                            echo '
+                                            <div class="exercise-card-edit">
+                                                <div class="ex-info">
+                                                    <span class="ex-meta">'.strtoupper($ex['tipo_mecanica']).'</span>
+                                                    <h4>'.$ex['nome_exercicio'].'</h4>
+                                                    <div class="sets-container">';
+                                                        
+                                                        foreach ($series as $s) {
+                                                            $qtd = $s['quantidade'];
+                                                            $reps = $s['reps_fixas'];
+                                                            $tecnica = $s['tecnica'] ?? 'normal';
+                                                            $valor   = $s['tecnica_valor'] ?? '';
+
+                                                            $badgeLabel = strtoupper($s['categoria']);
+                                                            $badgeClass = $s['categoria'];
+                                                            $badgeStyle = '';
+                                                            $extraText  = $reps ? "(".$reps.")" : "";
+
+                                                            // Estilização das Técnicas
+                                                            if ($tecnica === 'dropset') {
+                                                                $badgeLabel = 'DROP SET';
+                                                                $badgeClass = '';
+                                                                $badgeStyle = 'background:rgba(255, 77, 77, 0.15); color:#ff4d4d; border:1px solid rgba(255, 77, 77, 0.3);';
+                                                                $extraText  = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor} drops)</small>";
+                                                            } 
+                                                            elseif ($tecnica === 'restpause') {
+                                                                $badgeLabel = 'REST PAUSE';
+                                                                $badgeClass = '';
+                                                                $badgeStyle = 'background:rgba(0, 230, 118, 0.15); color:#00e676; border:1px solid rgba(0, 230, 118, 0.3);';
+                                                                $extraText  = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor}s)</small>";
+                                                            } 
+                                                            elseif ($tecnica === 'clusterset') {
+                                                                $badgeLabel = 'CLUSTER SET';
+                                                                $badgeClass = '';
+                                                                $badgeStyle = 'background:rgba(0, 191, 255, 0.15); color:#00bfff; border:1px solid rgba(0, 191, 255, 0.3);';
+                                                                
+                                                                $parts = explode('|', $valor);
+                                                                if(count($parts) === 3) {
+                                                                    $extraText = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$parts[0]}x{$parts[1]} | {$parts[2]}s)</small>";
+                                                                } else { $extraText = ""; }
+                                                            }
+
+                                                            if ($badgeStyle) {
+                                                                echo '<span class="set-tag" style="'.$badgeStyle.'">'.$qtd.'x '.$badgeLabel.' '.$extraText.'</span>';
+                                                            } else {
+                                                                echo '<span class="set-tag '.$badgeClass.'">'.$qtd.'x '.$badgeLabel.' '.$extraText.'</span>';
+                                                            }
+                                                        }
+                                                    echo '</div>
+                                                </div>
+                                                <div class="ex-actions">
+                                                    <button class="btn-action-icon" onclick=\'editarExercicio('.$ex_json.', '.$treino_id.', '.$div['id'].')\'>
+                                                        <i class="fa-solid fa-pen"></i>
+                                                    </button>
+                                                    
+                                                    <button class="btn-action-icon btn-delete" onclick="deletarExercicio('.$ex['id'].', '.$treino_id.')">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>';
+                                        } // Fim do loop interno (itens)
+
+                                        // Se for Grupo, fecha a div do wrapper
+                                        if ($bloco['tipo'] === 'grupo') {
+                                            echo '</div>'; // Fecha .agrupamento-wrapper
+                                        }
+
+                                    } // Fim do loop principal
                                 }
-                        
-                        echo '</div>
+
+                            echo '</div>
                         </div>';
                         $firstContent = false;
                     }
@@ -1477,88 +1566,90 @@ switch ($pagina) {
             <div id="modalExercicio" class="modal-overlay">
                 <div class="modal-content" style="max-width: 700px;">
                     <button class="modal-close" onclick="closeExercicioModal()">&times;</button>
-                    <h3 class="section-title" style="color:var(--gold); margin-bottom:20px;">Novo Exercício</h3>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h3 class="section-title" style="color:var(--gold); margin:0;">Novo Exercício</h3>
+                        
+                        <div class="block-type-selector" style="display:flex; gap:5px; background:rgba(255,255,255,0.05); padding:4px; border-radius:6px;">
+                            <button type="button" class="btn-type-select active" onclick="initBlockState(\'single\')" id="btn-mode-single">Padrão</button>
+                            <button type="button" class="btn-type-select" onclick="initBlockState(\'biset\')" id="btn-mode-biset">Bi-set</button>
+                            <button type="button" class="btn-type-select" onclick="initBlockState(\'triset\')" id="btn-mode-triset">Tri-set</button>
+                        </div>
+                    </div>
 
-                    <form id="formExercicio" onsubmit="salvarExercicio(event)">
-                        <input type="hidden" name="divisao_id" id="modal_divisao_id">
-                        <input type="hidden" name="treino_id" id="modal_treino_id">
-                        <input type="hidden" name="exercicio_id" id="modal_exercicio_id">
-                        <input type="hidden" name="series_data" id="series_json_input">
+                    <div id="exercise-tabs-container" style="display:none; gap:5px; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;"></div>
+
+                    <form id="formExercicio">
+                        <input type="hidden" id="modal_divisao_id">
+                        <input type="hidden" id="modal_treino_id">
+                        <input type="hidden" id="modal_exercicio_id">
 
                         <div class="row-flex" style="display:flex; gap:15px; margin-bottom:15px;">
                             <div style="flex:2;">
                                 <label class="input-label">Nome do Exercício</label>
-                                <input type="text" name="nome_exercicio" class="admin-input" placeholder="Ex: Supino Reto" required>
+                                <input type="text" id="inp_nome" class="admin-input" placeholder="Ex: Supino Reto" required>
                             </div>
                             <div style="flex:1;">
                                 <label class="input-label">Mecânica</label>
-                                <select name="tipo_mecanica" class="admin-input">
+                                <select id="inp_mecanica" class="admin-input">
                                     <option value="livre">Livre / Máquina</option>
-                                    <option value="composto">Composto (Periodizado)</option>
-                                    <option value="isolador">Isolador (Periodizado)</option>
+                                    <option value="composto">Composto</option>
+                                    <option value="isolador">Isolador</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="row-flex" style="display:flex; gap:15px; margin-bottom:15px;">
                             <div style="flex:1;">
-                                <label class="input-label">Link Vídeo (Youtube/Drive)</label>
-                                <input type="text" name="video_url" class="admin-input" placeholder="https://...">
+                                <label class="input-label">Vídeo URL</label>
+                                <input type="text" id="inp_video" class="admin-input" placeholder="https://youtube...">
                             </div>
                             <div style="flex:1;">
                                 <label class="input-label">Observação</label>
-                                <input type="text" name="observacao" class="admin-input" placeholder="Ex: Segurar 2s na descida">
+                                <input type="text" id="inp_obs" class="admin-input" placeholder="Dica técnica...">
                             </div>
                         </div>
 
                         <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
 
-                        <h4 style="color:#fff; font-size:0.9rem; margin-bottom:10px;">Configuração de Séries</h4>
-                        
+                        <h4 style="color:#fff; font-size:0.9rem; margin-bottom:10px;">Séries</h4>
                         <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:8px;">
-                            <label class="input-label" style="color:var(--gold); margin-bottom:10px; display:block;">Adicionar Série</label>
-                            
-                            <div class="set-inputs-row" style="display:flex; gap:10px; align-items:flex-end;">
-                                <div style="flex:0 0 60px;">
-                                    <label class="input-label" style="font-size:0.7rem;">Qtd</label>
-                                    <input type="number" id="set_qtd" class="admin-input" value="1" style="padding:8px;">
-                                </div>
-                                <div style="flex:1; min-width:100px;">
+                            <div class="set-inputs-row" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+                                <div style="flex:0 0 60px;"><label class="input-label" style="font-size:0.7rem;">Qtd</label><input type="number" id="set_qtd" class="admin-input" value="1" style="padding:8px;"></div>
+                                <div style="flex:1; min-width:140px;">
                                     <label class="input-label" style="font-size:0.7rem;">Tipo</label>
-                                    <select id="set_tipo" class="admin-input" style="padding:8px;">
+                                    <select id="set_tipo" class="admin-input" style="padding:8px;" onchange="toggleTechniqueFields()">
+                                        <option value="work">Work Set</option>
                                         <option value="warmup">Warm Up</option>
                                         <option value="feeder">Feeder</option>
-                                        <option value="work" selected>Work Set</option>
                                         <option value="top">Top Set</option>
                                         <option value="backoff">Backoff</option>
                                         <option value="falha">Falha</option>
+                                        <option value="dropset" style="color:#ff4d4d;">Drop-set</option>
+                                        <option value="restpause" style="color:#00e676;">Rest-pause</option>
+                                        <option value="clusterset" style="color:#00bfff;">Cluster Set</option>
                                     </select>
                                 </div>
-                                <div style="flex:1; min-width:70px;">
-                                    <label class="input-label" style="font-size:0.7rem;">Reps</label>
-                                    <input type="text" id="set_reps" class="admin-input" placeholder="Ex: 10" style="padding:8px;">
-                                </div>
-                                <div style="flex:1; min-width:70px;">
-                                    <label class="input-label" style="font-size:0.7rem;">Descanso</label>
-                                    <input type="text" id="set_desc" class="admin-input" placeholder="90s" style="padding:8px;">
-                                </div>
-                                <div style="flex:0 0 60px;">
-                                    <label class="input-label" style="font-size:0.7rem;">RPE</label>
-                                    <input type="number" id="set_rpe" class="admin-input" placeholder="-" style="padding:8px;">
-                                </div>
-                                <button type="button" class="btn-gold btn-add-set-mobile" onclick="addSetToList()" style="padding:8px 15px; height:38px;">
-                                    <i class="fa-solid fa-plus"></i>
-                                </button>
+                                <div style="flex:0 0 70px;"><label class="input-label" style="font-size:0.7rem;">Reps</label><input type="text" id="set_reps" class="admin-input" placeholder="10" style="padding:8px;"></div>
+                                <div style="flex:0 0 70px;"><label class="input-label" style="font-size:0.7rem;">Desc</label><input type="text" id="set_desc" class="admin-input" placeholder="60s" style="padding:8px;"></div>
+                                <div style="flex:0 0 50px;"><label class="input-label" style="font-size:0.7rem;">RPE</label><input type="number" id="set_rpe" class="admin-input" placeholder="-" style="padding:8px;"></div>
+                                <button type="button" class="btn-gold" onclick="addSetToList()" style="padding:8px 15px; height:38px;"><i class="fa-solid fa-plus"></i></button>
                             </div>
 
-                            <div id="temp-sets-list" style="margin-top:15px; max-height:150px; overflow-y:auto;">
-                                <p style="color:#666; font-size:0.8rem; text-align:center; margin-top:10px;">Nenhuma série adicionada.</p>
+                            <div id="div_special_inputs" style="margin-top:10px;">
+                                <div id="div_drops" style="display:none; padding:10px; border:1px dashed #ff4d4d; border-radius:4px;"><label style="color:#ff4d4d;">Qtd Drops:</label> <input type="number" id="set_drops_qtd" class="admin-input" style="width:60px;" placeholder="2"></div>
+                                <div id="div_pause" style="display:none; padding:10px; border:1px dashed #00e676; border-radius:4px;"><label style="color:#00e676;">Pausa (s):</label> <input type="number" id="set_rest_time" class="admin-input" style="width:60px;" placeholder="15"></div>
+                                <div id="div_cluster" style="display:none; padding:10px; border:1px dashed #00bfff; border-radius:4px;">
+                                    <label style="color:#00bfff;">Blocos:</label> <input type="number" id="set_cluster_blocos" class="admin-input" style="width:50px;"> X <input type="text" id="set_cluster_reps" class="admin-input" style="width:50px;" placeholder="reps"> <input type="number" id="set_cluster_rest" class="admin-input" style="width:60px;" placeholder="s">
+                                </div>
                             </div>
+
+                            <div id="temp-sets-list" style="margin-top:15px; max-height:150px; overflow-y:auto; font-size:0.85rem;"></div>
                         </div>
 
                         <div style="text-align: right; margin-top: 20px;">
                             <button type="button" class="btn-gold" style="background:transparent; border:1px solid #555; color:#ccc; margin-right:10px;" onclick="closeExercicioModal()">Cancelar</button>
-                            <button type="submit" class="btn-gold">SALVAR EXERCÍCIO</button>
+                            <button type="button" class="btn-gold" id="btn-save-modal" onclick="salvarBlocoExercicios()">SALVAR TUDO</button>
                         </div>
                     </form>
                 </div>

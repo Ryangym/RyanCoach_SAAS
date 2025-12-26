@@ -224,6 +224,18 @@ async function carregarConteudo(pagina) {
         areaConteudo.innerHTML = html;
         areaConteudo.classList.remove('loading');
 
+        // --- NOVO: LÓGICA DE RESTAURAÇÃO DE ABA ---
+        // Verifica se temos uma aba salva na memória
+        const lastTab = localStorage.getItem('lastActiveTab');
+        
+        // Se temos uma aba salva E ela existe no novo HTML carregado
+        if (lastTab && document.getElementById(lastTab)) {
+            // Chama a função openTab simulada (sem evento de clique)
+            // Certifique-se de usar a versão nova do openTab que te mandei antes
+            openTab(null, lastTab);
+        }
+        // ------------------------------------------
+
         // Atualiza botão ativo na sidebar
         const paginaBase = pagina.split('&')[0]; 
         const botoes = document.querySelectorAll('#main-aside button[data-pagina]');

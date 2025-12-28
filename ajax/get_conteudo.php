@@ -2002,7 +2002,7 @@ switch ($pagina) {
                                     }
 
                                     foreach ($bloco['itens'] as $ex) {
-                                        // Busca Séries
+                                        // Busca as Séries
                                         $stmtSeries = $pdo->prepare("SELECT * FROM series WHERE exercicio_id = ?");
                                         $stmtSeries->execute([$ex['id']]);
                                         $series = $stmtSeries->fetchAll(PDO::FETCH_ASSOC);

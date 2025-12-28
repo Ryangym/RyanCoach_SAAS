@@ -348,54 +348,111 @@ switch ($pagina) {
                 <div style="padding-bottom: 160px;">'; 
 
         if (count($exercicios) > 0) {
+            
+            // ---------------------------------------------------------
+            // 1. PRÉ-PROCESSAMENTO: AGRUPAMENTO (Lógica de Bi-set)
+            // ---------------------------------------------------------
+            $lista_final = [];
+            $grupos_temp = []; 
+
             foreach ($exercicios as $ex) {
-                $stmt_s = $pdo->prepare("SELECT * FROM series WHERE exercicio_id = ?");
-                $stmt_s->execute([$ex['id']]);
-                $series = $stmt_s->fetchAll(PDO::FETCH_ASSOC);
+                $hash = $ex['agrupamento_hash'];
 
-                // --- BUSCA HISTÓRICO AVANÇADA (POR SÉRIE E ORDEM) ---
-                // 1. Descobre qual foi a ÚLTIMA data que esse exercício foi treinado
-                $stmt_last_date = $pdo->prepare("SELECT MAX(data_treino) FROM treino_historico WHERE aluno_id = ? AND exercicio_id = ?");
-                $stmt_last_date->execute([$aluno_id, $ex['id']]);
-                $ultima_data = $stmt_last_date->fetchColumn();
-
-                // 2. Se achou data, busca TODOS os registros desse dia para mapear
-                $historico_map = []; // Vai guardar: [serie_id][numero_ordem] => dados
-                if ($ultima_data) {
-                    // Tenta buscar usando serie_id (novo padrão)
-                    $stmt_h = $pdo->prepare("SELECT serie_id, numero_serie, serie_numero, carga_kg, reps_realizadas 
-                                             FROM treino_historico 
-                                             WHERE aluno_id = ? AND exercicio_id = ? AND data_treino = ?");
-                    $stmt_h->execute([$aluno_id, $ex['id'], $ultima_data]);
-                    $regs = $stmt_h->fetchAll(PDO::FETCH_ASSOC);
-                    
-                    foreach ($regs as $r) {
-                        // Se tiver serie_id (novo), usa ele. Se não, tenta usar serie_numero (legado) como ID
-                        $s_key = $r['serie_id'] ? $r['serie_id'] : $r['serie_numero'];
-                        $n_key = $r['numero_serie'] ? $r['numero_serie'] : 1;
-                        
-                        $historico_map[$s_key][$n_key] = $r;
+                if ($hash) {
+                    // É parte de um grupo
+                    if (!isset($grupos_temp[$hash])) {
+                        $idx = count($lista_final);
+                        $lista_final[$idx] = [
+                            'tipo' => 'grupo',
+                            'itens' => []
+                        ];
+                        $grupos_temp[$hash] = $idx;
                     }
+                    $lista_final[$grupos_temp[$hash]]['itens'][] = $ex;
+                } else {
+                    // É Single
+                    $lista_final[] = [
+                        'tipo' => 'single',
+                        'itens' => [$ex]
+                    ];
+                }
+            }
+
+            // ---------------------------------------------------------
+            // 2. RENDERIZAÇÃO DA LISTA PROCESSADA
+            // ---------------------------------------------------------
+            foreach ($lista_final as $bloco) {
+
+                // A. Se for Grupo, abre o Wrapper Visual
+                if ($bloco['tipo'] === 'grupo') {
+                    $qtd_grupo = count($bloco['itens']);
+                    $label_grupo = ($qtd_grupo === 2) ? 'BI-SET' : 'TRI-SET';
+                    echo '<div class="exec-agrupamento">';
+                    echo '<span class="exec-agrupamento-badge">'.$label_grupo.'</span>';
                 }
 
-                $video_html = $ex['video_url'] ? '<a href="'.$ex['video_url'].'" target="_blank" class="exec-video"><i class="fa-solid fa-circle-play"></i></a>' : '';
+                // B. Loop dos Exercícios (Normal ou dentro do grupo)
+                foreach ($bloco['itens'] as $ex) {
+                    
+                    // --- Busca de Séries e Histórico (Lógica Original) ---
+                    $stmt_s = $pdo->prepare("SELECT * FROM series WHERE exercicio_id = ?");
+                    $stmt_s->execute([$ex['id']]);
+                    $series = $stmt_s->fetchAll(PDO::FETCH_ASSOC);
 
-                echo '
-                <div class="exec-card">
-                    <div class="exec-header">
-                        <span class="exec-title">'.$ex['nome_exercicio'].'</span>
-                        '.$video_html.'
-                    </div>
+                    // Busca Histórico (Mantida igual sua lógica)
+                    $stmt_last_date = $pdo->prepare("SELECT MAX(data_treino) FROM treino_historico WHERE aluno_id = ? AND exercicio_id = ?");
+                    $stmt_last_date->execute([$aluno_id, $ex['id']]);
+                    $ultima_data = $stmt_last_date->fetchColumn();
 
-                    <div class="set-row-header">
-                        <span>SÉRIE</span>
-                        <span>META</span>
-                        <span>CARGA (KG)</span>
-                        <span>REPS</span>
-                    </div>';
+                    $historico_map = []; 
+                    if ($ultima_data) {
+                        $stmt_h = $pdo->prepare("SELECT serie_id, numero_serie, serie_numero, carga_kg, reps_realizadas 
+                                                FROM treino_historico 
+                                                WHERE aluno_id = ? AND exercicio_id = ? AND data_treino = ?");
+                        $stmt_h->execute([$aluno_id, $ex['id'], $ultima_data]);
+                        $regs = $stmt_h->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($regs as $r) {
+                            $s_key = $r['serie_id'] ? $r['serie_id'] : $r['serie_numero'];
+                            $n_key = $r['numero_serie'] ? $r['numero_serie'] : 1;
+                            $historico_map[$s_key][$n_key] = $r;
+                        }
+                    }
+
+                    $video_html = $ex['video_url'] ? '<a href="'.$ex['video_url'].'" target="_blank" class="exec-video"><i class="fa-solid fa-circle-play"></i></a>' : '';
+
+                    // Renderiza Cabeçalho do Card
+                    echo '
+                    <div class="exec-card">
+                        <div class="exec-header">
+                            <span class="exec-title">'.$ex['nome_exercicio'].'</span>
+                            '.$video_html.'
+                        </div>
+
+                        <div class="set-row-header">
+                            <span>SÉRIE</span>
+                            <span>META</span>
+                            <span>CARGA (KG)</span>
+                            <span>REPS</span>
+                        </div>';
 
                     if (count($series) > 0) {
+                        
+                        // --- AQUI ENTRA O FOREACH DAS SÉRIES (O CÓDIGO PERFEITO QUE FIZEMOS) ---
                         foreach ($series as $s) {
+                            // 1. PREPARAÇÃO DE DADOS
+                            $tecnica_raw = strtolower(trim($s['tecnica'] ?? 'normal'));
+                            $valor_raw   = $s['tecnica_valor']; 
+
+                            $is_drop    = ($tecnica_raw === 'dropset');
+                            $is_rest    = ($tecnica_raw === 'restpause');
+                            $is_cluster = ($tecnica_raw === 'clusterset');
+                            $has_technique = ($is_drop || $is_rest || $is_cluster);
+
+                            $js_type_arg = 'normal';
+                            if ($is_drop) $js_type_arg = 'drop';
+                            if ($is_rest) $js_type_arg = 'rest';
+                            if ($is_cluster) $js_type_arg = 'cluster';
+
                             $meta_reps = $s['reps_fixas'];
                             $meta_desc = $s['descanso_fixo'];
 
@@ -403,76 +460,218 @@ switch ($pagina) {
                             elseif ($s['categoria'] === 'feeder') { $meta_desc = '60s'; }
                             elseif ($micro_atual) {
                                 if ($ex['tipo_mecanica'] == 'composto') {
-                                    if($micro_atual['reps_compostos']) $meta_reps = $micro_atual['reps_compostos'];
-                                    if($micro_atual['descanso_compostos']) $meta_desc = $micro_atual['descanso_compostos'].'s';
+                                    if(!empty($micro_atual['reps_compostos'])) $meta_reps = $micro_atual['reps_compostos'];
+                                    if(!empty($micro_atual['descanso_compostos'])) $meta_desc = $micro_atual['descanso_compostos'].'s';
                                 } else {
-                                    if($micro_atual['reps_isoladores']) $meta_reps = $micro_atual['reps_isoladores'];
-                                    if($micro_atual['descanso_isoladores']) $meta_desc = $micro_atual['descanso_isoladores'].'s';
+                                    if(!empty($micro_atual['reps_isoladores'])) $meta_reps = $micro_atual['reps_isoladores'];
+                                    if(!empty($micro_atual['descanso_isoladores'])) $meta_desc = $micro_atual['descanso_isoladores'].'s';
                                 }
                             }
-                            if(!$meta_reps) $meta_reps = "-";
+                            if(empty($meta_reps) || $meta_reps == '-') $meta_reps = "Falha";
 
                             $qtd_series = (int)$s['quantidade'];
                             if ($qtd_series < 1) $qtd_series = 1;
 
-                            // LOOP DE INPUTS (Gera 1 linha para cada repetição da série)
+                            // LOOP DE REPETIÇÕES (1..N)
                             for ($i = 1; $i <= $qtd_series; $i++) {
                                 
-                                // Tenta encontrar o histórico específico desta repetição ($i) desta série ($s['id'])
+                                // Histórico
                                 $ph_carga = '-';
                                 $ph_reps = '-';
-                                
                                 if (isset($historico_map[$s['id']][$i])) {
-                                    $dado_ant = $historico_map[$s['id']][$i];
-                                    $ph_carga = ($dado_ant['carga_kg'] * 1); // *1 remove zeros extras decimais
-                                    $ph_reps  = $dado_ant['reps_realizadas'];
+                                    $d = $historico_map[$s['id']][$i];
+                                    $ph_carga = ($d['carga_kg'] * 1);
+                                    $ph_reps  = $d['reps_realizadas'];
                                 } elseif (isset($historico_map[$s['id']][1])) {
-                                    // Fallback: Se não achou a repetição 2, tenta mostrar a 1 só pra ter referência
-                                    $dado_ant = $historico_map[$s['id']][1];
-                                    $ph_carga = ($dado_ant['carga_kg'] * 1);
-                                    $ph_reps  = $dado_ant['reps_realizadas'];
+                                    $d = $historico_map[$s['id']][1];
+                                    $ph_carga = ($d['carga_kg'] * 1);
+                                    $ph_reps  = $d['reps_realizadas'];
                                 }
 
-                                $input_name_carga = "carga[".$s['id']."][".$i."]";
-                                $input_name_reps = "reps[".$s['id']."][".$i."]";
+                                // Labels
+                                if ($has_technique) {
+                                    if ($is_drop) $label_serie = "DROP SET";
+                                    elseif ($is_rest) $label_serie = "REST PAUSE";
+                                    elseif ($is_cluster) $label_serie = "CLUSTER";
+                                } else {
+                                    $label_serie = strtoupper($s['categoria']);
+                                }
 
-                                $label_serie = strtoupper($s['categoria']);
-                                $indicador_num = '1';
-                                
+                                $indicador_num = ($qtd_series > 1) ? '#'.$i : '1';
                                 if ($qtd_series > 1) {
-                                    $indicador_num = '#'.$i;
-                                    $label_serie .= " <small style='font-size:0.6rem; color:#888;'>(".$i."/".$qtd_series.")</small>";
+                                    $label_serie .= " <small style='font-size:0.6rem; opacity:0.7;'>(".$i."/".$qtd_series.")</small>";
                                 }
 
-                                echo '
-                                <div class="set-row-input '.$s['categoria'].'" style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                // Classes CSS
+                                $row_class = "set-row-input " . $s['categoria'];
+                                if ($is_drop) $row_class .= " technique-drop";
+                                if ($is_rest) $row_class .= " technique-rest";
+                                if ($is_cluster) $row_class .= " technique-cluster";
+
+                                // Renderiza Linha
+                                echo '<div class="'.$row_class.'">';
+
+                                    // COLUNA 1
+                                    $style_label = "";
+                                    if ($has_technique) {
+                                        $style_label = "font-weight:bold; letter-spacing:0.5px;";
+                                        if ($is_drop)    $style_label .= " color: #ff4081;"; 
+                                        if ($is_rest)    $style_label .= " color: #00e676;"; 
+                                        if ($is_cluster) $style_label .= " color: #ff9100;"; 
+                                    }
+
+                                    echo '
                                     <div class="set-num">
-                                        <span style="font-size:1.1rem;">'.$indicador_num.'</span>
-                                        <span class="set-type-label">'.$label_serie.'</span>
+                                        <span style="font-size:1.1rem; display:block;">'.$indicador_num.'</span>
+                                        <span class="set-type-label" style="font-size:0.65rem; '.$style_label.'">'.$label_serie.'</span>
                                         <div style="font-size:0.6rem; color:#666;">'.$meta_desc.'</div>
-                                    </div>
-                                    
+                                    </div>';
+
+                                    // COLUNA 2
+                                    echo '
                                     <div style="text-align:center;">
                                         <span style="color:#fff; font-size:0.9rem; font-weight:bold;">'.$meta_reps.'</span>
                                         <span style="display:block; font-size:0.6rem; color:#aaa;">ALVO</span>
-                                    </div>
+                                    </div>';
 
-                                    <div>
-                                        <input type="number" step="0.5" name="'.$input_name_carga.'" class="input-exec" placeholder="Ant: '.$ph_carga.'" inputmode="decimal">
-                                    </div>
+                                    // COLUNAS 3 e 4
+                                    if ($has_technique) {
+                                        $modal_id = "modal_".$s['id']."_".$i;
+                                        
+                                        $btn_text = "REGISTRAR";
+                                        $icon = "fa-bolt";
+                                        $btn_style = "width:100%; height:38px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:space-between; padding: 0 12px; transition:0.2s;";
+                                        
+                                        if ($is_drop) { 
+                                            $btn_text = "ABRIR DROP SET"; 
+                                            $btn_style .= "background: rgba(255, 64, 129, 0.15); border: 1px solid #ff4081; color: #ff4081; box-shadow: 0 0 10px rgba(255, 64, 129, 0.1);";
+                                            $icon = "fa-layer-group";
+                                        }
+                                        elseif ($is_rest) { 
+                                            $btn_text = "ABRIR REST PAUSE"; 
+                                            $btn_style .= "background: rgba(0, 230, 118, 0.15); border: 1px solid #00e676; color: #00e676; box-shadow: 0 0 10px rgba(0, 230, 118, 0.1);";
+                                            $icon = "fa-stopwatch";
+                                        }
+                                        elseif ($is_cluster) { 
+                                            $btn_text = "ABRIR CLUSTER"; 
+                                            $btn_style .= "background: rgba(255, 145, 0, 0.15); border: 1px solid #ff9100; color: #ff9100; box-shadow: 0 0 10px rgba(255, 145, 0, 0.1);";
+                                            $icon = "fa-cubes";
+                                        }
 
-                                    <div style="display:flex; align-items:center; gap:5px;">
-                                        <input type="number" name="'.$input_name_reps.'" class="input-exec" placeholder="Ant: '.$ph_reps.'" inputmode="numeric">
-                                    </div>
-                                </div>';
+                                        echo '
+                                        <div style="grid-column: span 2;">
+                                            <button type="button" id="btn_'.$s['id'].'_'.$i.'" class="btn-open-technique" style="'.$btn_style.'" onclick="openTechniqueModal(\''.$modal_id.'\')">
+                                                <span><i class="fa-solid '.$icon.'"></i> &nbsp; '.$btn_text.'</span>
+                                                <i class="fa-solid fa-chevron-right"></i>
+                                            </button>
+                                        </div>';
+
+                                        // MODAL
+                                        echo '
+                                        <div id="'.$modal_id.'" class="tq-modal-overlay">
+                                            <div class="tq-modal-content">
+                                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px;">
+                                                    <h3 style="margin:0; font-size:1rem; color:#fff;">'.$label_serie.' '.$indicador_num.'</h3>
+                                                    <span onclick="closeTechniqueModal(\''.$modal_id.'\')" style="cursor:pointer; font-size:1.2rem; padding:0 10px;">&times;</span>
+                                                </div>
+                                                
+                                                <div style="margin-bottom:20px; text-align:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:6px;">
+                                                    <span style="color:#aaa; font-size:0.8rem;">META: </span> <b style="color:#fff">'.$meta_reps.'</b>
+                                                    <span style="color:#aaa; font-size:0.8rem; margin-left:15px;">DESC: </span> <b style="color:#fff">'.$meta_desc.'</b>
+                                                </div>';
+
+                                                if ($is_drop) {
+                                                    echo '<label style="font-size:0.7rem; color:#888;">Série Principal</label>
+                                                          <div style="display:flex; gap:10px; margin-bottom:15px;">
+                                                            <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.']" class="input-exec" placeholder="Kg: '.$ph_carga.'">
+                                                            <input type="number" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Reps: '.$ph_reps.'">
+                                                          </div>';
+                                                    $qtd_drops = (int)$valor_raw;
+                                                    for ($d = 1; $d <= $qtd_drops; $d++) {
+                                                        echo '<label style="font-size:0.7rem; color:#ff4081;">DROP #'.$d.' (-20%)</label>
+                                                              <div style="display:flex; gap:10px; margin-bottom:10px;">
+                                                                <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.'_drop_'.$d.']" class="input-exec" placeholder="Carga">
+                                                                <input type="number" name="reps['.$s['id'].']['.$i.'_drop_'.$d.']" class="input-exec" placeholder="Falha">
+                                                              </div>';
+                                                    }
+                                                }
+
+                                                if ($is_rest) {
+                                                     echo '<label style="font-size:0.7rem; color:#00e676;">Carga & Reps Totais</label>
+                                                          <div style="display:flex; gap:10px; margin-bottom:10px;">
+                                                            <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.']" class="input-exec" placeholder="Kg: '.$ph_carga.'">
+                                                            <input type="text" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Ex: 10+5+3">
+                                                          </div>
+                                                          <div style="margin-bottom:15px;">
+                                                            <button type="button" onclick="iniciarTimerRest('.(int)$valor_raw.')" style="width:100%; padding:10px; background:rgba(0, 230, 118, 0.15); border:1px solid #00e676; color:#00e676; border-radius:6px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                                                                <i class="fa-solid fa-stopwatch"></i> INICIAR DESCANSO ('.(int)$valor_raw.'s)
+                                                            </button>
+                                                          </div>
+                                                          <p style="font-size:0.7rem; color:#666;">Falha > Iniciar Descanso > Repete > Anota Soma.</p>';
+                                                }
+
+                                                if ($is_cluster) {
+                                                    $parts = explode('|', $valor_raw); 
+                                                    $tempo_descanso_cluster = isset($parts[2]) ? (int)$parts[2] : 0;
+                                                    echo '<label style="font-size:0.7rem; color:#ff9100;">Carga Fixa</label>
+                                                          <div style="margin-bottom:15px;">
+                                                            <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.']" class="input-exec" placeholder="Kg: '.$ph_carga.'">
+                                                          </div>
+                                                          <label style="font-size:0.7rem; color:#ff9100;">Blocos ('.$parts[1].' reps cada)</label>
+                                                          <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;">';
+                                                            for($b=1; $b<=$parts[0]; $b++) {
+                                                                echo '<div style="flex:1; background:#222; padding:10px; border-radius:4px; text-align:center; border:1px solid #444;">
+                                                                        <span style="font-size:0.7rem; color:#888;">B'.$b.'</span><br>
+                                                                        <strong style="color:#fff;">'.$parts[1].'</strong>
+                                                                      </div>';
+                                                            }
+                                                    echo '</div>
+                                                          <div style="margin-bottom:15px;">
+                                                            <button type="button" onclick="iniciarTimerRest('.$tempo_descanso_cluster.')" style="width:100%; padding:10px; background:rgba(255, 145, 0, 0.15); border:1px solid #ff9100; color:#ff9100; border-radius:6px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                                                                <i class="fa-solid fa-stopwatch"></i> DESCANSO ENTRE BLOCOS ('.$tempo_descanso_cluster.'s)
+                                                            </button>
+                                                          </div>
+                                                          <label style="font-size:0.7rem; color:#888;">Total Reps Realizadas</label>
+                                                          <input type="number" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Total">';
+                                                }
+
+                                        echo '  <div style="margin-top:20px;">
+                                                    <button type="button" class="btn-gold" style="width:100%; border-radius:50px;" onclick="confirmTechniqueData(\''.$modal_id.'\', \''.$js_type_arg.'\')">SALVAR DADOS</button>
+                                                </div>
+                                            </div>
+                                        </div>';
+
+                                    } else {
+                                        // NORMAL
+                                        $input_name_carga = "carga[".$s['id']."][".$i."]"; 
+                                        $input_name_reps  = "reps[".$s['id']."][".$i."]";
+                                        echo '
+                                        <div>
+                                            <input type="number" step="0.5" name="'.$input_name_carga.'" class="input-exec" placeholder="Ant: '.$ph_carga.'" inputmode="decimal">
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap:5px;">
+                                            <input type="number" name="'.$input_name_reps.'" class="input-exec" placeholder="Ant: '.$ph_reps.'" inputmode="numeric">
+                                        </div>';
+                                    }
+
+                                echo '</div>'; // Fecha set-row-input
                             }
                         }
+                        // --- FIM DO FOREACH DAS SÉRIES ---
+
                     } else {
                         echo '<p style="color:#666; padding:10px;">Sem séries cadastradas.</p>';
                     }
 
-                echo '</div>'; // Fim exec-card
-            }
+                    echo '</div>'; // Fim exec-card
+                } // Fim foreach bloco items
+
+                // C. Fecha o Wrapper se for Grupo
+                if ($bloco['tipo'] === 'grupo') {
+                    echo '</div>'; // Fecha exec-agrupamento
+                }
+            } // Fim foreach lista_final
+
         } else {
             echo '<p style="text-align:center; margin-top:20px; color:#888;">Nenhum exercício encontrado nesta divisão.</p>';
         }

@@ -172,7 +172,7 @@ if ($dados_usuario['data_expiracao_plano']) {
     }
     </script>
     
-<!-- ----------------- HTML CRONÔMETRO ------------------------------->
+<!-- ----------------- HTML CRONÔMETROS ------------------------------->
 
     <div id="float-timer" class="timer-widget" style="display: none;">
         
@@ -190,6 +190,20 @@ if ($dados_usuario['data_expiracao_plano']) {
             <button type="button" class="t-btn toggle" id="btn-timer-toggle" onclick="toggleTimer()">
                 <i class="fa-solid fa-play"></i>
             </button>
+        </div>
+    </div>
+
+
+    <div id="tech-timer-overlay" style="display:none;">
+        <div class="tech-timer-circle">
+            <svg viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" class="bg-ring"></circle>
+                <circle cx="50" cy="50" r="45" class="progress-ring" id="tech-progress-ring"></circle>
+            </svg>
+            <div class="timer-content">
+                <span id="tech-timer-val">00:00</span>
+                <button onclick="stopTechTimer()" class="btn-close-timer"><i class="fa-solid fa-times"></i></button>
+            </div>
         </div>
     </div>
 
@@ -494,7 +508,7 @@ if ($dados_usuario['data_expiracao_plano']) {
    ÍNDICE:
    1. MÓDULO: AVALIAÇÃO FÍSICA (Visualização e Modal)
    2. MÓDULO: DIETA (Check de Refeições)
-   3. MÓDULO: CRONÔMETRO FLUTUANTE (Timer & Drag)
+   3. MÓDULO: CRONÔMETRO FLUTUANTE E MODAL DE TÉCNICAS AVANÇADAS
    4. MÓDULO: GESTÃO DE COACH (Vincular)
    5. MÓDULO: HISTÓRICO (DELETE & EDIT)
    ========================================================================== */
@@ -698,6 +712,143 @@ if (dragItem) {
     }
 }
 
+let techTimerInterval;
+let techTimeLeft = 0;
+let techTotalTime = 0;
+
+// Função chamada pelo botãozinho do PHP: iniciarTimerRest(15)
+function iniciarTimerRest(seconds) {
+    // 1. Configura
+    techTotalTime = seconds;
+    techTimeLeft = seconds;
+    
+    // 2. Mostra o Overlay
+    const overlay = document.getElementById('tech-timer-overlay');
+    if(overlay) overlay.style.display = 'flex';
+    
+    // 3. Define cor baseada na técnica (Opcional, pega do CSS var ou fixa)
+    // Aqui deixamos Gold ou Branco por padrão, mas pode customizar
+    
+    updateTechDisplay();
+    
+    // 4. Inicia o Loop
+    clearInterval(techTimerInterval); // Limpa anteriores por segurança
+    techTimerInterval = setInterval(() => {
+        techTimeLeft--;
+        updateTechDisplay();
+        
+        if (techTimeLeft <= 0) {
+            timerFinished();
+        }
+    }, 1000);
+}
+
+function stopTechTimer() {
+    clearInterval(techTimerInterval);
+    const overlay = document.getElementById('tech-timer-overlay');
+    if(overlay) overlay.style.display = 'none';
+}
+
+function timerFinished() {
+    stopTechTimer();
+    // Opcional: Vibrar o celular se for mobile
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    // Opcional: Tocar um som
+    // new Audio('assets/beep.mp3').play();
+}
+
+function updateTechDisplay() {
+    const display = document.getElementById('tech-timer-val');
+    const ring = document.getElementById('tech-progress-ring');
+    
+    // Formata 00:00
+    const mins = Math.floor(techTimeLeft / 60);
+    const secs = techTimeLeft % 60;
+    if(display) display.innerText = (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
+    
+    // Atualiza o Círculo de Progresso SVG
+    if(ring) {
+        const radius = ring.r.baseVal.value;
+        const circumference = radius * 2 * Math.PI;
+        const offset = circumference - (techTimeLeft / techTotalTime) * circumference;
+        ring.style.strokeDashoffset = offset;
+        
+        // Muda cor se estiver acabando (ex: < 5s fica vermelho)
+        if(techTimeLeft <= 3) ring.style.stroke = "#ff4242";
+        else ring.style.stroke = "#00e676"; // Verde/Ciano padrão
+    }
+}
+
+// --- ATUALIZAÇÃO DA FUNÇÃO DE FECHAR MODAL ---
+// Substitua sua função closeTechniqueModal antiga por esta:
+function closeTechniqueModal(id) {
+    // 1. Fecha o Modal
+    document.getElementById(id).style.display = 'none';
+    
+    // 2. MATA O TIMER se estiver rodando (Regra que você pediu)
+    stopTechTimer();
+
+    // 3. Visual de "Preenchido" no botão
+    const btnId = 'btn_' + id.replace('modal_', '');
+    const btn = document.getElementById(btnId);
+    if(btn) {
+        btn.style.opacity = '1';
+        btn.innerHTML = '<span><i class="fa-solid fa-check"></i> DADOS SALVOS</span> <i class="fa-solid fa-chevron-down"></i>';
+        // Remove estilo inline antigo e aplica um verde sucesso
+        btn.style.background = 'rgba(0, 230, 118, 0.2)';
+        btn.style.borderColor = '#00e676';
+        btn.style.color = '#00e676';
+        btn.style.boxShadow = 'none';
+    }
+}
+
+function openTechniqueModal(id) {
+    document.getElementById(id).style.display = 'flex';
+}
+
+// Apenas fecha o modal e para o timer (Ação do "X")
+function closeTechniqueModal(id) {
+    document.getElementById(id).style.display = 'none';
+    
+    // Se tiver timer rodando, para ele
+    if (typeof stopTechTimer === "function") {
+        stopTechTimer();
+    }
+}
+
+// Muda o visual do botão para "Salvo" e fecha (Ação do "SALVAR DADOS")
+function confirmTechniqueData(id, type) {
+    // 1. Configura as cores baseadas no tipo
+    let color = '#00e676'; // Padrão (Rest Pause / Verde)
+    let bg = 'rgba(0, 230, 118, 0.2)';
+
+    if (type === 'drop') {
+        color = '#ff4081'; // Rosa
+        bg = 'rgba(255, 64, 129, 0.2)';
+    } else if (type === 'cluster') {
+        color = '#ff9100'; // Laranja
+        bg = 'rgba(255, 145, 0, 0.2)';
+    }
+
+    // 2. Muda o visual do botão principal na lista
+    const btnId = 'btn_' + id.replace('modal_', '');
+    const btn = document.getElementById(btnId);
+    
+    if(btn) {
+        btn.style.opacity = '1';
+        // Ícone de check + Texto
+        btn.innerHTML = '<span><i class="fa-solid fa-check"></i> DADOS SALVOS</span> <i class="fa-solid fa-chevron-down"></i>';
+        
+        // Aplica as cores dinâmicas
+        btn.style.background = bg;
+        btn.style.borderColor = color;
+        btn.style.color = color;
+        btn.style.boxShadow = 'none'; // Remove o brilho excessivo quando salvo
+    }
+
+    // 3. Fecha o modal
+    closeTechniqueModal(id);
+}
 /* ==========================================================================
    4. MÓDULO: GESTÃO DE COACH
    ========================================================================== */

@@ -11,7 +11,7 @@
    7.  MÓDULO: EDITOR DE TREINOS (Admin/Coach)
    8.  MÓDULO: DIETA (Timeline e Cards)
    9.  MÓDULO: AVALIAÇÃO FÍSICA (Histórico, Gráficos e Tabelas)
-   10.  MÓDULO: MENU E HUB
+   10. MÓDULO: MENU E HUB
    11. MODAIS (Popups Gerais e Específicos)
    12. RESPONSIVIDADE (Ajustes Mobile)
    ========================================================================== */
@@ -86,22 +86,44 @@
     /* Dimensões */
     --sidebar-width: 280px;
 
-    /* CORES TIPOS DE SÉRIE */
-    --color-warmup:   #9e9e9e; /* Cinza */
-    --color-feeder:   #64b5f6; /* Azul Céu */
-    
-    /* Padrão */
-    --color-work:     #ffc107; /* Dourado (Sua marca) */
-    
-    /* Alta Intensidade */
-    --color-top:      #ff5252; /* Vermelho Alerta */
-    --color-falha:    #e040fb; /* Roxo Elétrico */
-    
-    /* Volume / Técnicas */
-    --color-backoff:  #00e676; /* Verde Menta */
-    --color-drop:     #ff4081; /* Rosa Choque */
-    --color-rest:     #00bcd4; /* Ciano */
-    --color-cluster:  #ff9100; /* Laranja Intenso */
+    /* =========================================
+       PALETA DE CORES DAS SÉRIES (SISTEMA)
+       ========================================= */
+
+    /* 1. WARMUP (Aquecimento) - Amarelo Gold */
+    --color-warmup:  #ffd700; 
+    --bg-warmup:     rgba(255, 215, 0, 0.05); 
+    --badge-warmup:  rgba(255, 215, 0, 0.15);
+
+    /* 2. FEEDER (Aclimatização) - Azul Gelo/Cinza */
+    --color-feeder:  #A0C4FF; 
+    --bg-feeder:     rgba(160, 196, 255, 0.05); 
+    --badge-feeder:  rgba(160, 196, 255, 0.15);
+
+    /* 3. WORK (Trabalho Padrão) - Vermelho Neon */
+    --color-work:    #FF4242; 
+    --bg-work:       rgba(255, 66, 66, 0.05); 
+    --badge-work:    rgba(255, 66, 66, 0.15);
+
+    /* 4. TOP SET (Carga Máxima) - Roxo Elétrico */
+    --color-top:     #D500F9; 
+    --bg-top:        rgba(213, 0, 249, 0.05); 
+    --badge-top:     rgba(213, 0, 249, 0.15);
+
+    /* 5. BACK-OFF (Volume) - Azul Vivo */
+    --color-backoff: #2979FF; 
+    --bg-backoff:    rgba(41, 121, 255, 0.05); 
+    --badge-backoff: rgba(41, 121, 255, 0.15);
+
+    /* 6. FALHA (Exaustão) - Branco/Cinza */
+    --color-falha:   #ECEFF1; 
+    --bg-falha:      rgba(236, 239, 241, 0.05); 
+    --badge-falha:   rgba(236, 239, 241, 0.15);
+
+    /* 7. TÉCNICAS */
+    --color-drop:    #ff4081; --bg-drop: rgba(255, 64, 129, 0.05); --badge-drop: rgba(255, 64, 129, 0.15);
+    --color-rest:    #00e676; --bg-rest: rgba(0, 230, 118, 0.05); --badge-rest: rgba(0, 230, 118, 0.15);
+    --color-cluster: #ff9100; --bg-cluster: rgba(255, 145, 0, 0.05); --badge-cluster: rgba(255, 145, 0, 0.15);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -119,6 +141,53 @@ body {
     display: flex;
     overflow: hidden; /* Evita rolagem dupla no corpo */
 }
+
+/* ============================================================
+   APLICAÇÃO DAS CLASSES (Visualização, Execução e Histórico)
+   ============================================================ */
+
+/* --- 1. WARMUP --- */
+.set-item.warmup { border-color: var(--color-warmup) !important; color: var(--color-warmup); background: var(--bg-warmup); }
+.set-row-input.warmup { border-left-color: var(--color-warmup); }
+.badge-set-type.warmup { color: var(--color-warmup); background: var(--badge-warmup); border: 1px solid var(--color-warmup); }
+
+/* --- 2. FEEDER --- */
+.set-item.feeder { border-color: var(--color-feeder) !important; color: var(--color-feeder); background: var(--bg-feeder); }
+.set-row-input.feeder { border-left-color: var(--color-feeder); }
+.badge-set-type.feeder { color: var(--color-feeder); background: var(--badge-feeder); border: 1px solid var(--color-feeder); }
+
+/* --- 3. WORK --- */
+.set-item.work { border-color: var(--color-work) !important; color: var(--color-work); background: var(--bg-work); }
+.set-row-input.work { border-left-color: var(--color-work); }
+.badge-set-type.work { color: var(--color-work); background: var(--badge-work); border: 1px solid var(--color-work); }
+
+/* --- 4. TOP SET --- */
+.set-item.top { border-color: var(--color-top) !important; color: var(--color-top); background: var(--bg-top); box-shadow: -2px 0 10px var(--bg-top); }
+.set-row-input.top { border-left-color: var(--color-top); }
+.badge-set-type.top { color: var(--color-top); background: var(--badge-top); border: 1px solid var(--color-top); }
+
+/* --- 5. BACK-OFF --- */
+.set-item.backoff { border-color: var(--color-backoff) !important; color: var(--color-backoff); background: var(--bg-backoff); }
+.set-row-input.backoff { border-left-color: var(--color-backoff); }
+.badge-set-type.backoff { color: var(--color-backoff); background: var(--badge-backoff); border: 1px solid var(--color-backoff); }
+
+/* --- 6. FALHA --- */
+.set-item.falha { border-color: var(--color-falha) !important; color: var(--color-falha); background: var(--bg-falha); }
+.set-row-input.falha { border-left-color: var(--color-falha); }
+.badge-set-type.falha { color: var(--color-falha); background: var(--badge-falha); border: 1px solid var(--color-falha); }
+
+/* --- 7. TÉCNICAS (Mantendo sua estrutura) --- */
+.set-item.technique-drop, .badge-set-type.technique-drop { border-color: var(--color-drop) !important; color: var(--color-drop); background: var(--bg-drop); }
+.badge-set-type.technique-drop { background: var(--badge-drop); border: 1px solid var(--color-drop); } /* Badge BG mais forte */
+.set-row-input.technique-drop { border-left-color: var(--color-drop); background: linear-gradient(90deg, rgba(255, 64, 129, 0.05) 0%, rgba(15,15,15,0) 100%); }
+
+.set-item.technique-rest, .badge-set-type.technique-rest { border-color: var(--color-rest) !important; color: var(--color-rest); background: var(--bg-rest); }
+.badge-set-type.technique-rest { background: var(--badge-rest); border: 1px solid var(--color-rest); }
+.set-row-input.technique-rest { border-left-color: var(--color-rest); background: linear-gradient(90deg, rgba(0, 230, 118, 0.05) 0%, rgba(15,15,15,0) 100%); }
+
+.set-item.technique-cluster, .badge-set-type.technique-cluster { border-color: var(--color-cluster) !important; color: var(--color-cluster); background: var(--bg-cluster); }
+.badge-set-type.technique-cluster { background: var(--badge-cluster); border: 1px solid var(--color-cluster); }
+.set-row-input.technique-cluster { border-left-color: var(--color-cluster); background: linear-gradient(90deg, rgba(255, 145, 0, 0.05) 0%, rgba(15,15,15,0) 100%); }
 
 /* ==========================================================================
    2. LAYOUT PRINCIPAL (SIDEBAR E CONTEÚDO)
@@ -578,16 +647,20 @@ section {
 .sets-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; }
 .set-item { background: #252525; padding: 8px; border-radius: 6px; border-left: 3px solid #555; }
 
-.set-item.warmup { border-color: #FFD700; }
-.set-item.feeder { border-color: #87CEEB; }
-.set-item.work   { border-color: #FF4242; background: rgba(255, 66, 66, 0.05); }
-.set-item.top    { border-color: #FF0000; background: rgba(255, 0, 0, 0.1); }
-.set-item.backoff{ border-color: #90EE90; }
+/* Pequeno texto de detalhes dentro do card */
+.tech-info {
+    font-size: 0.7rem;
+    opacity: 0.8;
+    margin-top: 4px;
+    font-style: italic;
+    border-top: 1px dashed rgba(255,255,255,0.1);
+    padding-top: 2px;
+}
 
 .set-top { font-size: 0.7rem; color: #aaa; text-transform: uppercase; margin-bottom: 4px; }
 .set-bottom { display: flex; justify-content: space-between; align-items: baseline; }
 .set-bottom span { font-weight: bold; color: #fff; font-size: 1.1rem; }
-.set-bottom small { font-size: 0.75rem; color: #666; }
+.set-bottom small { font-size: 0.75rem; color: #aaa; }
 
 .week-focus-box {
     background: linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
@@ -671,21 +744,11 @@ section {
 
 .hist-sets-table tr:last-child td { border-bottom: none; }
 
-
-/* --- 3. BADGES DE TIPO DE SÉRIE --- */
-
 .badge-set-type {
     font-size: 0.6rem; padding: 3px 8px; border-radius: 12px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; display: inline-block;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
-.badge-set-type.warmup { color: #FFD700; background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.2); }
-
-.badge-set-type.feeder { color: #87CEEB; background: rgba(135, 206, 235, 0.1); border: 1px solid rgba(135, 206, 235, 0.2); }
-
-.badge-set-type.work { color: #ff5e5e; background: rgba(255, 66, 66, 0.1); border: 1px solid rgba(255, 66, 66, 0.2); }
-
-.badge-set-type.top { color: #fff; background: linear-gradient(135deg, #ff0000 0%, #aa0000 100%);border: none;box-shadow: 0 2px 8px rgba(255, 0, 0, 0.4); }
 
 /* ==========================================================================
    7. MÓDULO: EDITOR DE TREINOS (ADMIN/COACH)
@@ -775,75 +838,6 @@ section {
     border: 1px solid #444;
     color: #ccc;
     background: rgba(255,255,255,0.05);
-}
-
-/* --- CLASSES ESPECÍFICAS --- */
-
-/* 1. WARM UP (Aquecimento) */
-.set-tag.warmup {
-    border-color: var(--color-warmup);
-    color: var(--color-warmup);
-    background: rgba(158, 158, 158, 0.1);
-}
-
-/* 2. FEEDER (Preparatória) */
-.set-tag.feeder {
-    border-color: var(--color-feeder);
-    color: var(--color-feeder);
-    background: rgba(100, 181, 246, 0.1);
-}
-
-/* 3. WORK SET (Série de Trabalho) */
-.set-tag.work {
-    border-color: var(--color-work);
-    color: var(--color-work);
-    background: rgba(255, 193, 7, 0.1);
-}
-
-/* 4. TOP SET (Carga Máxima) */
-.set-tag.top {
-    border-color: var(--color-top);
-    color: var(--color-top);
-    background: rgba(255, 82, 82, 0.15); /* Um pouco mais forte o fundo */
-    box-shadow: 0 0 5px rgba(255, 82, 82, 0.2); /* Brilho */
-}
-
-/* 5. BACKOFF (Volume) */
-.set-tag.backoff {
-    border-color: var(--color-backoff);
-    color: var(--color-backoff);
-    background: rgba(0, 230, 118, 0.1);
-}
-
-/* 6. FALHA (Exaustão) */
-.set-tag.falha {
-    border-color: var(--color-falha);
-    color: var(--color-falha);
-    background: rgba(224, 64, 251, 0.1);
-    border-style: dashed; /* Borda tracejada para indicar instabilidade/falha */
-}
-
-/* --- TÉCNICAS AVANÇADAS --- */
-
-/* 7. DROP SET */
-.set-tag.dropset {
-    border-color: var(--color-drop);
-    color: var(--color-drop);
-    background: rgba(255, 64, 129, 0.1);
-}
-
-/* 8. REST PAUSE */
-.set-tag.restpause {
-    border-color: var(--color-rest);
-    color: var(--color-rest);
-    background: rgba(0, 188, 212, 0.1);
-}
-
-/* 9. CLUSTER SET */
-.set-tag.clusterset {
-    border-color: var(--color-cluster);
-    color: var(--color-cluster);
-    background: rgba(255, 145, 0, 0.1);
 }
 
 /* --------- Container do Bi-set/Tri-set ------------ */

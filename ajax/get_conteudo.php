@@ -439,10 +439,13 @@ switch ($pagina) {
                         
                         // --- AQUI ENTRA O FOREACH DAS SÉRIES (O CÓDIGO PERFEITO QUE FIZEMOS) ---
                         foreach ($series as $s) {
+                            // -----------------------------------------------------------
                             // 1. PREPARAÇÃO DE DADOS
+                            // -----------------------------------------------------------
                             $tecnica_raw = strtolower(trim($s['tecnica'] ?? 'normal'));
                             $valor_raw   = $s['tecnica_valor']; 
 
+                            // Flags
                             $is_drop    = ($tecnica_raw === 'dropset');
                             $is_rest    = ($tecnica_raw === 'restpause');
                             $is_cluster = ($tecnica_raw === 'clusterset');
@@ -453,11 +456,12 @@ switch ($pagina) {
                             if ($is_rest) $js_type_arg = 'rest';
                             if ($is_cluster) $js_type_arg = 'cluster';
 
+                            // Metas
                             $meta_reps = $s['reps_fixas'];
                             $meta_desc = $s['descanso_fixo'];
 
-                            if ($s['categoria'] === 'warmup') { $meta_desc = '30s'; }
-                            elseif ($s['categoria'] === 'feeder') { $meta_desc = '60s'; }
+                            if ($s['categoria'] === 'warmup') { $meta_desc = '30'; }
+                            elseif ($s['categoria'] === 'feeder') { $meta_desc = '60'; }
                             elseif ($micro_atual) {
                                 if ($ex['tipo_mecanica'] == 'composto') {
                                     if(!empty($micro_atual['reps_compostos'])) $meta_reps = $micro_atual['reps_compostos'];
@@ -472,7 +476,9 @@ switch ($pagina) {
                             $qtd_series = (int)$s['quantidade'];
                             if ($qtd_series < 1) $qtd_series = 1;
 
-                            // LOOP DE REPETIÇÕES (1..N)
+                            // -----------------------------------------------------------
+                            // 2. RENDERIZAÇÃO
+                            // -----------------------------------------------------------
                             for ($i = 1; $i <= $qtd_series; $i++) {
                                 
                                 // Histórico
@@ -482,13 +488,21 @@ switch ($pagina) {
                                     $d = $historico_map[$s['id']][$i];
                                     $ph_carga = ($d['carga_kg'] * 1);
                                     $ph_reps  = $d['reps_realizadas'];
+                                    
+                                    // Se tiver o detalhe da soma (string), usa ele no placeholder
+                                    if (!empty($d['dados_tecnicos'])) {
+                                        $dt_json = json_decode($d['dados_tecnicos'], true);
+                                        if (isset($dt_json['reps_string'])) {
+                                            $ph_reps = $dt_json['reps_string'];
+                                        }
+                                    }
                                 } elseif (isset($historico_map[$s['id']][1])) {
                                     $d = $historico_map[$s['id']][1];
                                     $ph_carga = ($d['carga_kg'] * 1);
                                     $ph_reps  = $d['reps_realizadas'];
                                 }
 
-                                // Labels
+                                // Labels e Estilos
                                 if ($has_technique) {
                                     if ($is_drop) $label_serie = "DROP SET";
                                     elseif ($is_rest) $label_serie = "REST PAUSE";
@@ -502,16 +516,14 @@ switch ($pagina) {
                                     $label_serie .= " <small style='font-size:0.6rem; opacity:0.7;'>(".$i."/".$qtd_series.")</small>";
                                 }
 
-                                // Classes CSS
                                 $row_class = "set-row-input " . $s['categoria'];
                                 if ($is_drop) $row_class .= " technique-drop";
                                 if ($is_rest) $row_class .= " technique-rest";
                                 if ($is_cluster) $row_class .= " technique-cluster";
 
-                                // Renderiza Linha
                                 echo '<div class="'.$row_class.'">';
 
-                                    // COLUNA 1
+                                    // COLUNA 1: INFO
                                     $style_label = "";
                                     if ($has_technique) {
                                         $style_label = "font-weight:bold; letter-spacing:0.5px;";
@@ -524,20 +536,21 @@ switch ($pagina) {
                                     <div class="set-num">
                                         <span style="font-size:1.1rem; display:block;">'.$indicador_num.'</span>
                                         <span class="set-type-label" style="font-size:0.65rem; '.$style_label.'">'.$label_serie.'</span>
-                                        <div style="font-size:0.6rem; color:#666;">'.$meta_desc.'</div>
+                                        <small style="color: #666; font-size:0.65rem;">
+                                            <i class="fa-solid fa-clock"></i> '.$meta_desc.'
+                                        </small>
                                     </div>';
 
-                                    // COLUNA 2
+                                    // COLUNA 2: META
                                     echo '
                                     <div style="text-align:center;">
                                         <span style="color:#fff; font-size:0.9rem; font-weight:bold;">'.$meta_reps.'</span>
                                         <span style="display:block; font-size:0.6rem; color:#aaa;">ALVO</span>
                                     </div>';
 
-                                    // COLUNAS 3 e 4
+                                    // COLUNAS 3 e 4: BOTÃO OU INPUTS
                                     if ($has_technique) {
                                         $modal_id = "modal_".$s['id']."_".$i;
-                                        
                                         $btn_text = "REGISTRAR";
                                         $icon = "fa-bolt";
                                         $btn_style = "width:100%; height:38px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:space-between; padding: 0 12px; transition:0.2s;";
@@ -566,7 +579,7 @@ switch ($pagina) {
                                             </button>
                                         </div>';
 
-                                        // MODAL
+                                        // --- MODAL ---
                                         echo '
                                         <div id="'.$modal_id.'" class="tq-modal-overlay">
                                             <div class="tq-modal-content">
@@ -580,59 +593,66 @@ switch ($pagina) {
                                                     <span style="color:#aaa; font-size:0.8rem; margin-left:15px;">DESC: </span> <b style="color:#fff">'.$meta_desc.'</b>
                                                 </div>';
 
+                                                // DROP SET
                                                 if ($is_drop) {
                                                     echo '<label style="font-size:0.7rem; color:#888;">Série Principal</label>
-                                                          <div style="display:flex; gap:10px; margin-bottom:15px;">
+                                                        <div style="display:flex; gap:10px; margin-bottom:15px;">
                                                             <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.']" class="input-exec" placeholder="Kg: '.$ph_carga.'">
                                                             <input type="number" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Reps: '.$ph_reps.'">
-                                                          </div>';
+                                                        </div>';
                                                     $qtd_drops = (int)$valor_raw;
                                                     for ($d = 1; $d <= $qtd_drops; $d++) {
                                                         echo '<label style="font-size:0.7rem; color:#ff4081;">DROP #'.$d.' (-20%)</label>
-                                                              <div style="display:flex; gap:10px; margin-bottom:10px;">
+                                                            <div style="display:flex; gap:10px; margin-bottom:10px;">
                                                                 <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.'_drop_'.$d.']" class="input-exec" placeholder="Carga">
                                                                 <input type="number" name="reps['.$s['id'].']['.$i.'_drop_'.$d.']" class="input-exec" placeholder="Falha">
-                                                              </div>';
+                                                            </div>';
                                                     }
                                                 }
 
+                                                // REST PAUSE
                                                 if ($is_rest) {
-                                                     echo '<label style="font-size:0.7rem; color:#00e676;">Carga & Reps Totais</label>
-                                                          <div style="display:flex; gap:10px; margin-bottom:10px;">
+                                                    echo '<label style="font-size:0.7rem; color:#00e676;">Carga & Reps Totais</label>
+                                                        <div style="display:flex; gap:10px; margin-bottom:10px;">
                                                             <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.']" class="input-exec" placeholder="Kg: '.$ph_carga.'">
                                                             <input type="text" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Ex: 10+5+3">
-                                                          </div>
-                                                          <div style="margin-bottom:15px;">
+                                                        </div>
+                                                        <div style="margin-bottom:15px;">
                                                             <button type="button" onclick="iniciarTimerRest('.(int)$valor_raw.')" style="width:100%; padding:10px; background:rgba(0, 230, 118, 0.15); border:1px solid #00e676; color:#00e676; border-radius:6px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
                                                                 <i class="fa-solid fa-stopwatch"></i> INICIAR DESCANSO ('.(int)$valor_raw.'s)
                                                             </button>
-                                                          </div>
-                                                          <p style="font-size:0.7rem; color:#666;">Falha > Iniciar Descanso > Repete > Anota Soma.</p>';
+                                                        </div>
+                                                        <p style="font-size:0.7rem; color:#666;">Falha > Iniciar Descanso > Repete > Anota Soma.</p>';
                                                 }
 
+                                                // CLUSTER SET (ALTERADO AQUI)
                                                 if ($is_cluster) {
                                                     $parts = explode('|', $valor_raw); 
                                                     $tempo_descanso_cluster = isset($parts[2]) ? (int)$parts[2] : 0;
+                                                    
                                                     echo '<label style="font-size:0.7rem; color:#ff9100;">Carga Fixa</label>
-                                                          <div style="margin-bottom:15px;">
+                                                        <div style="margin-bottom:15px;">
                                                             <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.']" class="input-exec" placeholder="Kg: '.$ph_carga.'">
-                                                          </div>
-                                                          <label style="font-size:0.7rem; color:#ff9100;">Blocos ('.$parts[1].' reps cada)</label>
-                                                          <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;">';
+                                                        </div>
+                                                        
+                                                        <label style="font-size:0.7rem; color:#ff9100;">Blocos ('.$parts[1].' reps cada)</label>
+                                                        <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;">';
                                                             for($b=1; $b<=$parts[0]; $b++) {
                                                                 echo '<div style="flex:1; background:#222; padding:10px; border-radius:4px; text-align:center; border:1px solid #444;">
                                                                         <span style="font-size:0.7rem; color:#888;">B'.$b.'</span><br>
                                                                         <strong style="color:#fff;">'.$parts[1].'</strong>
-                                                                      </div>';
+                                                                    </div>';
                                                             }
                                                     echo '</div>
-                                                          <div style="margin-bottom:15px;">
+
+                                                        <div style="margin-bottom:15px;">
                                                             <button type="button" onclick="iniciarTimerRest('.$tempo_descanso_cluster.')" style="width:100%; padding:10px; background:rgba(255, 145, 0, 0.15); border:1px solid #ff9100; color:#ff9100; border-radius:6px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
                                                                 <i class="fa-solid fa-stopwatch"></i> DESCANSO ENTRE BLOCOS ('.$tempo_descanso_cluster.'s)
                                                             </button>
-                                                          </div>
-                                                          <label style="font-size:0.7rem; color:#888;">Total Reps Realizadas</label>
-                                                          <input type="number" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Total">';
+                                                        </div>
+
+                                                        <label style="font-size:0.7rem; color:#888;">Reps Realizadas (Soma)</label>
+                                                        <input type="text" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Ex: 4+4+4+3">';
                                                 }
 
                                         echo '  <div style="margin-top:20px;">
@@ -688,11 +708,11 @@ switch ($pagina) {
 
         
     case 'treinos':
-        require_once '../config/db_connect.php'; // Garante conexão se não houver
+        require_once '../config/db_connect.php'; 
         $aluno_id = $_SESSION['user_id'];
         $hoje = date('Y-m-d');
 
-        // A. BUSCA TODOS OS TREINOS (Para o Select)
+        // A. BUSCA TODOS OS TREINOS
         $sql = "SELECT id, nome, data_inicio, data_fim, nivel_plano FROM treinos WHERE aluno_id = :uid ORDER BY criado_em DESC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['uid' => $aluno_id]);
@@ -727,12 +747,10 @@ switch ($pagina) {
             if ($per) {
                 $meta_treino = $per['objetivo_macro'];
                 
-                // Busca todos os campos, incluindo os novos descansos
                 $stmt = $pdo->prepare("SELECT * FROM microciclos WHERE periodizacao_id = ? ORDER BY semana_numero ASC");
                 $stmt->execute([$per['id']]);
                 $micros = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-                // Seleção do Microciclo (Clique > Data > Primeiro)
                 if ($micro_req) {
                     foreach ($micros as $m) {
                         if ($m['id'] == $micro_req) { $micro_atual = $m; break; }
@@ -760,7 +778,6 @@ switch ($pagina) {
         // --- RENDERIZAÇÃO ---
         echo '<section id="meu-treino" class="fade-in">';
         
-
         // 2. Header
         echo '<div class="workout-header-main">
                 <h2 class="workout-title">'.$treino['nome'].'</h2>
@@ -784,9 +801,8 @@ switch ($pagina) {
             }
             echo '</div>';
 
-            // VISUALIZAÇÃO DE FOCO ATUALIZADA (COMPOSTOS VS ISOLADORES)
+            // VISUALIZAÇÃO DE FOCO
             if ($micro_atual) {
-                // Prepara valores para exibição (fallback para '-')
                 $reps_comp = $micro_atual['reps_compostos'] ?: '-';
                 $desc_comp = $micro_atual['descanso_compostos'] ? $micro_atual['descanso_compostos'].'s' : '-';
                 
@@ -797,7 +813,6 @@ switch ($pagina) {
                         <div class="focus-header">
                             <h4><i class="fa-solid fa-flag"></i> FASE: '.strtoupper($micro_atual['nome_fase']).'</h4>
                         </div>
-                        
                         <div class="focus-grid">
                             <div class="focus-item">
                                 <small style="color:var(--gold);">COMPOSTOS</small>
@@ -814,13 +829,12 @@ switch ($pagina) {
                                 </span>
                             </div>
                         </div>
-                        
                         '.($micro_atual['foco_comentario'] ? '<p class="focus-obs">"'.$micro_atual['foco_comentario'].'"</p>' : '').'
                       </div>';
             }
         }
 
-        // 4. Abas e Exercícios
+        // 4. Abas
         echo '<div class="division-tabs">';
         $first = true;
         foreach ($divisoes as $d) {
@@ -830,18 +844,17 @@ switch ($pagina) {
         }
         echo '</div>';
 
+        // 5. Conteúdo das Divisões
         $first = true;
         foreach ($divisoes as $d) {
             $display = $first ? 'block' : 'none';
             
-            // 1. Busca Exercícios crus do banco
+            // Busca Exercícios
             $stmt = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC");
             $stmt->execute([$d['id']]);
             $exercicios_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // ---------------------------------------------------------
-            // 2. LÓGICA DE AGRUPAMENTO (Bi-set / Tri-set)
-            // ---------------------------------------------------------
+            // AGRUPAMENTO (Bi-set / Tri-set)
             $lista_final = [];
             $grupos_temp = []; 
 
@@ -850,35 +863,24 @@ switch ($pagina) {
                     $hash = $ex['agrupamento_hash'];
 
                     if ($hash) {
-                        // É parte de um grupo
                         if (!isset($grupos_temp[$hash])) {
                             $idx = count($lista_final);
-                            $lista_final[$idx] = [
-                                'tipo' => 'grupo',
-                                'itens' => []
-                            ];
+                            $lista_final[$idx] = ['tipo' => 'grupo', 'itens' => []];
                             $grupos_temp[$hash] = $idx;
                         }
                         $lista_final[$grupos_temp[$hash]]['itens'][] = $ex;
                     } else {
-                        // É Single
-                        $lista_final[] = [
-                            'tipo' => 'single',
-                            'itens' => [$ex]
-                        ];
+                        $lista_final[] = ['tipo' => 'single', 'itens' => [$ex]];
                     }
                 }
             }
-            // ---------------------------------------------------------
 
             echo '<div id="div_'.$d['id'].'" class="treino-content" style="display:'.$display.'">';
             
             if (!empty($lista_final)) {
                 
-                // 3. LOOP DA LISTA PROCESSADA
                 foreach ($lista_final as $bloco) {
 
-                    // Se for Grupo, abre o Wrapper Visual
                     if ($bloco['tipo'] === 'grupo') {
                         $qtd = count($bloco['itens']);
                         $label = ($qtd === 2) ? 'BI-SET' : 'TRI-SET';
@@ -886,7 +888,6 @@ switch ($pagina) {
                         echo '<span class="agrupamento-badge">'.$label.'</span>';
                     }
 
-                    // Loop Interno (Renderiza os Cards)
                     foreach ($bloco['itens'] as $ex) {
                         
                         $stmt = $pdo->prepare("SELECT * FROM series WHERE exercicio_id = ?");
@@ -906,19 +907,15 @@ switch ($pagina) {
                                     <div class="sets-grid">';
                                     
                                     foreach ($series as $s) {
-                                        // ---------------------------------------------------------
-                                        // SUAS LÓGICAS ORIGINAIS DE RENDERIZAÇÃO DE SÉRIE
-                                        // ---------------------------------------------------------
+                                        // Regras de Reps/Descanso (Periodização)
                                         $reps = $s['reps_fixas'];
                                         $desc = $s['descanso_fixo'];
 
-                                        // Overrides de categoria
                                         if ($s['categoria'] === 'warmup') {
                                             $desc = '30s';
                                         } elseif ($s['categoria'] === 'feeder') {
                                             $desc = '60s';
                                         } else {
-                                            // Lógica de Periodização
                                             if ($micro_atual) {
                                                 if ($ex['tipo_mecanica'] == 'composto') {
                                                     if (!empty($micro_atual['reps_compostos'])) $reps = $micro_atual['reps_compostos'];
@@ -930,59 +927,51 @@ switch ($pagina) {
                                             }
                                         }
 
-                                        // Fallbacks
                                         if(empty($reps)) $reps = "Falha";
                                         if(empty($desc)) $desc = "-";
 
-                                    // 2. LÓGICA DE TÉCNICAS AVANÇADAS (Visual Personalizado)
-                                    // ---------------------------------------------------------
-                                    
-                                    $tecnica = $s['tecnica'] ?? 'normal';
-                                    $valor   = $s['tecnica_valor'] ?? '';
-                                    
-                                    // Variáveis de Estilo Padrão
-                                    $labelSet = $s['quantidade'].'x '.strtoupper($s['categoria']);
-                                    $cssClass = 'set-item '.$s['categoria']; // Usa as classes CSS existentes (.work, .top, etc)
-                                    $customStyle = ''; // Para injetar cores das técnicas
-                                    $extraInfo = '';   // Para mostrar os dados da técnica
-
-                                    // A. DROP-SET (Vermelho)
-                                    if ($tecnica === 'dropset') {
-                                        $labelSet = $s['quantidade'].'x DROP SET';
-                                        $cssClass = 'set-item'; // Remove a classe padrão para não conflitar
-                                        $customStyle = 'border: 1px solid #ff4d4d; color: #ff4d4d; background: rgba(255, 77, 77, 0.05);';
-                                        $extraInfo = '<div style="font-size:0.7rem; opacity:0.8; margin-top:2px;">+ '.$valor.' Drops (Sem descanso)</div>';
-                                    }
-                                    // B. REST-PAUSE (Verde)
-                                    elseif ($tecnica === 'restpause') {
-                                        $labelSet = $s['quantidade'].'x REST PAUSE';
-                                        $cssClass = 'set-item';
-                                        $customStyle = 'border: 1px solid #00e676; color: #00e676; background: rgba(0, 230, 118, 0.05);';
-                                        $extraInfo = '<div style="font-size:0.7rem; opacity:0.8; margin-top:2px;">Pausa Intra: '.$valor.'s</div>';
-                                    }
-                                    // C. CLUSTER SET (Azul)
-                                    elseif ($tecnica === 'clusterset') {
-                                        $labelSet = $s['quantidade'].'x CLUSTER';
-                                        $cssClass = 'set-item';
-                                        $customStyle = 'border: 1px solid #00bfff; color: #00bfff; background: rgba(0, 191, 255, 0.05);';
+                                        // ---------------------------------------------------------
+                                        // LÓGICA DE TÉCNICAS (SEM CSS INLINE)
+                                        // ---------------------------------------------------------
+                                        $tecnica = strtolower(trim($s['tecnica'] ?? 'normal'));
+                                        $valor   = $s['tecnica_valor'] ?? '';
                                         
-                                        // Desmonta a string "blocos|reps|descanso"
-                                        $parts = explode('|', $valor);
-                                        if(count($parts) === 3) {
-                                            // Ex: 4 blocos de 3 reps (15s)
-                                            $extraInfo = '<div style="font-size:0.7rem; opacity:0.8; margin-top:2px;">'.$parts[0].' blocos de '.$parts[1].' reps ('.$parts[2].'s pausa)</div>';
-                                            
-                                            // Opcional: Se quiser que o "REPS" principal mostre o total calculado
-                                            // $reps = ((int)$parts[0] * (int)$parts[1]); 
-                                        }
-                                    }
+                                        // 1. Classe Base: set-item + categoria (ex: set-item work)
+                                        $cssClass = 'set-item ' . $s['categoria'];
+                                        
+                                        // 2. Labels e Infos
+                                        $labelSet = $s['quantidade'].'x '.strtoupper($s['categoria']);
+                                        $extraInfo = '';
 
-                                        // Renderiza Item da Série
-                                        echo '<div class="'.$cssClass.'" style="'.$customStyle.'">
+                                        // A. DROP-SET (Adiciona classe técnica)
+                                        if ($tecnica === 'dropset') {
+                                            $cssClass .= ' technique-drop'; // Classe do CSS
+                                            $labelSet = $s['quantidade'].'x DROP SET';
+                                            $extraInfo = '<div class="tech-info">+ '.$valor.' Drops</div>';
+                                        }
+                                        // B. REST-PAUSE
+                                        elseif ($tecnica === 'restpause') {
+                                            $cssClass .= ' technique-rest'; // Classe do CSS
+                                            $labelSet = $s['quantidade'].'x REST PAUSE';
+                                            $extraInfo = '<div class="tech-info">Pausa Intra: '.$valor.'s</div>';
+                                        }
+                                        // C. CLUSTER SET
+                                        elseif ($tecnica === 'clusterset') {
+                                            $cssClass .= ' technique-cluster'; // Classe do CSS
+                                            $labelSet = $s['quantidade'].'x CLUSTER';
+                                            
+                                            $parts = explode('|', $valor);
+                                            if(count($parts) === 3) {
+                                                $extraInfo = '<div class="tech-info">'.$parts[0].' blocos de '.$parts[1].' reps ('.$parts[2].'s)</div>';
+                                            }
+                                        }
+
+                                        // Renderiza Item da Série (Sem style inline)
+                                        echo '<div class="'.$cssClass.'">
                                                 <div class="set-top">'.$labelSet.'</div>
                                                 <div class="set-bottom">
                                                     <span style="font-size:1.1rem; font-weight:bold;">'.$reps.'</span>
-                                                    <small><i class="fa-solid fa-clock" style="font-size:0.6rem; margin-right:3px;"></i> '.$desc.'</small>
+                                                    <small><i class="fa-solid fa-clock" style="font-size:0.6rem;"></i> '.$desc.'</small>
                                                 </div>
                                                 '.$extraInfo.'
                                             </div>';
@@ -990,11 +979,10 @@ switch ($pagina) {
                                 echo '</div>
                                 </div>
                               </div>';
-                    } // Fim foreach itens do bloco
+                    }
 
-                    // Se for Grupo, fecha o Wrapper
                     if ($bloco['tipo'] === 'grupo') {
-                        echo '</div>'; // Fecha .agrupamento-wrapper
+                        echo '</div>';
                     }
                 }
 
@@ -1018,20 +1006,20 @@ switch ($pagina) {
     if ($data_ref) {
         // Infos Gerais
         $stmt = $pdo->prepare("SELECT DISTINCT t.nome as nome_treino, td.letra 
-                     FROM treino_historico th
-                     JOIN treinos t ON th.treino_id = t.id
-                     JOIN treino_divisoes td ON th.divisao_id = td.id
-                     WHERE th.aluno_id = :uid AND th.data_treino = :dt");
+                      FROM treino_historico th
+                      JOIN treinos t ON th.treino_id = t.id
+                      JOIN treino_divisoes td ON th.divisao_id = td.id
+                      WHERE th.aluno_id = :uid AND th.data_treino = :dt");
         $stmt->execute(['uid' => $aluno_id, 'dt' => $data_ref]);
         $info = $stmt->fetch(PDO::FETCH_ASSOC);
 
         // Detalhes
-        $stmt = $pdo->prepare("SELECT th.*, e.nome_exercicio, s.categoria 
-                         FROM treino_historico th
-                         JOIN exercicios e ON th.exercicio_id = e.id
-                         LEFT JOIN series s ON COALESCE(th.serie_id, th.serie_numero) = s.id 
-                         WHERE th.aluno_id = :uid AND th.data_treino = :dt
-                         ORDER BY e.ordem ASC, th.id ASC");
+        $stmt = $pdo->prepare("SELECT th.*, e.nome_exercicio, s.categoria, s.tecnica 
+                          FROM treino_historico th
+                          JOIN exercicios e ON th.exercicio_id = e.id
+                          LEFT JOIN series s ON COALESCE(th.serie_id, th.serie_numero) = s.id 
+                          WHERE th.aluno_id = :uid AND th.data_treino = :dt
+                          ORDER BY e.ordem ASC, th.id ASC");
         $stmt->execute(['uid' => $aluno_id, 'dt' => $data_ref]);
         $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1086,34 +1074,100 @@ switch ($pagina) {
                                 <span>'.$dados['nome'].'</span>
                             </div>
                             
-                            <table class="hist-sets-table">
+                            <table class="hist-sets-table" style="border-collapse: separate; border-spacing: 0 4px;">
                                 <thead>
                                     <tr>
-                                        <th width="15%">#</th>
+                                        <th width="20%">#</th>
                                         <th width="25%">TIPO</th>
-                                        <th width="30%">KG</th>
+                                        <th width="25%">KG</th>
                                         <th width="30%">REPS</th>
                                     </tr>
                                 </thead>
                                 <tbody>';
                                 
                                 foreach ($dados['series'] as $serie) {
-                                    $cat = $serie['categoria'] ? strtolower($serie['categoria']) : 'work';
-                                    $num = $serie['numero_serie'] > 0 ? $serie['numero_serie'] : '-';
                                     $id_hist = $serie['id'];
+                                    
+                                    // Pega os dados técnicos JSON (se existirem)
+                                    $dados_tecnicos = !empty($serie['dados_tecnicos']) ? json_decode($serie['dados_tecnicos'], true) : [];
+                                    
+                                    // Pega a definição original da série
+                                    $tecnica_original = strtolower($serie['tecnica'] ?? '');
 
-                                    echo '<tr>
-                                            <td style="color:#666; font-weight:bold;">#'.$num.'</td>
-                                            <td><span class="badge-set-type '.$cat.'">'.strtoupper($cat).'</span></td>
+                                    // -- 1. Definição Padrão (Normal) --
+                                    $cat_visual = $serie['categoria'] ? strtolower($serie['categoria']) : 'work';
+                                    $label_visual = strtoupper($cat_visual);
+                                    
+                                    // Número Padrão
+                                    $num_display = '#'.($serie['numero_serie'] > 0 ? $serie['numero_serie'] : '-');
+                                    $num_style = "color:#666; font-weight:bold;";
+                                    $row_style = ""; 
+                                    
+                                    // Reps Padrão
+                                    $reps_display = $serie['reps_realizadas'];
+
+                                    // -- 2. Lógica para DROP SET --
+                                    if ($tecnica_original === 'dropset') {
+                                        $cat_visual = 'technique-drop'; // Rosa
+                                        $label_visual = 'DROP SET';
+                                        
+                                        // A. É um Drop Específico (tem índice no JSON)
+                                        if (isset($dados_tecnicos['drop_index'])) {
+                                            $idx_drop = $dados_tecnicos['drop_index'];
+                                            $num_display = '<i class="fa-solid fa-turn-up fa-rotate-90" style="margin-right:5px; font-size:0.7rem; opacity:0.7;"></i> DROP '.$idx_drop;
+                                            $num_style = "color:#ff4081; font-weight:bold; font-size:0.8rem; padding-left:10px;";
+                                            $row_style = "background: linear-gradient(90deg, rgba(255, 64, 129, 0.1) 0%, rgba(0,0,0,0) 100%);";
+                                            
+                                            // MUDANÇA AQUI: Remove o badge de tipo para os drops filhos
+                                            $label_visual = ''; 
+                                            $cat_visual = ''; 
+                                        } 
+                                        // B. É a Série Principal do Drop
+                                        else {
+                                            // Mantém o número #1, mas pinta de Rosa e mantém o Label DROP SET
+                                            $num_style = "color:#ff4081; font-weight:bold;";
+                                        }
+                                    }
+
+                                    // -- 3. Lógica para REST PAUSE --
+                                    elseif ($tecnica_original === 'restpause' || (isset($dados_tecnicos['tipo']) && $dados_tecnicos['tipo'] === 'restpause')) {
+                                        $cat_visual = 'technique-rest'; // Verde
+                                        $label_visual = 'REST PAUSE';
+                                        if (!empty($dados_tecnicos['reps_string'])) {
+                                            $reps_display = $dados_tecnicos['reps_string'];
+                                        }
+                                    }
+
+                                    // -- 4. Lógica para CLUSTER SET --
+                                    elseif ($tecnica_original === 'clusterset' || (isset($dados_tecnicos['tipo']) && $dados_tecnicos['tipo'] === 'clusterset')) {
+                                        $cat_visual = 'technique-cluster'; // Laranja
+                                        $label_visual = 'CLUSTER';
+                                        
+                                        if (!empty($dados_tecnicos['reps_string'])) {
+                                            $reps_display = $dados_tecnicos['reps_string'];
+                                        }
+                                    }
+
+                                    echo '<tr style="'.$row_style.'">
+                                            <td style="'.$num_style.'">'.$num_display.'</td>
+                                            
+                                            <td>';
+                                    
+                                    // Só exibe o badge se tiver label (assim os drops ficam vazios)
+                                    if ($label_visual !== '') {
+                                        echo '<span class="badge-set-type '.$cat_visual.'">'.$label_visual.'</span>';
+                                    }
+                                            
+                                    echo '  </td>
                                             
                                             <td class="editable-cell" data-id="'.$id_hist.'" data-type="carga">
                                                 <span class="view-val" style="color:#fff; font-weight:bold;">'.($serie['carga_kg']*1).'</span>
-                                                <input type="number" step="0.1" class="edit-input" value="'.($serie['carga_kg']*1).'" style="display:none; width:60px; background:#222; border:1px solid #444; color:#fff; padding:5px; border-radius:4px;">
+                                                <input type="number" step="0.1" class="edit-input" value="'.($serie['carga_kg']*1).'" style="display:none; width:50px; background:#222; border:1px solid #444; color:#fff; padding:5px; border-radius:4px;">
                                             </td>
 
                                             <td class="editable-cell" data-id="'.$id_hist.'" data-type="reps">
-                                                <span class="view-val" style="color:#fff;">'.$serie['reps_realizadas'].'</span>
-                                                <input type="number" class="edit-input" value="'.$serie['reps_realizadas'].'" style="display:none; width:50px; background:#222; border:1px solid #444; color:#fff; padding:5px; border-radius:4px;">
+                                                <span class="view-val" style="color:#fff;">'.$reps_display.'</span>
+                                                <input type="text" class="edit-input" value="'.$reps_display.'" style="display:none; width:60px; background:#222; border:1px solid #444; color:#fff; padding:5px; border-radius:4px;">
                                             </td>
                                           </tr>';
                                 }
@@ -1177,10 +1231,6 @@ switch ($pagina) {
     }
     echo '</section>';
     break;
-
-
-
-
 
     case 'perfil':
         require_once '../config/db_connect.php';

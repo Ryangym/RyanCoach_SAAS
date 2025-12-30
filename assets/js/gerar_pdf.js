@@ -458,48 +458,65 @@ function gerarPeriodizacaoPDF() {
 function processarDownload(template, filename, orientation) {
     const btn = document.querySelector('#modalPDFConfig .btn-gold');
     const oldText = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando Alta Qualidade...';
     btn.disabled = true;
 
+    // Configuração "Ultra Quality"
     const opt = {
         margin: 0,
         filename: filename,
-        image: { type: 'jpeg', quality: 1 },
+        image: { 
+            type: 'jpeg', 
+            quality: 1  // Qualidade máxima (sem compressão visível)
+        },
         html2canvas: { 
-            scale: 2, 
+            scale: 4,   // AUMENTADO: Escala 4 deixa tudo super nítido (antes era 2)
             useCORS: true, 
             scrollY: 0,
-            letterRendering: true
+            letterRendering: true, // Melhora o espaçamento das fontes
+            dpi: 300    // Força DPI de impressão
         },
         jsPDF: { 
             unit: 'mm', 
-            format: 'a4', // Mantém A4 (o conteúdo será redimensionado para caber)
-            orientation: orientation 
+            format: 'a4', 
+            orientation: orientation,
+            compress: true // Comprime o PDF final sem perder qualidade visual
         }
     };
 
-    // Força dimensões exatas no template antes de gerar
+    // LÓGICA DE AJUSTE DE DIMENSÃO (A que funcionou)
     if (orientation === 'landscape') {
-        // NOVAS DIMENSÕES PERSONALIZADAS
-        template.style.width = '330mm';  // Mais largo
-        template.style.height = '190mm'; // Menos alto
+        // Largura com leve sangria para evitar borda branca lateral
+        template.style.width = '297.5mm'; 
+        
+        // Altura milimetricamente calculada para não gerar página 2
+        template.style.height = '209.8mm'; 
+        
+        // Trava o tamanho
+        template.style.overflow = 'hidden'; 
+        template.style.margin = '0';
+        template.style.padding = '0';
     } else {
+        // Retrato (Portrait) - Mantém o padrão
         template.style.width = '210mm';
+        template.style.minHeight = '297mm';
         template.style.height = 'auto';
     }
 
     template.style.display = 'block';
 
+    // Gera o PDF
     html2pdf().set(opt).from(template).save().then(() => {
         template.style.display = 'none';
         btn.innerHTML = oldText;
         btn.disabled = false;
         document.getElementById('modalPDFConfig').style.display = 'none';
     }).catch(err => {
-        console.error(err);
-        alert("Erro ao gerar PDF.");
+        console.error("Erro na geração:", err);
+        alert("Erro ao gerar PDF. Tente novamente.");
         btn.innerHTML = oldText;
         btn.disabled = false;
+        template.style.display = 'none';
     });
 }
 

@@ -539,6 +539,17 @@ window.onclick = function(event) {
     if (event.target == m2) fecharModalAvaliacoes();
 }
 
+function abrirModalAvaliacao(idAluno = null) {
+    if (idAluno) {
+        document.getElementById('av_aluno_id').value = idAluno;
+    }
+    document.getElementById('modalNovaAvaliacao').style.display = 'flex';
+}
+
+function fecharModalAvaliacao() {
+    document.getElementById('modalNovaAvaliacao').style.display = 'none';
+}
+
 /* ==========================================================================
    2. MÓDULO: DIETA (CHECKLIST)
    ========================================================================== */

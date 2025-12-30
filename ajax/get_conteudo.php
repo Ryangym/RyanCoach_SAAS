@@ -1795,60 +1795,54 @@ switch ($pagina) {
     }
 
     // -------------------------------------------------------------
-    // NOVO BLOCO: BUSCA DADOS DE PERIODIZAÇÃO (SE HOUVER)
+    // BLOCO DE PERIODIZAÇÃO (MANTIDO)
     // -------------------------------------------------------------
     $micros_para_pdf = [];
     if ($plano['nivel_plano'] !== 'basico') {
-        // Busca Periodização Vinculada
         $stmt_per = $pdo->prepare("SELECT id FROM periodizacoes WHERE treino_id = ?");
         $stmt_per->execute([$plano['id']]);
         $per = $stmt_per->fetch(PDO::FETCH_ASSOC);
 
         if ($per) {
-            // Busca Microciclos ordenados
             $stmt_micro = $pdo->prepare("SELECT * FROM microciclos WHERE periodizacao_id = ? ORDER BY semana_numero ASC");
             $stmt_micro->execute([$per['id']]);
             $micros_para_pdf = $stmt_micro->fetchAll(PDO::FETCH_ASSOC);
         }
     }
-    // Codifica para JSON seguro
     $json_micros = htmlspecialchars(json_encode($micros_para_pdf), ENT_QUOTES, 'UTF-8');
+
+    // -------------------------------------------------------------
+    // NOVO BLOCO: BUSCA AVALIAÇÕES FÍSICAS
+    // -------------------------------------------------------------
+    $stmt_av = $pdo->prepare("SELECT * FROM avaliacoes WHERE aluno_id = ? ORDER BY data_avaliacao DESC LIMIT 5");
+    $stmt_av->execute([$aluno_id]);
+    $avaliacoes_lista = $stmt_av->fetchAll(PDO::FETCH_ASSOC);
+    $json_avaliacoes = htmlspecialchars(json_encode($avaliacoes_lista), ENT_QUOTES, 'UTF-8');
     // -------------------------------------------------------------
 
-    // 2. Busca Divisões e Exercícios (Mantido igual)
+    // 2. Busca Divisões e Exercícios (MANTIDO)
     $stmt_div = $pdo->prepare("SELECT * FROM treino_divisoes WHERE treino_id = ? ORDER BY letra ASC");
     $stmt_div->execute([$plano['id']]);
     $divisoes = $stmt_div->fetchAll(PDO::FETCH_ASSOC);
 
-    // 1. Mapa de Dias da Semana
+    // Mapa de Dias (MANTIDO)
     $mapa_dias = [
-        1 => 'Segunda-Feira',
-        2 => 'Terça-Feira',
-        3 => 'Quarta-Feira',
-        4 => 'Quinta-Feira',
-        5 => 'Sexta-Feira',
-        6 => 'Sábado',
-        7 => 'Domingo',
-        0 => 'Domingo'
+        1 => 'Segunda-Feira', 2 => 'Terça-Feira', 3 => 'Quarta-Feira',
+        4 => 'Quinta-Feira', 5 => 'Sexta-Feira', 6 => 'Sábado',
+        7 => 'Domingo', 0 => 'Domingo'
     ];
 
-    // 2. Decodifica os dias do banco
     $dias_treino = [];
     if (!empty($plano['dias_semana'])) {
         $decoded = json_decode($plano['dias_semana'], true);
-        if (is_array($decoded)) {
-            $dias_treino = $decoded;
-        }
+        if (is_array($decoded)) { $dias_treino = $decoded; }
     }
 
-    // 3. Monta o array gigante de dados
     $dados_treinos = [];
     $total_divisoes = count($divisoes);
 
     foreach ($divisoes as $index_div => $div) {
-        
         $dias_desta_divisao = [];
-        
         if ($total_divisoes > 0 && !empty($dias_treino)) {
             foreach ($dias_treino as $k => $dia_num) {
                 if (($k % $total_divisoes) == $index_div) {
@@ -1858,7 +1852,6 @@ switch ($pagina) {
                 }
             }
         }
-
         $dia_exibicao = !empty($dias_desta_divisao) ? implode(' / ', $dias_desta_divisao) : 'TREINO ' . $div['letra'];
 
         $stmt_ex = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC");
@@ -1891,13 +1884,15 @@ switch ($pagina) {
             </header>
 
             <input type="hidden" id="json-dados-treinos" value="'.$json_treinos.'">
-            <input type="hidden" id="json-dados-micros" value="'.$json_micros.'"> <input type="hidden" id="plano-nome-atual" value="'.$plano['nome'].'">
+            <input type="hidden" id="json-dados-micros" value="'.$json_micros.'">
+            <input type="hidden" id="json-dados-avaliacoes" value="'.$json_avaliacoes.'">
+            <input type="hidden" id="plano-nome-atual" value="'.$plano['nome'].'">
 
             <div class="pdf-action-card" onclick="abrirModalPDF()">
                 <div class="pac-icon"><i class="fa-solid fa-file-pdf"></i></div>
                 <div class="pac-info">
                     <h3>Gerar Arquivos PDF</h3>
-                    <p>Ficha de Treino e Tabela de Periodização.</p>
+                    <p>Ficha de Treino, Periodização e Avaliação Física.</p>
                 </div>
                 <div class="pac-arrow"><i class="fa-solid fa-chevron-right"></i></div>
             </div>
@@ -1919,6 +1914,7 @@ switch ($pagina) {
                         <select id="pdf_tipo_arquivo" class="modal-input" style="cursor:pointer;">
                             <option value="treino">Ficha de Treino (Retrato)</option>
                             <option value="periodizacao">Periodização (Paisagem)</option>
+                            <option value="avaliacao">Avaliação Física (Retrato)</option>
                         </select>
                     </div>
 
@@ -2005,6 +2001,26 @@ switch ($pagina) {
 
                     <div class="sheet-footer">
                         Gerado por Ryan Coach App
+                    </div>
+                </div>
+            </div>
+
+            <div id="template-avaliacao-full" style="display:none;">
+                <div class="pdf-sheet">
+                    <div class="sheet-header" id="pdf-header-aval">
+                        <div class="sh-meta">
+                            <span>RELATÓRIO TÉCNICO</span>
+                            <span>DATA: <strong id="aval-data-ref"></strong></span>
+                        </div>
+                        <h1><strong id="render-aluno-nome-aval" style="font-family: \'Lobster\', cursive; font-size: 35px; margin: 0; text-decoration: none; font-weight: 500;">NOME</strong></h1>
+                        <div class="sh-logo"><img src="assets/img/icones/icon-nav.png"></div>
+                    </div>
+
+                    <div id="pdf-container-avaliacao" style="padding: 20px;">
+                        </div>
+
+                    <div class="sheet-footer">
+                        <p>Metodologia <strong>RYAN COACH</strong></p>
                     </div>
                 </div>
             </div>

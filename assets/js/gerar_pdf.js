@@ -294,7 +294,7 @@ function renderizarTemplatePeriodizacao(micros, nomeAluno, nomePlano, configCore
     }
 
     divDatas.className = 'perio-dates-block'; 
-    divDatas.style.border = `1px solid ${borda}`;
+    divDatas.style.border = `2px solid ${borda}`;
     divDatas.style.background = `${tema}`; 
     divDatas.style.color = '#fff';
     divDatas.innerText = textoPeriodo;
@@ -317,35 +317,47 @@ function renderizarTemplatePeriodizacao(micros, nomeAluno, nomePlano, configCore
         let cardHTML = '';
 
         // --- LÓGICA ESTRITA DE DESIGN DE BORDAS ---
-        // Padrão: Sem bordas
         let borderStyle = 'border: none;';
+        
+        // Variável para guardar o HTML das bordinhas parciais (se houver)
+        let bordinhasExtras = ''; 
 
         // COLUNA ESQUERDA (0 a 5)
         if (i === 0) {
-            // Topo Esquerda -> Apenas Top
-            borderStyle = `border-top: 1px solid ${borda};`;
+            // Topo Esquerda -> Top + "Abas laterais"
+            borderStyle = `border-top: 2px solid ${borda};`;
+            
+            // AQUI ESTÁ A MÁGICA:
+            // Criamos dois divs absolutos de 2px de largura e 35% de altura
+            bordinhasExtras = `
+                <div style="position: absolute; top: 0; left: 0; width: 2px; height: 35%; background: ${borda};"></div>
+                <div style="position: absolute; top: 0; right: 0; width: 2px; height: 35%; background: ${borda};"></div>
+            `;
         } else if (i > 0 && i < 5) {
-            // Meio Esquerda -> Apenas Left
-            borderStyle = `border-left: 1px solid ${borda};`;
+            borderStyle = `border-left: 2px solid ${borda};`;
         } else if (i === 5) {
-            // Fim Esquerda -> Apenas Bottom
-            borderStyle = `border-bottom: 1px solid ${borda};`;
+            borderStyle = `border-bottom: 2px solid ${borda};`;
         }
         
         // COLUNA DIREITA (6 a 11)
         else if (i === 6) {
-            // Topo Direita -> Apenas Top
-            borderStyle = `border-top: 1px solid ${borda};`;
+            // Topo Direita -> Top + "Abas laterais"
+            borderStyle = `border-top: 2px solid ${borda};`;
+            
+            // Mesma mágica para o topo da coluna direita
+            bordinhasExtras = `
+                <div style="position: absolute; top: 0; left: 0; width: 2px; height: 35%; background: ${borda};"></div>
+                <div style="position: absolute; top: 0; right: 0; width: 2px; height: 35%; background: ${borda};"></div>
+            `;
         } else if (i > 6 && i < 11) {
-            // Meio Direita -> Apenas Right
-            borderStyle = `border-right: 1px solid ${borda};`;
+            borderStyle = `border-right: 2px solid ${borda};`;
         } else if (i === 11) {
-            // Fim Direita -> Apenas Bottom
-            borderStyle = `border-bottom: 1px solid ${borda};`;
+            borderStyle = `border-bottom: 2px solid ${borda};`;
         }
 
-        // Mantém overflow hidden e background
-        const estiloContainerCard = `${borderStyle} overflow: hidden; background: ${tema};`;
+        // IMPORTANTE: Adicionei 'position: relative' aqui.
+        // Sem isso, as bordinhas iriam para o topo da página, não do card.
+        const styleWrapper = `background: ${tema}; ${borderStyle} position: relative; overflow: hidden;`;
 
         if (micro) {
             let dIni = new Date(micro.data_inicio_semana);
@@ -355,40 +367,31 @@ function renderizarTemplatePeriodizacao(micros, nomeAluno, nomePlano, configCore
 
             const conteudoCard = `
                 <div class="col-info">
-                    <div class="info-header">
-                        <span class="txt-sem">Semana ${micro.semana_numero}: ${textoData}</span>
-                    </div>
-                    <div class="info-body">
-                        <div class="row-phase">
-                            <span class="label-phase">Microciclo: ${micro.nome_fase}</span>
-                        </div>
-                        <div class="metrics-grid">
-                            <div class="metric-box">
-                                <span class="m-label">Compostos: ${micro.reps_compostos || '-'} | ${micro.descanso_compostos ? micro.descanso_compostos+'s' : ''}</span>
-                            </div>
-                            <div class="metric-box">
-                                <span class="m-label">Isolados: ${micro.reps_isoladores || '-'} | ${micro.descanso_isoladores ? micro.descanso_isoladores+'s' : ''}</span>
-                            </div>
-                        </div>
+                    <span style="font-size: 14px;">Semana ${micro.semana_numero}: ${textoData}</span>
+                    <span style="margin-right: 3px;">Microciclo: ${micro.nome_fase}</span>
+                    <div class="metrics-box">
+                        <span class="m-label">Compostos: ${micro.reps_compostos || '-'} | ${micro.descanso_compostos ? micro.descanso_compostos+'s' : ''}
+                            Isolados: ${micro.reps_isoladores || '-'} | ${micro.descanso_isoladores ? micro.descanso_isoladores+'s' : ''}</span>
                     </div>
                 </div>
                 <div class="col-obs">
-                    <span class="obs-label">Comentários</span>
                     <div class="obs-text">
-                        ${micro.foco_comentario ? micro.foco_comentario : '-'}
+                        ${micro.foco_comentario ? micro.foco_comentario : ''}
                     </div>
                 </div>
             `;
 
-            
+            // Adicionei ${bordinhasExtras} dentro do card
             cardHTML = `
-                <div class="micro-pdf-card" style="background: ${tema}; ${borderStyle}">
+                <div class="micro-pdf-card" style="${styleWrapper}">
+                    ${bordinhasExtras}
                     ${conteudoCard}
                 </div>
             `;
         } else {
             cardHTML = `
-                <div class="micro-pdf-card empty" style="${borderStyle}">
+                <div class="micro-pdf-card empty" style="${styleWrapper}">
+                    ${bordinhasExtras}
                     <i class="fa-solid fa-lock"></i>
                 </div>
             `;
@@ -404,6 +407,231 @@ function renderizarTemplatePeriodizacao(micros, nomeAluno, nomePlano, configCore
     return template;
 }
 
+// ==========================================
+// RENDERIZAÇÃO: AVALIAÇÃO FÍSICA
+// ==========================================
+
+function renderizarTemplateAvaliacao(avaliacoes, nomeAluno, configCores) {
+    const { tema, fundo, borda } = configCores;
+    const template = document.getElementById('template-avaliacao-full');
+    
+    if (!template || !avaliacoes || avaliacoes.length === 0) {
+        alert("Nenhuma avaliação encontrada.");
+        return null;
+    }
+
+    const atual = avaliacoes[0]; 
+    
+    // --- 1. CONFIGURAÇÕES VISUAIS ---
+    template.querySelector('.pdf-sheet').style.backgroundColor = fundo;
+    template.querySelector('#render-aluno-nome-aval').innerText = nomeAluno;
+    
+    // Formata Data
+    let dataFmt = atual.data_avaliacao;
+    if(dataFmt.includes('-')) {
+        const p = dataFmt.split('-');
+        dataFmt = `${p[2]}/${p[1]}/${p[0]}`;
+    }
+    template.querySelector('#aval-data-ref').innerText = dataFmt;
+    
+    const header = template.querySelector('#pdf-header-aval');
+    if(header) header.style.borderBottom = `4px solid ${tema}`;
+
+    // Estilos Dinâmicos
+    const stBorder = `border-color: ${borda};`;
+    const stTitle = `border-bottom: 2px solid ${tema}; color: ${tema};`;
+
+    const stText = `color: inherit;`;
+
+    // --- 2. LÓGICA DE DADOS & IMC ---
+    const peso = parseFloat(atual.peso_kg || 0);
+    const altura = parseFloat(atual.altura_cm || 0); // Precisa vir do banco se tiver, ou calcular se tiver salvo
+    const bf = parseFloat(atual.percentual_gordura || 0);
+    const mm = parseFloat(atual.massa_magra_kg || 0);
+    const mg = parseFloat(atual.massa_gorda_kg || 0);
+    let imc = parseFloat(atual.imc || 0);
+
+    // Se IMC não vier pronto mas tiver peso e altura
+    if (imc === 0 && peso > 0 && altura > 0) {
+        imc = peso / ((altura/100) * (altura/100));
+    }
+
+    // Função Interna de Classificação IMC
+    function getClassificacaoIMC(v) {
+        if (v < 18.5) return { label: 'Abaixo do Peso', color: '#ffb74d' }; // Laranja claro
+        if (v < 24.9) return { label: 'Saudável', color: '#00c853' };      // Verde forte
+        if (v < 29.9) return { label: 'Sobrepeso', color: '#ff9100' };     // Laranja
+        if (v < 34.9) return { label: 'Obesidade I', color: '#ff5252' };   // Vermelho claro
+        if (v < 39.9) return { label: 'Obesidade II', color: '#d32f2f' };  // Vermelho
+        return { label: 'Obesidade III', color: '#b71c1c' };               // Vermelho escuro
+    }
+
+    const imcStatus = getClassificacaoIMC(imc);
+
+    // --- 3. LÓGICA DO GRÁFICO (Histórico) ---
+    // Pegamos até 6 últimas avaliações e invertemos para ficar cronológico (Esq -> Dir)
+    const historicoChart = avaliacoes.slice(0, 6).reverse();
+    
+    // Acha o maior peso para usar como 100% da altura do gráfico
+    let maxPeso = 0;
+    historicoChart.forEach(h => { if(parseFloat(h.peso_kg) > maxPeso) maxPeso = parseFloat(h.peso_kg); });
+    // Margem de segurança visual (+10%)
+    const tetoGrafico = maxPeso * 1.1; 
+
+    // --- 4. CONSTRUÇÃO DO HTML ---
+    let html = `
+    <div class="aval-landscape-layout">
+        
+        <div class="aval-col-left">
+            
+            <div class="aval-summary-grid landscape-mode" style="margin-bottom: 20px;">
+                
+                <div class="metric-card-premium" style="border-color: ${borda};">
+                    <i class="fa-solid fa-weight-scale mcp-icon" style="color: ${tema};"></i>
+                    <div>
+                        <span class="mcp-title">Peso Corporal</span>
+                        <div class="mcp-value" style="color: ${tema};">${peso} <small>kg</small></div>
+                    </div>
+                </div>
+
+                <div class="metric-card-premium" style="border-color: ${borda};">
+                    <i class="fa-solid fa-heart-pulse mcp-icon" style="color: ${imcStatus.color};"></i>
+                    <div>
+                        <span class="mcp-title">IMC</span>
+                        <div class="mcp-value" style="color: ${tema};">${imc.toFixed(1)}</div>
+                        <span class="aval-status-badge" style="background-color: ${imcStatus.color};">
+                            ${imcStatus.label}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="metric-card-premium" style="border-color: ${borda};">
+                    <i class="fa-solid fa-droplet mcp-icon" style="color: #ff4444;"></i>
+                    <div>
+                        <span class="mcp-title">% Gordura</span>
+                        <div class="mcp-value" style="color: #ff4444;">${bf} <small>%</small></div>
+                        <div class="mcp-sub">${mg.toFixed(1)} kg de gordura</div>
+                    </div>
+                </div>
+
+                <div class="metric-card-premium" style="border-color: ${borda};">
+                    <i class="fa-solid fa-dumbbell mcp-icon" style="color: ${tema};"></i>
+                    <div>
+                        <span class="mcp-title">Massa Magra</span>
+                        <div class="mcp-value" style="color: ${tema};">${mm} <small>kg</small></div>
+                        <div class="mcp-sub">Músculos, ossos, órgãos</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="aval-comp-box" style="border-color: ${borda};">
+                <div class="aval-section-title" style="${stTitle} margin-top:0; font-size:12px;">Composição Corporal</div>
+                
+                <div class="aval-comp-row">
+                    <span class="aval-comp-label">Massa Magra</span>
+                    <div class="aval-comp-track">
+                        <div class="aval-comp-fill" style="width: ${(mm/(mm+mg)*100)}%; background-color: ${tema};"></div>
+                    </div>
+                    <span class="aval-comp-val">${mm} kg</span>
+                </div>
+                
+                <div class="aval-comp-row">
+                    <span class="aval-comp-label">Massa Gorda</span>
+                    <div class="aval-comp-track">
+                        <div class="aval-comp-fill" style="width: ${(mg/(mm+mg)*100)}%; background-color: #ff4444;"></div>
+                    </div>
+                    <span class="aval-comp-val">${mg} kg</span>
+                </div>
+            </div>
+
+            <div class="aval-history-box" style="margin-top: 20px;">
+                <div class="aval-section-title" style="${stTitle} margin-top:0;">Evolução de Peso (Últimas Avaliações)</div>
+                
+                <div class="chart-container" style="border-bottom-color: ${borda};">
+                    ${historicoChart.map(h => {
+                        const val = parseFloat(h.peso_kg);
+                        const alturaBarra = (val / tetoGrafico) * 100; // % da altura total
+                        let dt = h.data_avaliacao.split('-');
+                        let dtShow = `${dt[2]}/${dt[1]}`;
+                        
+                        return `
+                        <div class="chart-bar-group">
+                            <span class="chart-value-top">${val}</span>
+                            <div class="chart-bar" style="height: ${alturaBarra}%; background-color: ${tema}; opacity: 0.8;"></div>
+                            <span class="chart-date-bottom">${dtShow}</span>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+
+            ${atual.observacoes ? `
+            <div class="aval-obs-box" style="border-color: ${borda}; margin-top: 20px;">
+                <strong><i class="fa-solid fa-comment-dots"></i> Observações Técnicas:</strong><br>
+                ${atual.observacoes}
+            </div>` : ''}
+
+        </div> 
+        <div class="aval-col-right">
+            
+            <div class="aval-measures-container" style="border: 1px solid ${borda}; border-radius: 8px; padding: 20px;">
+                
+                <div class="aval-grid-measures">
+                    <div>
+                        <div class="aval-section-title" style="${stTitle}"><i class="fa-solid fa-ruler-vertical"></i> Perímetros (Tronco)</div>
+                        <table class="aval-table measures-modern-table">
+                            <tr><td>Pescoço</td><td style="${stText}">${atual.pescoco||'-'} <small>cm</small></td></tr>
+                            <tr><td>Ombros</td><td style="${stText}">${atual.ombro||'-'} <small>cm</small></td></tr>
+                            <tr><td>Tórax (Relaxado)</td><td style="${stText}">${atual.torax_relaxado||'-'} <small>cm</small></td></tr>
+                            <tr><td>Tórax (Inspirado)</td><td style="${stText}">${atual.torax_inspirado||'-'} <small>cm</small></td></tr>
+                            <tr><td>Cintura</td><td style="${stText}">${atual.cintura||'-'} <small>cm</small></td></tr>
+                            <tr><td>Abdômen</td><td style="${stText}">${atual.abdomen||'-'} <small>cm</small></td></tr>
+                            <tr><td>Quadril</td><td style="${stText}">${atual.quadril||'-'} <small>cm</small></td></tr>
+                        </table>
+                    </div>
+
+                    <div>
+                        <div class="aval-section-title" style="${stTitle}"><i class="fa-solid fa-ruler-horizontal"></i> Membros (Dir / Esq)</div>
+                        <table class="aval-table measures-modern-table">
+                            <tr><td>Braço Relaxado</td><td style="${stText}">${atual.braco_dir_relaxado||'-'} / ${atual.braco_esq_relaxado||'-'}</td></tr>
+                            <tr><td>Braço Contraído</td><td style="${stText}">${atual.braco_dir_contraido||'-'} / ${atual.braco_esq_contraido||'-'}</td></tr>
+                            <tr><td>Antebraço</td><td style="${stText}">${atual.antebraco_dir||'-'} / ${atual.antebraco_esq||'-'}</td></tr>
+                            <tr><td colspan="2" style="height:10px; border:none;"></td></tr> <tr><td>Coxa Medial</td><td style="${stText}">${atual.coxa_dir||'-'} / ${atual.coxa_esq||'-'}</td></tr>
+                            <tr><td>Panturrilha</td><td style="${stText}">${atual.panturrilha_dir||'-'} / ${atual.panturrilha_esq||'-'}</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <div class="aval-section-title" style="${stTitle} border-bottom-width: 1px; font-size: 12px;">Histórico Detalhado</div>
+                    <table class="aval-history-table" style="border-color: ${borda};">
+                        <thead>
+                            <tr class="aval-history-header" style="background-color: ${tema}; color: #fff;">
+                                <th>DATA</th><th>PESO</th><th>BF %</th><th>CINTURA</th><th>ABD</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${avaliacoes.slice(0, 8).map(av => {
+                                let d = av.data_avaliacao.split('-');
+                                return `<tr>
+                                    <td>${d[2]}/${d[1]}/${d[0]}</td>
+                                    <td>${parseFloat(av.peso_kg||0)}</td>
+                                    <td>${parseFloat(av.percentual_gordura||0)}</td>
+                                    <td>${parseFloat(av.cintura||0)}</td>
+                                    <td>${parseFloat(av.abdomen||0)}</td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div> 
+        </div>`;
+
+    document.getElementById('pdf-container-avaliacao').innerHTML = html;
+    return template;
+}
 /* ==========================================================================
    3. AÇÃO: GERAR ARQUIVO (DOWNLOAD)
    ========================================================================== */
@@ -421,11 +649,14 @@ function getPdfData() {
 }
 
 // Função Principal (Controlada pelo Select)
+// Função Principal (Controlada pelo Select)
 function gerarPDFSelecionado() {
     const tipo = document.getElementById('pdf_tipo_arquivo') ? document.getElementById('pdf_tipo_arquivo').value : 'treino';
     
     if (tipo === 'periodizacao') {
         gerarPeriodizacaoPDF();
+    } else if (tipo === 'avaliacao') {
+        gerarAvaliacaoPDF(); 
     } else {
         gerarFichaCompleta();
     }
@@ -455,49 +686,59 @@ function gerarPeriodizacaoPDF() {
     processarDownload(template, `Periodizacao_${nomeAluno}.pdf`, 'landscape');
 }
 
+function gerarAvaliacaoPDF() {
+    const { nomeAluno, configCores } = getPdfData();
+    const jsonRaw = document.getElementById('json-dados-avaliacoes') ? document.getElementById('json-dados-avaliacoes').value : '[]';
+    let avaliacoes;
+    try { avaliacoes = JSON.parse(jsonRaw); } catch(e) { avaliacoes = []; }
+
+    const template = renderizarTemplateAvaliacao(avaliacoes, nomeAluno, configCores);
+    if (!template) return;
+
+    // IMPORTANTE: Agora usa 'landscape'
+    processarDownload(template, `Avaliacao_${nomeAluno}.pdf`, 'landscape');
+}
+
 function processarDownload(template, filename, orientation) {
     const btn = document.querySelector('#modalPDFConfig .btn-gold');
     const oldText = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando Alta Qualidade...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando em HD...';
     btn.disabled = true;
 
-    // Configuração "Ultra Quality"
     const opt = {
         margin: 0,
         filename: filename,
         image: { 
-            type: 'jpeg', 
-            quality: 1  // Qualidade máxima (sem compressão visível)
+            type: 'png',  // MUDANÇA 1: PNG é "Lossless" (sem perda de qualidade)
+            quality: 1    // Qualidade máxima
         },
         html2canvas: { 
-            scale: 4,   // AUMENTADO: Escala 4 deixa tudo super nítido (antes era 2)
+            scale: 4,     // Escala 4x (equivalente a tela Retina/4K)
             useCORS: true, 
             scrollY: 0,
-            letterRendering: true, // Melhora o espaçamento das fontes
-            dpi: 300    // Força DPI de impressão
+            letterRendering: true,
+            // Dica: Tenta melhorar a renderização de fontes
+            onclone: (clonedDoc) => {
+                clonedDoc.body.style.fontSmooth = 'always';
+                clonedDoc.body.style.webkitFontSmoothing = 'antialiased';
+            }
         },
         jsPDF: { 
             unit: 'mm', 
             format: 'a4', 
             orientation: orientation,
-            compress: true // Comprime o PDF final sem perder qualidade visual
+            compress: false // MUDANÇA 2: Desliga a compressão para não borrar nada
         }
     };
 
-    // LÓGICA DE AJUSTE DE DIMENSÃO (A que funcionou)
+    // --- AJUSTES DE TAMANHO (MANTIDOS) ---
     if (orientation === 'landscape') {
-        // Largura com leve sangria para evitar borda branca lateral
         template.style.width = '297.5mm'; 
-        
-        // Altura milimetricamente calculada para não gerar página 2
         template.style.height = '209.8mm'; 
-        
-        // Trava o tamanho
         template.style.overflow = 'hidden'; 
         template.style.margin = '0';
         template.style.padding = '0';
     } else {
-        // Retrato (Portrait) - Mantém o padrão
         template.style.width = '210mm';
         template.style.minHeight = '297mm';
         template.style.height = 'auto';
@@ -505,15 +746,14 @@ function processarDownload(template, filename, orientation) {
 
     template.style.display = 'block';
 
-    // Gera o PDF
     html2pdf().set(opt).from(template).save().then(() => {
         template.style.display = 'none';
         btn.innerHTML = oldText;
         btn.disabled = false;
         document.getElementById('modalPDFConfig').style.display = 'none';
     }).catch(err => {
-        console.error("Erro na geração:", err);
-        alert("Erro ao gerar PDF. Tente novamente.");
+        console.error(err);
+        alert("Erro ao gerar PDF.");
         btn.innerHTML = oldText;
         btn.disabled = false;
         template.style.display = 'none';
@@ -532,14 +772,20 @@ function debugPreviewPDF() {
     let isLandscape = false;
 
     if (tipo === 'periodizacao') {
-        const jsonRaw = document.getElementById('json-dados-micros') ? document.getElementById('json-dados-micros').value : '[]';
+        const jsonRaw = document.getElementById('json-dados-micros').value;
         const micros = JSON.parse(jsonRaw);
         template = renderizarTemplatePeriodizacao(micros, nomeAluno, nomePlano, configCores);
         isLandscape = true;
+    } else if (tipo === 'avaliacao') {
+        const jsonRaw = document.getElementById('json-dados-avaliacoes').value;
+        const avaliacoes = JSON.parse(jsonRaw);
+        template = renderizarTemplateAvaliacao(avaliacoes, nomeAluno, configCores);
+        isLandscape = true; // AGORA É TRUE
     } else {
         const jsonRaw = document.getElementById('json-dados-treinos').value;
         const dados = JSON.parse(jsonRaw);
         template = renderizarTemplateTreino(dados, nomeAluno, nomePlano, configCores);
+        isLandscape = false; // Treino continua Portrait
     }
 
     // Limpa Overlays Antigos

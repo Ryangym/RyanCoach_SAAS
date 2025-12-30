@@ -1781,195 +1781,236 @@ switch ($pagina) {
         break;
 
     case 'gerar_pdf':
-        require_once '../config/db_connect.php';
-        $aluno_id = $_SESSION['user_id'];
+    require_once '../config/db_connect.php';
+    $aluno_id = $_SESSION['user_id'];
 
-        // 1. Busca o Plano Ativo
-        $stmt = $pdo->prepare("SELECT * FROM treinos WHERE aluno_id = ? ORDER BY criado_em DESC LIMIT 1");
-        $stmt->execute([$aluno_id]);
-        $plano = $stmt->fetch(PDO::FETCH_ASSOC);
+    // 1. Busca o Plano Ativo
+    $stmt = $pdo->prepare("SELECT * FROM treinos WHERE aluno_id = ? ORDER BY criado_em DESC LIMIT 1");
+    $stmt->execute([$aluno_id]);
+    $plano = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$plano) {
-            echo '<section class="empty-state"><h2>Sem plano ativo</h2></section>';
-            break;
+    if (!$plano) {
+        echo '<section class="empty-state"><h2>Sem plano ativo</h2></section>';
+        break;
+    }
+
+    // -------------------------------------------------------------
+    // NOVO BLOCO: BUSCA DADOS DE PERIODIZAÇÃO (SE HOUVER)
+    // -------------------------------------------------------------
+    $micros_para_pdf = [];
+    if ($plano['nivel_plano'] !== 'basico') {
+        // Busca Periodização Vinculada
+        $stmt_per = $pdo->prepare("SELECT id FROM periodizacoes WHERE treino_id = ?");
+        $stmt_per->execute([$plano['id']]);
+        $per = $stmt_per->fetch(PDO::FETCH_ASSOC);
+
+        if ($per) {
+            // Busca Microciclos ordenados
+            $stmt_micro = $pdo->prepare("SELECT * FROM microciclos WHERE periodizacao_id = ? ORDER BY semana_numero ASC");
+            $stmt_micro->execute([$per['id']]);
+            $micros_para_pdf = $stmt_micro->fetchAll(PDO::FETCH_ASSOC);
         }
+    }
+    // Codifica para JSON seguro
+    $json_micros = htmlspecialchars(json_encode($micros_para_pdf), ENT_QUOTES, 'UTF-8');
+    // -------------------------------------------------------------
 
-        // 2. Busca Divisões e Exercícios
-        $stmt_div = $pdo->prepare("SELECT * FROM treino_divisoes WHERE treino_id = ? ORDER BY letra ASC");
-        $stmt_div->execute([$plano['id']]);
-        $divisoes = $stmt_div->fetchAll(PDO::FETCH_ASSOC);
+    // 2. Busca Divisões e Exercícios (Mantido igual)
+    $stmt_div = $pdo->prepare("SELECT * FROM treino_divisoes WHERE treino_id = ? ORDER BY letra ASC");
+    $stmt_div->execute([$plano['id']]);
+    $divisoes = $stmt_div->fetchAll(PDO::FETCH_ASSOC);
 
-        // ... (código anterior de busca do plano e divisões) ...
+    // 1. Mapa de Dias da Semana
+    $mapa_dias = [
+        1 => 'Segunda-Feira',
+        2 => 'Terça-Feira',
+        3 => 'Quarta-Feira',
+        4 => 'Quinta-Feira',
+        5 => 'Sexta-Feira',
+        6 => 'Sábado',
+        7 => 'Domingo',
+        0 => 'Domingo'
+    ];
 
-        // 1. Mapa de Dias da Semana
-        $mapa_dias = [
-            1 => 'Segunda-Feira',
-            2 => 'Terça-Feira',
-            3 => 'Quarta-Feira',
-            4 => 'Quinta-Feira',
-            5 => 'Sexta-Feira',
-            6 => 'Sábado',
-            7 => 'Domingo',
-            0 => 'Domingo' // Garantia
-        ];
-
-        // 2. Decodifica os dias do banco (que estão como JSON "[1,3,5]")
-        $dias_treino = [];
-        if (!empty($plano['dias_semana'])) {
-            $decoded = json_decode($plano['dias_semana'], true);
-            if (is_array($decoded)) {
-                $dias_treino = $decoded;
-            }
+    // 2. Decodifica os dias do banco
+    $dias_treino = [];
+    if (!empty($plano['dias_semana'])) {
+        $decoded = json_decode($plano['dias_semana'], true);
+        if (is_array($decoded)) {
+            $dias_treino = $decoded;
         }
+    }
 
-        // 3. Monta o array gigante de dados
-        $dados_treinos = [];
-        $total_divisoes = count($divisoes);
+    // 3. Monta o array gigante de dados
+    $dados_treinos = [];
+    $total_divisoes = count($divisoes);
 
-        // Percorre as divisões (A, B, C...) pelo índice numérico (0, 1, 2...)
-        foreach ($divisoes as $index_div => $div) {
-            
-            // --- LÓGICA DE ASSOCIAÇÃO (A MESMA DO REALIZAR TREINO) ---
-            // Descobre quais dias da semana caem nesta divisão
-            $dias_desta_divisao = [];
-            
-            if ($total_divisoes > 0 && !empty($dias_treino)) {
-                // Percorre todos os dias que o aluno treina (ex: Seg, Qua, Sex)
-                foreach ($dias_treino as $k => $dia_num) {
-                    // Se o resto da divisão bater com o índice atual, esse dia é deste treino
-                    if (($k % $total_divisoes) == $index_div) {
-                        if (isset($mapa_dias[$dia_num])) {
-                            $dias_desta_divisao[] = $mapa_dias[$dia_num];
-                        }
+    foreach ($divisoes as $index_div => $div) {
+        
+        $dias_desta_divisao = [];
+        
+        if ($total_divisoes > 0 && !empty($dias_treino)) {
+            foreach ($dias_treino as $k => $dia_num) {
+                if (($k % $total_divisoes) == $index_div) {
+                    if (isset($mapa_dias[$dia_num])) {
+                        $dias_desta_divisao[] = $mapa_dias[$dia_num];
                     }
                 }
             }
+        }
 
-            // Cria a string final (ex: "Segunda-Feira / Sexta-Feira")
-            // Se não tiver dia calculado, usa um fallback
-            $dia_exibicao = !empty($dias_desta_divisao) ? implode(' / ', $dias_desta_divisao) : 'TREINO ' . $div['letra'];
+        $dia_exibicao = !empty($dias_desta_divisao) ? implode(' / ', $dias_desta_divisao) : 'TREINO ' . $div['letra'];
 
-            // Busca Exercícios e Séries
-            $stmt_ex = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC");
-            $stmt_ex->execute([$div['id']]);
-            $exercicios = $stmt_ex->fetchAll(PDO::FETCH_ASSOC);
+        $stmt_ex = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC");
+        $stmt_ex->execute([$div['id']]);
+        $exercicios = $stmt_ex->fetchAll(PDO::FETCH_ASSOC);
 
-            foreach ($exercicios as &$ex) {
-                $stmt_s = $pdo->prepare("SELECT * FROM series WHERE exercicio_id = ? ORDER BY id ASC");
-                $stmt_s->execute([$ex['id']]);
-                $ex['lista_series'] = $stmt_s->fetchAll(PDO::FETCH_ASSOC); 
-            }
-            
-            $dados_treinos[$div['letra']] = [
-                'nome' => $div['nome'],
-                'letra' => $div['letra'],
-                'dia_real' => $dia_exibicao, // <--- Aqui vai o dia certo (ex: Segunda-Feira)
-                'exercicios' => $exercicios
-            ];
+        foreach ($exercicios as &$ex) {
+            $stmt_s = $pdo->prepare("SELECT * FROM series WHERE exercicio_id = ? ORDER BY id ASC");
+            $stmt_s->execute([$ex['id']]);
+            $ex['lista_series'] = $stmt_s->fetchAll(PDO::FETCH_ASSOC); 
         }
         
-        $json_treinos = htmlspecialchars(json_encode($dados_treinos), ENT_QUOTES, 'UTF-8');
+        $dados_treinos[$div['letra']] = [
+            'nome' => $div['nome'],
+            'letra' => $div['letra'],
+            'dia_real' => $dia_exibicao,
+            'exercicios' => $exercicios
+        ];
+    }
+    
+    $json_treinos = htmlspecialchars(json_encode($dados_treinos), ENT_QUOTES, 'UTF-8');
 
-        echo '<section id="area-relatorios" class="fade-in">
-                
-                <header class="dash-header-clean">
-                    <div>
-                        <h1 class="greeting-clean">Gerador de <span class="text-gold">Fichas</span></h1>
-                        <p class="date-clean">Plano Atual: <strong>'.$plano['nome'].'</strong></p>
-                    </div>
-                </header>
-
-                <input type="hidden" id="json-dados-treinos" value="'.$json_treinos.'">
-                <input type="hidden" id="plano-nome-atual" value="'.$plano['nome'].'">
-
-                <div class="pdf-action-card" onclick="document.getElementById(\'modalPDFConfig\').style.display=\'flex\'">
-                    <div class="pac-icon"><i class="fa-solid fa-file-pdf"></i></div>
-                    <div class="pac-info">
-                        <h3>Ficha de Treino Completa</h3>
-                        <p>Visualização em blocos com dias da semana e tipos de série.</p>
-                    </div>
-                    <div class="pac-arrow"><i class="fa-solid fa-chevron-right"></i></div>
+    echo '<section id="area-relatorios" class="fade-in">
+            
+            <header class="dash-header-clean">
+                <div>
+                    <h1 class="greeting-clean">Gerador de <span class="text-gold">Fichas</span></h1>
+                    <p class="date-clean">Plano Atual: <strong>'.$plano['nome'].'</strong></p>
                 </div>
+            </header>
 
-                <div id="modalPDFConfig" class="modal-overlay" style="display:none;">
-                    <div class="modal-content-premium" style="max-width: 450px;">
+            <input type="hidden" id="json-dados-treinos" value="'.$json_treinos.'">
+            <input type="hidden" id="json-dados-micros" value="'.$json_micros.'"> <input type="hidden" id="plano-nome-atual" value="'.$plano['nome'].'">
+
+            <div class="pdf-action-card" onclick="abrirModalPDF()">
+                <div class="pac-icon"><i class="fa-solid fa-file-pdf"></i></div>
+                <div class="pac-info">
+                    <h3>Gerar Arquivos PDF</h3>
+                    <p>Ficha de Treino e Tabela de Periodização.</p>
+                </div>
+                <div class="pac-arrow"><i class="fa-solid fa-chevron-right"></i></div>
+            </div>
+
+            <div id="modalPDFConfig" class="modal-overlay" style="display:none;">
+                <div class="modal-content-premium" style="max-width: 450px;">
+                    
+                    <h3 class="modal-title">
+                        <i class="fa-solid fa-sliders"></i> PERSONALIZAR FICHA
+                    </h3>
+                    
+                    <div style="text-align:left; margin-bottom:15px;">
+                        <label class="input-label">Nome no Relatório</label>
+                        <input type="text" id="pdf_aluno_nome" class="modal-input" value="'.$_SESSION['user_nome'].'">
+                    </div>
+
+                    <div style="text-align:left; margin-bottom:15px;">
+                        <label class="input-label">Tipo de Arquivo</label>
+                        <select id="pdf_tipo_arquivo" class="modal-input" style="cursor:pointer;">
+                            <option value="treino">Ficha de Treino (Retrato)</option>
+                            <option value="periodizacao">Periodização (Paisagem)</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
                         
-                        <h3 class="modal-title">
-                            <i class="fa-solid fa-sliders"></i> PERSONALIZAR FICHA
-                        </h3>
+                        <div>
+                            <label class="input-label">Tema</label>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <input type="color" id="pdf_theme_color" value="#000000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                <span style="font-size:0.8rem; color:#888;">Cabeçalhos</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="input-label">Fundo</label>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <input type="color" id="pdf_bg_color" value="#ffffff" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                <span style="font-size:0.8rem; color:#888;">Folha</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="input-label">Bordas</label>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <input type="color" id="pdf_border_color" value="#000000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                <span style="font-size:0.8rem; color:#888;">Linhas</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn-gold" onclick="gerarPDFSelecionado()" style="flex: 2; display:flex; align-items:center; justify-content:center; gap:8px;">
+                            <i class="fa-solid fa-file-pdf"></i> BAIXAR PDF
+                        </button>
                         
-                        <div style="text-align:left; margin-bottom:15px;">
-                            <label class="input-label">Nome no Relatório</label>
-                            <input type="text" id="pdf_aluno_nome" class="modal-input" value="'.$_SESSION['user_nome'].'">
-                        </div>
-
-                        <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
-                            
-                            <div>
-                                <label class="input-label">Tema</label>
-                                <div style="display:flex; align-items:center; gap:10px;">
-                                    <input type="color" id="pdf_theme_color" value="#000000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
-                                    <span style="font-size:0.8rem; color:#888;">Cabeçalhos</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="input-label">Fundo</label>
-                                <div style="display:flex; align-items:center; gap:10px;">
-                                    <input type="color" id="pdf_bg_color" value="#000000ff" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
-                                    <span style="font-size:0.8rem; color:#888;">Folha</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="input-label">Bordas</label>
-                                <div style="display:flex; align-items:center; gap:10px;">
-                                    <input type="color" id="pdf_border_color" value="#000000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
-                                    <span style="font-size:0.8rem; color:#888;">Linhas</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="modal-actions">
-                            <button class="btn-gold" onclick="gerarFichaCompleta()" style="flex: 2; display:flex; align-items:center; justify-content:center; gap:8px;">
-                                <i class="fa-solid fa-file-pdf"></i> BAIXAR PDF
-                            </button>
-                            
-                            <button type="button" class="btn-outline" onclick="debugPreviewPDF()" style="flex: 1; border: 1px solid var(--gold); color: var(--gold); background: transparent; border-radius:10px;">
-                                <i class="fa-solid fa-eye"></i>
-                            </button>
-                        </div>
-
-                        <button class="btn-cancel" onclick="document.getElementById(\'modalPDFConfig\').style.display=\'none\'" style="margin-top:15px;">
-                            Cancelar
+                        <button type="button" class="btn-outline" onclick="debugPreviewPDF()" style="flex: 1; border: 1px solid var(--gold); color: var(--gold); background: transparent; border-radius:10px;">
+                            <i class="fa-solid fa-eye"></i>
                         </button>
                     </div>
+
+                    <button class="btn-cancel" onclick="document.getElementById(\'modalPDFConfig\').style.display=\'none\'" style="margin-top:15px;">
+                        Cancelar
+                    </button>
                 </div>
+            </div>
 
-                <div id="template-impressao-full" style="display:none;">
-                    <div class="pdf-sheet">
-                        
-                        <div class="sheet-header" id="pdf-header-main">
-                            <div class="sh-meta">
-                                <span id="render-plano-nome">HIPERTROFIA AVANÇADA</span>
-                                <span>DATA: <strong>'.date('d/m/Y').'</strong></span>
-                            </div>
-                            <h1><strong id="render-aluno-nome">NOME DO ALUNO</strong></h1>
-                            <div class="sh-logo">
-                                <img src="assets/img/icones/icon-nav.png" alt="Ryan Coach">
-                            </div>
+            <div id="template-impressao-full" style="display:none;">
+                <div class="pdf-sheet">
+                    <div class="sheet-header" id="pdf-header-main">
+                        <div class="sh-meta">
+                            <span id="render-plano-nome">HIPERTROFIA AVANÇADA</span>
+                            <span>DATA: <strong>'.date('d/m/Y').'</strong></span>
                         </div>
-
-                        <div id="pdf-container-treinos"></div>
-
-                        <div class="sheet-footer">
-                            <p>Metodologia <strong>RYAN COACH</strong></p>
+                        <h1><strong id="render-aluno-nome">NOME DO ALUNO</strong></h1>
+                        <div class="sh-logo">
+                            <img src="assets/img/icones/icon-nav.png" alt="Ryan Coach">
                         </div>
                     </div>
+                    <div id="pdf-container-treinos"></div>
+                    <div class="sheet-footer">
+                        <p>Metodologia <strong>RYAN COACH</strong></p>
+                    </div>
                 </div>
+            </div>
 
-              </section>';
-        break;
+            <div id="template-periodizacao-full" style="display: none; width: 330mm; min-height: 190mm; background: black; color: #fff;">
+                <div class="pdf-sheet landscape" style="padding: 10px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
+                    
+                    <div id="pdf-header-perio" style="display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 10px; margin-bottom: 15px; border-bottom: 4px solid #fff;">
+                        <div class="sh-logo">
+                            <img src="assets/img/icones/icon-nav.png" style="height: 50px; object-fit: contain;">
+                        </div>
+                        <div style="text-align: center; flex: 1;">
+                            <h1 id="render-aluno-nome-perio" style="font-family: \'Lobster\', cursive; font-size: 35px; margin: 0; text-decoration: none; font-weight: 500;">Nome do Aluno</h1>
+                            <span id="render-plano-nome-perio" style="font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #fff; font-weight: bold;">MACROCICLO</span>
+                        </div>
+                        <div class="sh-meta" style="text-align: right;">
+                            <span style="color: #fff; font-size: 10px; font-weight: bold;">PERIODIZAÇÃO</span>
+                        </div>
+                    </div>
+
+                    <div id="pdf-container-micros">
+                        </div>
+
+                    <div class="sheet-footer">
+                        Gerado por Ryan Coach App
+                    </div>
+                </div>
+            </div>
+
+          </section>';
+    break;
 
 
 

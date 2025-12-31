@@ -52,7 +52,10 @@ require_once 'includes/head_main.php';
                         <li class="disabled"><i class="fa-solid fa-chart-line"></i> Gráficos de Evolução</li>
                         <li class="disabled"><i class="fa-solid fa-file-pdf"></i> Gerador de PDF</li>
                     </ul>
-                    <a href="actions/auth_register.php?plan=basic" class="btn-plan-basic">SOU ATLETA</a>
+                    <a href="https://wa.me/5535999928473?text=Olá!%20Gostaria%20de%20assinar%20o%20plano%20ALUNO%20START%20(R$%2019,90)." 
+                        target="_blank" class="btn-plan-basic">
+                        <i class="fa-brands fa-whatsapp"></i> ASSINAR START
+                    </a>
                 </div>
             </div>
 
@@ -80,7 +83,10 @@ require_once 'includes/head_main.php';
                         <li class="highlight"><i class="fa-solid fa-calendar-days"></i> <span>Periodização Automática</span></li>
                         <li><i class="fa-solid fa-database"></i> <span>Histórico Vitalício</span></li>
                     </ul>
-                    <a href="actions/auth_register.php?plan=pro" class="btn-plan-pro">QUERO SER PRO</a>
+                    <a href="https://wa.me/5535999928473?text=Opa!%20Quero%20evoluir%20meu%20treino.%20Tenho%20interesse%20no%20ALUNO%20PRO%20(R$%2029,90)." 
+                        target="_blank" class="btn-plan-pro">
+                        <i class="fa-brands fa-whatsapp"></i> QUERO SER PRO
+                    </a>
                 </div>
             </div>
 
@@ -104,7 +110,10 @@ require_once 'includes/head_main.php';
                         <li><i class="fa-solid fa-file-pdf"></i> <span>Envio de PDF via Whats</span></li>
                         <li><i class="fa-solid fa-clipboard-check"></i> <span>Avaliação Física Completa</span></li>
                     </ul>
-                    <a href="actions/auth_register.php?plan=coach" class="btn-plan-coach">CRIAR CONTA COACH</a>
+                    <a href="https://wa.me/5535999928473?text=Sou%20Personal%20Trainer%20e%20quero%20conhecer%20o%20plano%20para%20COACHES." 
+                        target="_blank" class="btn-plan-coach">
+                        <i class="fa-brands fa-whatsapp"></i> CRIAR CONTA COACH
+                    </a>
                 </div>
             </div>
 

@@ -193,7 +193,7 @@ switch ($pagina) {
     case 'alunos':
         require_once '../config/db_connect.php';
         
-        $sql = "SELECT * FROM usuarios WHERE tipo_conta != 'master' ORDER BY nome ASC";
+        $sql = "SELECT * FROM usuarios WHERE tipo_conta != 'admin' ORDER BY nome ASC";
         $alunos = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
         $total_alunos = count($alunos);
 
@@ -342,9 +342,18 @@ switch ($pagina) {
                         <div style="margin-bottom: 15px;">
                             <label style="color:var(--gold); font-size: 0.8rem; font-weight:bold;">Tipo de Usuário (Permissão)</label>
                             <select name="tipo_conta" id="edit_tipo_conta" class="admin-input" style="border-color:var(--gold);">
-                                <option value="aluno">Aluno (Padrão)</option>
+                                <option value="aluno">Atleta (Padrão)</option>
                                 <option value="personal">Coach / Personal</option>
                                 <option value="admin">Administrador (Acesso Total)</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <label style="color:var(--gold); font-size: 0.8rem; font-weight:bold;">Plano Ativo</label>
+                            <select name="plano_atual" id="edit_plano_atual" class="admin-input" style="border-color:var(--gold);">
+                                <option value="start">Plano Start (Básico)</option>
+                                <option value="pro">Plano Pro (Elite)</option>
+                                <option value="coach">Plano Coach (Personal)</option>
                             </select>
                         </div>
 
@@ -360,10 +369,20 @@ switch ($pagina) {
                         </div>
 
                         <div class="row-flex" style="display: flex; gap: 15px; margin-bottom: 15px;">
+    
                             <div style="flex: 1;">
                                 <label style="color:#ccc; font-size: 0.8rem;">Vencimento do Plano</label>
-                                <input type="date" name="data_expiracao" id="edit_expiracao" class="admin-input">
+                                
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="date" name="data_expiracao_plano" id="edit_data_expiracao_plano" class="admin-input" style="flex:1;">
+                                    
+                                    <button type="button" onclick="adicionar30Dias()" 
+                                            style="background: var(--gold); color: #000; border: none; border-radius: 5px; padding: 0 15px; cursor: pointer; font-weight: bold; font-size: 0.8rem; white-space: nowrap;">
+                                        <i class="fa-solid fa-calendar-plus"></i> +30 Dias
+                                    </button>
+                                </div>
                             </div>
+
                         </div>
 
                         <div style="margin-bottom: 20px;">

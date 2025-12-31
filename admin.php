@@ -365,24 +365,110 @@ function hubAcao(acao) {
 }
 
 // Modal de Edição Rápida
+// --- FUNÇÃO CORRIGIDA PARA ABRIR O MODAL ---
 function openEditModal(aluno) {
+    console.log("Dados recebidos:", aluno); // Para você conferir no Console (F12) se precisar
+
+    // 1. Campos Básicos (Texto)
     document.getElementById("edit_id").value = aluno.id;
     document.getElementById("edit_nome").value = aluno.nome;
     document.getElementById("edit_email").value = aluno.email;
     document.getElementById("edit_telefone").value = aluno.telefone;
-    
-    // Verifica campos opcionais
-    const expiracao = document.getElementById("edit_expiracao");
-    if(expiracao) expiracao.value = aluno.data_expiracao || "";
-    
-    const nivel = document.getElementById("edit_nivel");
-    if(nivel) nivel.value = aluno.nivel || "aluno";
-    
+
+    // 2. Data de Expiração (Vencimento)
+    // O banco manda 'data_expiracao_plano'. Se vier null, deixamos vazio.
+    const campoData = document.getElementById("edit_data_expiracao_plano");
+    if (campoData) {
+        campoData.value = aluno.data_expiracao_plano || "";
+    }
+
+    // 3. Tipo de Usuário (Tradução Banco -> Select HTML)
+    // Banco usa: 'atleta', 'coach', 'admin'
+    // Seu Select HTML usa: 'aluno', 'personal', 'admin'
+    const selectTipo = document.getElementById("edit_tipo_conta");
+    if (selectTipo) {
+        let tipoBanco = aluno.tipo_conta; 
+        
+        if (tipoBanco === 'atleta') {
+            selectTipo.value = 'aluno';
+        } else if (tipoBanco === 'coach') {
+            selectTipo.value = 'personal';
+        } else {
+            selectTipo.value = tipoBanco; // 'admin'
+        }
+    }
+
+    // 4. Plano Atual
+    // Banco usa: 'start', 'pro', 'coach'
+    const selectPlano = document.getElementById("edit_plano_atual");
+    if (selectPlano) {
+        // Se o usuário não tiver plano definido (null), marca 'start'
+        selectPlano.value = aluno.plano_atual || 'start';
+    }
+
+    // 5. Exibir o Modal
     document.getElementById("modalEditarAluno").style.display = "flex";
 }
 
+// --- FUNÇÃO AUXILIAR: Adicionar 30 Dias ---
+function adicionar30Dias() {
+    const inputDate = document.getElementById('edit_data_expiracao_plano');
+    let dataBase;
+    
+    // Se já tem data, soma nela. Se não, soma em hoje.
+    if (inputDate.value) {
+        // Precisamos ajustar o fuso horário para não pular o dia errado
+        const parts = inputDate.value.split('-');
+        dataBase = new Date(parts[0], parts[1] - 1, parts[2]); 
+    } else {
+        dataBase = new Date();
+    }
+
+    dataBase.setDate(dataBase.getDate() + 30);
+
+    const ano = dataBase.getFullYear();
+    const mes = String(dataBase.getMonth() + 1).padStart(2, '0');
+    const dia = String(dataBase.getDate()).padStart(2, '0');
+
+    inputDate.value = `${ano}-${mes}-${dia}`;
+}
+
+// --- FUNÇÃO PARA FECHAR O MODAL ---
 function closeEditModal() {
     document.getElementById("modalEditarAluno").style.display = "none";
+}
+
+// Fecha se clicar fora
+window.onclick = function(event) {
+    const modal = document.getElementById("modalEditarAluno");
+    if (event.target == modal) {
+        closeEditModal();
+    }
+}
+
+function adicionar30Dias() {
+    // Pega o elemento pelo ID correto
+    const inputDate = document.getElementById('edit_data_expiracao_plano');
+    
+    let dataBase;
+    
+    // Se o campo tiver valor, usa ele. Se não, usa hoje.
+    if (inputDate.value) {
+        dataBase = new Date(inputDate.value);
+    } else {
+        dataBase = new Date();
+    }
+
+    // Adiciona 30 dias
+    dataBase.setDate(dataBase.getDate() + 30);
+
+    // Formata para YYYY-MM-DD
+    const ano = dataBase.getFullYear();
+    const mes = String(dataBase.getMonth() + 1).padStart(2, '0');
+    const dia = String(dataBase.getDate()).padStart(2, '0');
+
+    // Preenche o input
+    inputDate.value = `${ano}-${mes}-${dia}`;
 }
 
 // Filtro da Tabela de Alunos (Pesquisa visual)

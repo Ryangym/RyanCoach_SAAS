@@ -7,7 +7,7 @@ CREATE TABLE usuarios (
   foto VARCHAR(255) DEFAULT 'assets/img/user-default.png',
   tipo_conta ENUM('atleta','coach','admin') DEFAULT 'atleta',
   coach_id INT,
-  plano_atual ENUM('free','pro','founder') DEFAULT 'free',
+  plano_atual ENUM('start', 'pro', 'coach') DEFAULT 'start',
   data_expiracao_plano DATE,
   codigo_convite VARCHAR(20) UNIQUE,
   indicado_por INT,

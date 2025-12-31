@@ -192,6 +192,26 @@ form {
     text-align: center;
 }
 
+.return{
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ccc;
+    min-width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: 0.3s;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+    position: absolute;
+    top: 10px; left: 10px;
+}
+.return:hover{
+    background: #fff;
+}
+
 /* --- Inputs Flutuantes --- */
 .input-group {
     position: relative;
@@ -377,8 +397,7 @@ form {
 /* ======================================================= */
 @media (max-width: 768px) {
     .logo {
-        font-size: 3rem;
-        margin-bottom: 1rem;
+        display: none;
     }
     
     /* 1. Oculta o overlay */

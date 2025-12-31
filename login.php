@@ -49,6 +49,7 @@
         </div>
 
         <div class="form-container sign-in-container">
+            <a class="return" href="index.php"><i class="fa-solid fa-arrow-left"></i></a>
             <form id="formLogin" onsubmit="fazerLogin(event)">
                 <input type="hidden" name="tipo_login" value="aluno">
                 <h1>Entrar</h1>

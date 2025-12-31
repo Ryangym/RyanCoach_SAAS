@@ -318,7 +318,7 @@ form {
 
 /* --- Links de troca no Mobile (COMEÇAM ESCONDIDOS) --- */
 .form-bottom-text.mobile-only {
-    /* display: none;  */
+    display: none;
 }
 
 
@@ -450,15 +450,18 @@ form {
 
     /* 7. Mostra os links de texto "Cadastre-se" / "Faça Login" */
     .form-bottom-text.mobile-only {
-        display: block; /* Garante que os links de troca apareçam */
+        display: block !important; /* Força a exibição no mobile */
         text-align: center;
         color: #ccc;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         margin-top: 1.5rem;
     }
+    
     .form-bottom-text.mobile-only .form-link {
         font-weight: bold;
-        color: rgb(22, 76, 213);
+        color: var(--accent-gold); /* Usa o dourado do tema */
+        text-decoration: none;
+        cursor: pointer;
     }
 }
 
@@ -491,4 +494,12 @@ input:-webkit-autofill:active {
 /* Garante que o foco do autofill use a cor dourada */
 input:-webkit-autofill:focus {
     border-bottom-color: var(--accent-gold);
+}
+@media (max-width: 380px) {
+    form{
+        padding: 0 1rem;
+    }
+    .form-bottom-text.mobile-only{
+        padding: 0 1rem;
+    }
 }

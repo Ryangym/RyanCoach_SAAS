@@ -42,6 +42,9 @@
 
                 <button type="submit" class="btn-submit">Cadastrar</button>
                 
+                <p class="form-bottom-text mobile-only">
+                    Já tem uma conta? <a href="#" class="form-link" id="signInMobile">Faça Login</a>
+                </p>
             </form>
         </div>
 
@@ -61,6 +64,9 @@
                 <a href="#" class="form-link forgot-pass">Esqueceu sua senha?</a>
                 <button type="submit" class="btn-submit">Entrar</button>
 
+                <p class="form-bottom-text mobile-only">
+                    Não tem uma conta? <a href="#" class="form-link" id="signUpMobile">Cadastre-se</a>
+                </p>
             </form>
         </div>
 
@@ -96,10 +102,11 @@
             const signUpButton = document.getElementById('signUp');
             const signInButton = document.getElementById('signIn');
 
-            // Links de texto do Mobile (Verifica se existem antes de usar)
+            // Links de texto do Mobile
             const signUpLinkMobile = document.getElementById('signUpMobile');
             const signInLinkMobile = document.getElementById('signInMobile');
 
+            // Funções de Troca
             const showSignUp = () => {
                 if(container) container.classList.add('active');
             };
@@ -108,21 +115,25 @@
                 if(container) container.classList.remove('active');
             };
 
-            // Listeners para Desktop (Com verificação)
-            if (signUpButton) signUpButton.addEventListener('click', showSignUp);
-            if (signInButton) signInButton.addEventListener('click', showSignIn);
+            // --- Listeners Desktop ---
+            if (signUpButton) {
+                signUpButton.addEventListener('click', () => showSignUp());
+            }
+            if (signInButton) {
+                signInButton.addEventListener('click', () => showSignIn());
+            }
 
-            // Listeners para Mobile (Só adiciona se o elemento existir no HTML)
+            // --- Listeners Mobile ---
             if (signUpLinkMobile) {
                 signUpLinkMobile.addEventListener('click', (e) => {
-                    e.preventDefault();
+                    e.preventDefault(); // Evita recarregar a página
                     showSignUp();
                 });
             }
 
             if (signInLinkMobile) {
                 signInLinkMobile.addEventListener('click', (e) => {
-                    e.preventDefault();
+                    e.preventDefault(); // Evita recarregar a página
                     showSignIn();
                 });
             }

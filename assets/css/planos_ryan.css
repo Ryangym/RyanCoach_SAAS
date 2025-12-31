@@ -1,0 +1,206 @@
+/* --- TÍTULO DA PÁGINA --- */
+h1.section-title { /* Mudei o seletor para ser mais específico */
+    font-family: 'Copse', sans-serif;
+    font-weight: 500;
+    text-shadow: #760e0e 6px 6px 8px;
+    font-style: normal;
+    font-size: 3.5rem; /* Um pouco menor para telas móveis */
+    color: #ffffff;
+    text-align: center;
+    margin-top: 10rem;
+    margin-bottom: 4rem; /* Adicionado espaço abaixo */
+}
+
+/* --- CONTAINER DOS PLANOS --- */
+.planos-container {
+    display: flex;
+    flex-wrap: wrap; /* ESSENCIAL: Faz os cards quebrarem a linha em telas pequenas */
+    justify-content: center;
+    align-items: stretch; /* Garante que todos os cards na mesma linha tenham a mesma altura */
+    padding: 20px;
+    gap: 2.5rem; /* Espaçamento entre os cards */
+    width: 100%;
+    max-width: 1400px; /* Limita a largura máxima no desktop */
+    margin: 0 auto; /* Centraliza o container */
+}
+
+/* --- ESTILO BASE DOS CARDS --- */
+@keyframes spin{
+    from {
+        --angle: 0deg;
+    }
+
+    to {
+        --angle: 360deg;
+    }
+}
+
+@property --angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+}
+#card::after,
+#card::before {
+    content: '';
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background-image: conic-gradient(from var(--angle), transparent 70%, rgb(252, 0, 0), #931616, #d21212 );
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    z-index: -1;
+    border-radius: 10px;
+    padding: 4px;
+    animation: 6s spin linear infinite;
+}
+
+
+.card {
+    display: flex; 
+    flex-direction: column; 
+    flex-basis: 350px; 
+    flex-grow: 1; 
+    max-width: 400px; 
+    position: relative;
+    background: linear-gradient(black 60%, #330000 100%);
+    border-radius: 10px;
+}
+
+
+.card img {
+    width: 100%;
+    height: 350px; 
+}
+.card h2 {
+    color: white;
+    text-align: center;
+    padding: 1rem;
+    font-size: 1.6rem; 
+    letter-spacing: 1px;
+    margin: 0;
+    font-family: 'cinema-sunday', sans-serif;
+}
+
+/* Título Premium */
+
+.premium {
+    font-weight: bold;
+    color: white; 
+    animation: glow 1.5s infinite alternate;
+}
+
+/* --- PREÇO DENTRO DO CARD --- */
+.card .price {
+    font-size: 1.5rem; /* Diminuí o preço (era h2) */
+    color: white; 
+    text-align: center;
+    padding: 1rem;
+    margin: 0;
+    font-family: 'Copse', sans-serif;
+    letter-spacing: 3px;
+}
+
+.card .price strong {
+    color: #dd3c3c;
+    font-size: 1.5rem; /* Garante que o preço antigo tenha o mesmo tamanho */
+    text-decoration: line-through;
+    margin-right: 10px;
+}
+
+/* --- LISTA DE BENEFÍCIOS --- */
+.textbeneficios {
+    list-style: none; /* Remove os pontinhos da lista */
+    padding: 1rem 1.5rem;
+    margin: 0;
+    font-size: 1.1rem; /* Tamanho de fonte mais legível */
+    text-align: left;
+    min-height: 8rem; /* Altura mínima para alinhar cards com poucos itens */
+}
+
+.textbeneficios li {
+    margin-bottom: 0.75rem; /* Espaço entre os itens */
+    display: flex;
+    align-items: center;
+    font-family: cursive;
+}
+
+/* Adiciona ícones de ✔ e ✘ */
+.textbeneficios li::before {
+    font-size: 1.2rem;
+    margin-right: 10px;
+}
+
+.textbeneficios li.have {
+    color: white;
+}
+.textbeneficios li.have::before {
+    content: '✔';
+    color: #4CAF50; /* Verde */
+}
+
+.textbeneficios li.nohave {
+    color: #888;
+    text-decoration: line-through;
+}
+.textbeneficios li.nohave::before {
+    content: '✘';
+    color: #ff4d4d; /* Vermelho */
+}
+
+/* Destaque da Dieta */
+#dieta {
+    color: white;
+    font-weight: bold;
+    animation: glow 1.5s infinite alternate;
+}
+#dieta::before {
+    content: '✔';
+    color: #45da20; /* Dourado/Amarelo */
+    animation: glow 1.5s infinite alternate;
+}
+
+/* --- BOTÃO DE ASSINAR --- */
+.contact-btn {
+    /* CHAVE: Isso empurra o botão para o final do card */
+    margin-top: auto; 
+    
+    display: block; /* Faz o <a> ocupar a largura */
+    text-align: center;
+    background: #810e0e;
+    box-shadow: 0 0 20px #660808;
+    padding: 1rem 0.8rem;
+    color: white;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 5px;
+    
+    width: 60%; /* Largura do botão */
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 1.5rem; /* Espaço na base */
+
+    font-weight: bold;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.contact-btn:hover {
+    background: #979700;
+    box-shadow: 0 0 20px #dcf30c;
+}
+
+
+
+/* --- ANIMAÇÕES (Glow) --- */
+@keyframes glow {
+    0% {
+        text-shadow: 0 0 2px #fff, 0 0 3px #daa520, 0 0 4px #daa520, 0 0 6px #daa520, 0 0 8px #daa520;
+    }
+    50% {
+        text-shadow: 0 0 4px #fff, 0 0 6px #daa520, 0 0 9px #daa520, 0 0 12px #daa520, 0 0 15px #daa520;
+    }
+    100% {
+        text-shadow: 0 0 2px #fff, 0 0 3px #daa520, 0 0 4px #daa520, 0 0 6px #daa520, 0 0 8px #daa520;
+    }
+}

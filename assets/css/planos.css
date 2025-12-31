@@ -1,206 +1,254 @@
-/* --- TÍTULO DA PÁGINA --- */
-h1.section-title { /* Mudei o seletor para ser mais específico */
-    font-family: 'Copse', sans-serif;
-    font-weight: 500;
-    text-shadow: #760e0e 6px 6px 8px;
-    font-style: normal;
-    font-size: 3.5rem; /* Um pouco menor para telas móveis */
-    color: #ffffff;
-    text-align: center;
-    margin-top: 10rem;
-    margin-bottom: 4rem; /* Adicionado espaço abaixo */
+/* =========================================
+   ESTILO DA PÁGINA DE PLANOS (SaaS)
+   ========================================= */
+:root {
+    --vinho: #360a03;
+    --black: #0a0a0a;
+    --dark-grey: #1b1b1b;
+    --accent-red-border: #ac0f0f;
+    --accent-red-shadow: rgba(194, 9, 9, 0.55);
+    --accent-red-hover: #c70000;
+    --accent-gold: #FFBA42;
+    --text-white: #ffffff;
 }
 
-/* --- CONTAINER DOS PLANOS --- */
-.planos-container {
-    display: flex;
-    flex-wrap: wrap; /* ESSENCIAL: Faz os cards quebrarem a linha em telas pequenas */
-    justify-content: center;
-    align-items: stretch; /* Garante que todos os cards na mesma linha tenham a mesma altura */
-    padding: 20px;
-    gap: 2.5rem; /* Espaçamento entre os cards */
-    width: 100%;
-    max-width: 1400px; /* Limita a largura máxima no desktop */
-    margin: 0 auto; /* Centraliza o container */
-}
-
-/* --- ESTILO BASE DOS CARDS --- */
-@keyframes spin{
-    from {
-        --angle: 0deg;
-    }
-
-    to {
-        --angle: 360deg;
-    }
-}
-
-@property --angle {
-    syntax: "<angle>";
-    initial-value: 0deg;
-    inherits: false;
-}
-#card::after,
-#card::before {
-    content: '';
-    position: absolute;
-    height: 100%;
-    width: 100%;
-    background-image: conic-gradient(from var(--angle), transparent 70%, rgb(252, 0, 0), #931616, #d21212 );
-    top: 50%;
-    left: 50%;
-    translate: -50% -50%;
-    z-index: -1;
-    border-radius: 10px;
-    padding: 4px;
-    animation: 6s spin linear infinite;
-}
-
-
-.card {
-    display: flex; 
-    flex-direction: column; 
-    flex-basis: 350px; 
-    flex-grow: 1; 
-    max-width: 400px; 
-    position: relative;
-    background: linear-gradient(black 60%, #330000 100%);
-    border-radius: 10px;
-}
-
-
-.card img {
-    width: 100%;
-    height: 350px; 
-}
-.card h2 {
-    color: white;
-    text-align: center;
-    padding: 1rem;
-    font-size: 1.6rem; 
-    letter-spacing: 1px;
-    margin: 0;
-    font-family: 'cinema-sunday', sans-serif;
-}
-
-/* Título Premium */
-
-.premium {
-    font-weight: bold;
-    color: white; 
-    animation: glow 1.5s infinite alternate;
-}
-
-/* --- PREÇO DENTRO DO CARD --- */
-.card .price {
-    font-size: 1.5rem; /* Diminuí o preço (era h2) */
-    color: white; 
-    text-align: center;
-    padding: 1rem;
-    margin: 0;
-    font-family: 'Copse', sans-serif;
-    letter-spacing: 3px;
-}
-
-.card .price strong {
-    color: #dd3c3c;
-    font-size: 1.5rem; /* Garante que o preço antigo tenha o mesmo tamanho */
-    text-decoration: line-through;
-    margin-right: 10px;
-}
-
-/* --- LISTA DE BENEFÍCIOS --- */
-.textbeneficios {
-    list-style: none; /* Remove os pontinhos da lista */
-    padding: 1rem 1.5rem;
-    margin: 0;
-    font-size: 1.1rem; /* Tamanho de fonte mais legível */
-    text-align: left;
-    min-height: 8rem; /* Altura mínima para alinhar cards com poucos itens */
-}
-
-.textbeneficios li {
-    margin-bottom: 0.75rem; /* Espaço entre os itens */
+.logo-container {
     display: flex;
     align-items: center;
-    font-family: cursive;
-}
-
-/* Adiciona ícones de ✔ e ✘ */
-.textbeneficios li::before {
+    gap: 12px;
+    font-weight: 800;
     font-size: 1.2rem;
-    margin-right: 10px;
+    letter-spacing: 1px;
 }
+.logo-container img { height: 40px; filter: drop-shadow(0 0 5px var(--red-premium)); }
 
-.textbeneficios li.have {
-    color: white;
-}
-.textbeneficios li.have::before {
-    content: '✔';
-    color: #4CAF50; /* Verde */
-}
+/* =========================================
+   PLANOS & PREÇOS (IDENTIDADE VISUAL RYAN COACH)
+   ========================================= */
 
-.textbeneficios li.nohave {
-    color: #888;
-    text-decoration: line-through;
-}
-.textbeneficios li.nohave::before {
-    content: '✘';
-    color: #ff4d4d; /* Vermelho */
-}
+/* Fundo mantém o padrão do site (Body já configurado no style.css) */
 
-/* Destaque da Dieta */
-#dieta {
-    color: white;
-    font-weight: bold;
-    animation: glow 1.5s infinite alternate;
-}
-#dieta::before {
-    content: '✔';
-    color: #45da20; /* Dourado/Amarelo */
-    animation: glow 1.5s infinite alternate;
-}
-
-/* --- BOTÃO DE ASSINAR --- */
-.contact-btn {
-    /* CHAVE: Isso empurra o botão para o final do card */
-    margin-top: auto; 
-    
-    display: block; /* Faz o <a> ocupar a largura */
+.planos-header {
     text-align: center;
-    background: #810e0e;
-    box-shadow: 0 0 20px #660808;
-    padding: 1rem 0.8rem;
-    color: white;
-    text-transform: uppercase;
-    text-decoration: none;
-    border-radius: 5px;
+    padding: 40px 20px;
+}
+
+.pricing-section { padding-bottom: 100px; }
+
+.pricing-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    justify-content: center;
+}
+
+/* --- CARD PADRÃO (Estilo Login Container) --- */
+.plan-card {
+    /* Glassmorphism IDÊNTICO ao Login */
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(10px);
     
-    width: 60%; /* Largura do botão */
-    margin-left: auto;
-    margin-right: auto;
-    margin-bottom: 1.5rem; /* Espaço na base */
+    /* Borda Vermelha Padrão */
+    border: 1px solid var(--accent-red-border);
+    border-radius: 15px;
+    
+    /* Sombra Vermelha Padrão */
+    box-shadow: 0 8px 32px 0 var(--accent-red-shadow);
+    width: clamp(300px, 350px, 500px);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+    position: relative;
+    margin: 15px;
+}
 
+/* HEADER DO CARD */
+.card-header {
+    background: rgba(172, 15, 15, 0.1); /* Fundo vermelho bem suave no topo */
+    padding: 30px;
+    text-align: center;
+    border-bottom: 1px solid var(--accent-red-border);
+}
+
+.plan-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.plan-price {
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    color: var(--accent-gold); /* Preço Dourado */
+    text-shadow: 0 0 10px rgba(255, 186, 66, 0.3);
+}
+
+.currency { font-size: 1.2rem; font-weight: bold; margin-right: 5px; }
+.amount { font-size: 3.5rem; font-family: 'Orbitron', sans-serif; font-weight: 700; }
+.cents { font-size: 1.2rem; font-weight: bold; }
+
+.plan-desc {
+    color: #ccc;
+    font-size: 0.9rem;
+    margin-top: 10px;
+    font-weight: 300;
+}
+
+/* BODY DO CARD */
+.card-body {
+    padding: 30px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 30px 0;
+}
+
+.feature-list li {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    color: #ddd;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Ícones */
+.feature-list li i {
+    color: var(--accent-red-border); /* Ícones vermelhos */
+    width: 20px;
+    text-align: center;
+}
+
+/* No assets/css/planos.css */
+
+.feature-list li.disabled {
+    color: #444; /* Cor bem escura para parecer desativado */
+    text-decoration: line-through; /* O riscado */
+    opacity: 0.6;
+}
+
+.feature-list li.disabled i {
+    color: #444; /* Ícone "X" também escuro */
+}
+
+
+/* --- BOTÕES (Igual ao Login) --- */
+.btn-plan {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    text-align: center;
+    border-radius: 99em; /* Pílula */
+    text-transform: uppercase;
     font-weight: bold;
-    transition: background 0.3s ease, box-shadow 0.3s ease;
+    letter-spacing: 1px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: 0.3s;
+    cursor: pointer;
 }
 
-.contact-btn:hover {
-    background: #979700;
-    box-shadow: 0 0 20px #dcf30c;
+/* Botão Básico (Outline Vermelho) */
+.btn-plan.basic {
+    background: transparent;
+    border: 2px solid var(--accent-red-border);
+    color: #fff;
+}
+.btn-plan.basic:hover {
+    background: var(--accent-red-border);
+    box-shadow: 0 0 15px rgba(163, 12, 12, 0.7);
+}
+
+/* Botão Pro (Sólido Vermelho ou Dourado) */
+.btn-plan.pro {
+    background: var(--accent-gold);
+    border: 2px solid var(--accent-gold);
+    color: #000; /* Texto preto para contraste no dourado */
+}
+.btn-plan.pro:hover {
+    background: #fff;
+    border-color: #fff;
+    box-shadow: 0 0 20px rgba(255, 186, 66, 0.6);
 }
 
 
+/* --- DESTAQUE PRO (Opcional: Borda Dourada) --- */
+.plan-card.pro {
+    border-color: var(--accent-gold);
+    box-shadow: 0 8px 32px 0 rgba(255, 186, 66, 0.2); /* Sombra dourada suave */
+    transform: scale(1.05);
+}
 
-/* --- ANIMAÇÕES (Glow) --- */
-@keyframes glow {
-    0% {
-        text-shadow: 0 0 2px #fff, 0 0 3px #daa520, 0 0 4px #daa520, 0 0 6px #daa520, 0 0 8px #daa520;
+.plan-card.pro .card-header {
+    border-bottom-color: var(--accent-gold);
+    background: rgba(255, 186, 66, 0.05);
+}
+
+.badge-popular {
+    position: absolute;
+    top: 0; left: 0; width: 100%;
+    background: #695402;
+    color: #fff;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    padding: 5px 0;
+    letter-spacing: 1px;
+}
+
+/* Features Destaque no Pro */
+.feature-list li.highlight { color: #fff; font-weight: 500; }
+.feature-list li.highlight i { color: var(--accent-gold); }
+
+
+/* --- FAQ / GARANTIA --- */
+.faq-section {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.guarantee-seal {
+    background: rgba(0,0,0,0.6);
+    border: 1px solid var(--accent-red-border);
+    border-radius: 15px;
+    padding: 30px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.guarantee-seal i { font-size: 2.5rem; color: var(--accent-gold); }
+.guarantee-seal h3 { margin-bottom: 5px; font-family: 'Orbitron'; color: #fff; }
+.guarantee-seal p { color: #ccc; margin: 0; font-size: 0.9rem; }
+
+
+/* --- RESPONSIVO --- */
+@media (min-width: 992px) {
+    .pricing-grid {
+        flex-direction: row;
+        align-items: center; /* Alinhamento central */
+        gap: 30px;
     }
-    50% {
-        text-shadow: 0 0 4px #fff, 0 0 6px #daa520, 0 0 9px #daa520, 0 0 12px #daa520, 0 0 15px #daa520;
-    }
-    100% {
-        text-shadow: 0 0 2px #fff, 0 0 3px #daa520, 0 0 4px #daa520, 0 0 6px #daa520, 0 0 8px #daa520;
-    }
+    
+    .plan-card.basic { z-index: 1; }
+    .plan-card.pro { z-index: 2; }
+}
+
+@media (max-width: 768px) {
+    .guarantee-seal { flex-direction: column; text-align: center; }
 }

@@ -23,17 +23,26 @@
 .logo-container img { height: 40px; filter: drop-shadow(0 0 5px var(--red-premium)); }
 
 /* =========================================
-   PLANOS & PREÇOS (IDENTIDADE VISUAL RYAN COACH)
+   PLANOS & PREÇOS (FINAL: ALUNO + COACH)
    ========================================= */
 
-/* Fundo mantém o padrão do site (Body já configurado no style.css) */
-
-.planos-header {
-    text-align: center;
-    padding: 40px 20px;
+body.saas-body {
+    background: radial-gradient(circle at 50% -20%, #2a2a2a 0%, #0a0a0a 80%);
+    min-height: 100vh;
 }
 
-.pricing-section { padding-bottom: 100px; }
+/* Header Ajustado */
+.planos-header {
+    text-align: center;
+    padding: 130px 20px 40px 20px;
+    position: relative; z-index: 2;
+}
+
+.hero-title { font-size: 2.5rem; font-family: 'Orbitron', sans-serif; font-weight: 700; text-transform: uppercase; color: #fff; }
+.text-gold { color: var(--accent-gold); text-shadow: 0 0 15px rgba(255, 186, 66, 0.4); }
+.hero-sub { color: #ccc; font-size: 1rem; }
+
+.pricing-section { padding-bottom: 100px; position: relative; z-index: 2; }
 
 .pricing-grid {
     display: flex;
@@ -41,214 +50,214 @@
     align-items: center;
     gap: 40px;
     justify-content: center;
+    padding: 0 15px;
 }
 
-/* --- CARD PADRÃO (Estilo Login Container) --- */
+/* --- CARD GENÉRICO --- */
 .plan-card {
-    /* Glassmorphism IDÊNTICO ao Login */
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(10px);
-    
-    /* Borda Vermelha Padrão */
-    border: 1px solid var(--accent-red-border);
-    border-radius: 15px;
-    
-    /* Sombra Vermelha Padrão */
-    box-shadow: 0 8px 32px 0 var(--accent-red-shadow);
-    width: clamp(300px, 350px, 500px);
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    transition: transform 0.3s ease;
+    background: #161616; 
+    border-radius: 20px;
+    width: 100%;
+    max-width: 360px;
     position: relative;
-    margin: 15px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    transition: transform 0.3s ease;
+    display: flex; flex-direction: column;
+    overflow: visible; 
 }
 
-/* HEADER DO CARD */
+/* Header do Card */
 .card-header {
-    background: rgba(172, 15, 15, 0.1); /* Fundo vermelho bem suave no topo */
     padding: 30px;
     text-align: center;
-    border-bottom: 1px solid var(--accent-red-border);
+    border-bottom: 2px solid #222;
+    background: #1a1a1a;
+    border-radius: 20px 20px 0 0;
 }
 
 .plan-name {
+    font-size: 1.1rem; font-weight: 900; letter-spacing: 1px;
+    text-transform: uppercase; display: block; margin-bottom: 5px; color: #fff;
     font-family: 'Orbitron', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #fff;
-    margin-bottom: 10px;
-    display: block;
 }
 
 .plan-price {
-    display: flex;
-    justify-content: center;
-    align-items: baseline;
-    color: var(--accent-gold); /* Preço Dourado */
-    text-shadow: 0 0 10px rgba(255, 186, 66, 0.3);
+    display: flex; justify-content: center; align-items: flex-start;
+    line-height: 1; margin: 15px 0;
+}
+.currency { font-size: 1.2rem; font-weight: 600; margin-top: 5px; color: #888; }
+.amount { font-size: 3.5rem; font-weight: 800; color: #fff; font-family: 'Roboto', sans-serif; }
+.cents { font-size: 1.2rem; font-weight: 600; margin-top: 5px; color: #fff; }
+.per-student { 
+    font-size: 0.9rem; color: #aaa; 
+    align-self: center; margin-left: 5px; 
+    font-weight: normal; 
 }
 
-.currency { font-size: 1.2rem; font-weight: bold; margin-right: 5px; }
-.amount { font-size: 3.5rem; font-family: 'Orbitron', sans-serif; font-weight: 700; }
-.cents { font-size: 1.2rem; font-weight: bold; }
+.plan-desc { font-size: 0.85rem; color: #999; min-height: 40px; }
 
-.plan-desc {
-    color: #ccc;
-    font-size: 0.9rem;
-    margin-top: 10px;
-    font-weight: 300;
-}
+/* Body do Card */
+.card-body { padding: 30px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
 
-/* BODY DO CARD */
-.card-body {
-    padding: 30px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.feature-list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 30px 0;
-}
-
+.feature-list { list-style: none; padding: 0; margin: 0 0 30px 0; }
 .feature-list li {
-    padding: 12px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    color: #ddd;
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    padding: 10px 0; color: #ddd; font-size: 0.9rem;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px dashed #333;
 }
+.feature-list li:last-child { border-bottom: none; }
+.feature-list li i { font-size: 1rem; width: 25px; text-align: center; }
 
-/* Ícones */
-.feature-list li i {
-    color: var(--accent-red-border); /* Ícones vermelhos */
-    width: 20px;
-    text-align: center;
+
+/* --- ESTILO: ALUNO BASIC --- */
+.plan-card.basic { border: 2px solid #333; }
+.plan-card.basic:hover { border-color: #555; transform: translateY(-5px); }
+.plan-card.basic .plan-name { color: #ccc; }
+.plan-card.basic .feature-list li.disabled { color: #444; text-decoration: line-through; }
+
+.btn-plan-basic {
+    display: block; width: 100%; padding: 15px; text-align: center;
+    background: #222; border: 1px solid #444; border-radius: 10px;
+    color: #fff; text-decoration: none; font-weight: 700;
+    text-transform: uppercase; font-size: 0.9rem; transition: 0.3s;
 }
-
-/* No assets/css/planos.css */
-
-.feature-list li.disabled {
-    color: #444; /* Cor bem escura para parecer desativado */
-    text-decoration: line-through; /* O riscado */
-    opacity: 0.6;
-}
-
-.feature-list li.disabled i {
-    color: #444; /* Ícone "X" também escuro */
-}
+.btn-plan-basic:hover { background: #333; border-color: #666; }
 
 
-/* --- BOTÕES (Igual ao Login) --- */
-.btn-plan {
-    display: block;
-    width: 100%;
-    padding: 15px;
-    text-align: center;
-    border-radius: 99em; /* Pílula */
-    text-transform: uppercase;
-    font-weight: bold;
-    letter-spacing: 1px;
-    text-decoration: none;
-    font-size: 0.9rem;
-    transition: 0.3s;
-    cursor: pointer;
-}
-
-/* Botão Básico (Outline Vermelho) */
-.btn-plan.basic {
-    background: transparent;
-    border: 2px solid var(--accent-red-border);
-    color: #fff;
-}
-.btn-plan.basic:hover {
-    background: var(--accent-red-border);
-    box-shadow: 0 0 15px rgba(163, 12, 12, 0.7);
-}
-
-/* Botão Pro (Sólido Vermelho ou Dourado) */
-.btn-plan.pro {
-    background: var(--accent-gold);
-    border: 2px solid var(--accent-gold);
-    color: #000; /* Texto preto para contraste no dourado */
-}
-.btn-plan.pro:hover {
-    background: #fff;
-    border-color: #fff;
-    box-shadow: 0 0 20px rgba(255, 186, 66, 0.6);
-}
-
-
-/* --- DESTAQUE PRO (Opcional: Borda Dourada) --- */
+/* --- ESTILO: ALUNO PRO (GOLD) --- */
 .plan-card.pro {
-    border-color: var(--accent-gold);
-    box-shadow: 0 8px 32px 0 rgba(255, 186, 66, 0.2); /* Sombra dourada suave */
-    transform: scale(1.05);
+    background: linear-gradient(#161616, #161616) padding-box,
+                linear-gradient(45deg, var(--accent-gold), var(--accent-red-border)) border-box;
+    border: 3px solid transparent;
+    transform: scale(1.03);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.8), 0 0 20px rgba(255, 186, 66, 0.2);
+    z-index: 5;
 }
+.plan-card.pro:hover { transform: scale(1.05); box-shadow: 0 40px 80px rgba(0,0,0,0.9), 0 0 30px rgba(255, 186, 66, 0.3); }
 
-.plan-card.pro .card-header {
-    border-bottom-color: var(--accent-gold);
-    background: rgba(255, 186, 66, 0.05);
-}
-
+/* Badge */
 .badge-popular {
-    position: absolute;
-    top: 0; left: 0; width: 100%;
-    background: #695402;
-    color: #fff;
-    text-align: center;
-    font-size: 0.75rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    padding: 5px 0;
-    letter-spacing: 1px;
+    position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(90deg, var(--accent-red-border), #ff4d4d);
+    color: #fff; padding: 8px 25px; border-radius: 30px;
+    font-size: 0.8rem; font-weight: 900; text-transform: uppercase;
+    letter-spacing: 1px; box-shadow: 0 5px 15px rgba(206, 17, 17, 0.5);
+    z-index: 10; white-space: nowrap;
 }
 
-/* Features Destaque no Pro */
-.feature-list li.highlight { color: #fff; font-weight: 500; }
-.feature-list li.highlight i { color: var(--accent-gold); }
+.plan-card.pro .card-header { background: radial-gradient(circle at top, rgba(255, 186, 66, 0.15), #161616); border-bottom: 2px solid rgba(255, 186, 66, 0.3); }
+.plan-card.pro .plan-name {
+    background: linear-gradient(to bottom, #fff, var(--accent-gold));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.plan-card.pro .amount, .plan-card.pro .currency, .plan-card.pro .cents { color: var(--accent-gold); text-shadow: 0 0 20px rgba(255,186,66,0.4); }
+.plan-card.pro .feature-list li.highlight { color: #fff; font-weight: 500; }
+.plan-card.pro .feature-list li i { color: var(--accent-gold); }
+
+.btn-plan-pro {
+    display: block; width: 100%; padding: 18px; text-align: center;
+    background: linear-gradient(135deg, var(--accent-gold) 0%, #b8860b 100%);
+    border-radius: 10px; color: #000; text-decoration: none;
+    font-weight: 900; font-size: 1rem; text-transform: uppercase;
+    box-shadow: 0 10px 20px rgba(212, 175, 55, 0.3); transition: 0.3s;
+}
+.btn-plan-pro:hover { filter: brightness(1.15); box-shadow: 0 0 30px rgba(212, 175, 55, 0.6); }
+
+
+/* --- ESTILO: COACH (BLUE/CYAN) --- */
+/* Cria um destaque diferente para separar público B2B */
+.plan-card.coach {
+    border: 2px solid #00a8ff;
+    box-shadow: 0 10px 30px rgba(0, 168, 255, 0.15);
+}
+.plan-card.coach:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(0, 168, 255, 0.3); }
+
+.plan-card.coach .card-header {
+    background: radial-gradient(circle at top, rgba(0, 168, 255, 0.15), #161616);
+    border-bottom: 2px solid rgba(0, 168, 255, 0.3);
+}
+.plan-card.coach .plan-name { color: #00a8ff; }
+.plan-card.coach .amount, .plan-card.coach .currency, .plan-card.coach .cents { color: #00a8ff; text-shadow: 0 0 15px rgba(0, 168, 255, 0.4); }
+.plan-card.coach .feature-list li.highlight { color: #fff; font-weight: 500; }
+.plan-card.coach .feature-list li i { color: #00a8ff; }
+
+.btn-plan-coach {
+    display: block; width: 100%; padding: 15px; text-align: center;
+    background: transparent; border: 2px solid #00a8ff;
+    border-radius: 10px; color: #00a8ff; text-decoration: none;
+    font-weight: 700; font-size: 0.9rem; text-transform: uppercase;
+    transition: 0.3s;
+}
+.btn-plan-coach:hover { background: #00a8ff; color: #000; box-shadow: 0 0 20px rgba(0, 168, 255, 0.5); }
 
 
 /* --- FAQ / GARANTIA --- */
-.faq-section {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 40px 20px;
-}
-
+.faq-section { margin-top: 40px; text-align: center; }
 .guarantee-seal {
-    background: rgba(0,0,0,0.6);
-    border: 1px solid var(--accent-red-border);
-    border-radius: 15px;
-    padding: 30px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
+    max-width: 600px; margin: 0 auto;
+    background: linear-gradient(90deg, #1a1a1a, #222);
+    border-left: 5px solid var(--accent-gold);
+    padding: 30px; border-radius: 10px;
+    display: flex; align-items: center; gap: 20px; text-align: left;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 .guarantee-seal i { font-size: 2.5rem; color: var(--accent-gold); }
-.guarantee-seal h3 { margin-bottom: 5px; font-family: 'Orbitron'; color: #fff; }
-.guarantee-seal p { color: #ccc; margin: 0; font-size: 0.9rem; }
+.guarantee-seal h3 { color: #fff; margin: 0; font-size: 1.2rem; text-transform: uppercase; font-weight: 800; }
+.guarantee-seal p { color: #aaa; margin: 5px 0 0 0; }
 
 
-/* --- RESPONSIVO --- */
-@media (min-width: 992px) {
+/* =========================================================
+   RESPONSIVIDADE (Ajustes Críticos para Mobile)
+   ========================================================= */
+
+/* Desktop: 3 Colunas lado a lado */
+@media (min-width: 1100px) {
     .pricing-grid {
-        flex-direction: row;
-        align-items: center; /* Alinhamento central */
-        gap: 30px;
+        flex-direction: row; /* Lado a lado */
+        align-items: center; 
+        justify-content: center;
+        gap: 20px;
+        max-width: 1200px; margin: 0 auto;
     }
     
-    .plan-card.basic { z-index: 1; }
-    .plan-card.pro { z-index: 2; }
+    .plan-card { max-width: 320px; }
+    .plan-card.pro { transform: scale(1.1); z-index: 10; max-width: 340px; }
+    .plan-card.pro:hover { transform: scale(1.12); }
 }
 
-@media (max-width: 768px) {
-    .guarantee-seal { flex-direction: column; text-align: center; }
+/* Tablet */
+@media (min-width: 768px) and (max-width: 1099px) {
+    .pricing-grid {
+        flex-direction: row;
+        flex-wrap: wrap; 
+        justify-content: center;
+    }
+    .plan-card.pro { margin: 20px 0; }
+}
+
+/* --- MOBILE PEQUENO (Abaixo de 380px - Ex: iPhone SE) --- */
+@media (max-width: 380px) {
+    
+    /* Reduz título para não quebrar */
+    .hero-title { font-size: 1.8rem; }
+    
+    /* Compacta o card internamente */
+    .card-header { padding: 20px 10px; }
+    .card-body { padding: 20px 15px; }
+    
+    /* Diminui fonte do preço */
+    .amount { font-size: 2.5rem; }
+    .currency, .cents { font-size: 1rem; }
+    
+    /* Ajusta lista */
+    .feature-list li { font-size: 0.8rem; gap: 8px; }
+    .feature-list li i { font-size: 0.9rem; width: 18px; }
+    
+    /* Botões menores */
+    .btn-plan-basic, .btn-plan-pro, .btn-plan-coach { padding: 12px; font-size: 0.85rem; }
+    
+    /* Badge menor */
+    .badge-popular { font-size: 0.7rem; padding: 6px 15px; min-width: auto; width: 80%; }
+    
+    .guarantee-seal { flex-direction: column; text-align: center; padding: 20px; }
 }

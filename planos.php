@@ -21,11 +21,11 @@ require_once 'includes/head_main.php';
 
     <section class="planos-header">
         <div class="container">
-            <h1 class="hero-title" style="font-size: 3rem; margin-bottom: 10px;">
-                Escolha seu <span class="text-gold">Nível</span>
+            <h1 class="hero-title" style="margin-bottom: 10px;">
+                Escolha seu <span class="text-gold">Plano</span>
             </h1>
-            <p class="hero-sub" style="color: #ccc;">
-                Evolução constante. Sem fidelidade.
+            <p class="hero-sub" style="margin-bottom: 0;">
+                Atleta ou Treinador? Temos a ferramenta certa.
             </p>
         </div>
     </section>
@@ -35,7 +35,7 @@ require_once 'includes/head_main.php';
             
             <div class="plan-card basic">
                 <div class="card-header">
-                    <span class="plan-name">START</span>
+                    <span class="plan-name">ALUNO START</span>
                     <div class="plan-price">
                         <span class="currency">R$</span>
                         <span class="amount">19</span>
@@ -49,12 +49,10 @@ require_once 'includes/head_main.php';
                         <li><i class="fa-solid fa-mobile-screen"></i> Acesso ao App</li>
                         <li><i class="fa-solid fa-clipboard-list"></i> 1 Ficha de Treino</li>
                         <li><i class="fa-solid fa-play"></i> Vídeos de Execução</li>
-                        
-                        <li class="disabled"><i class="fa-solid fa-xmark"></i> Gráficos de Evolução</li>
-                        <li class="disabled"><i class="fa-solid fa-xmark"></i> Gerador de PDF</li>
-                        <li class="disabled"><i class="fa-solid fa-xmark"></i> Periodização</li>
+                        <li class="disabled"><i class="fa-solid fa-chart-line"></i> Gráficos de Evolução</li>
+                        <li class="disabled"><i class="fa-solid fa-file-pdf"></i> Gerador de PDF</li>
                     </ul>
-                    <a href="actions/auth_register.php?plan=basic" class="btn-plan basic">COMEÇAR AGORA</a>
+                    <a href="actions/auth_register.php?plan=basic" class="btn-plan-basic">SOU ATLETA</a>
                 </div>
             </div>
 
@@ -62,26 +60,51 @@ require_once 'includes/head_main.php';
                 <div class="badge-popular">
                     <i class="fa-solid fa-fire"></i> MAIS VENDIDO
                 </div>
+                <div class="card-glow"></div>
                 
                 <div class="card-header">
-                    <span class="plan-name">PRO ELITE</span>
+                    <span class="plan-name">ALUNO PRO</span>
                     <div class="plan-price">
                         <span class="currency">R$</span>
                         <span class="amount">29</span>
                         <span class="cents">,90</span>
                     </div>
-                    <p class="plan-desc">Ferramentas de atleta profissional.</p>
+                    <p class="plan-desc">Ferramentas de atleta de elite.</p>
                 </div>
                 
                 <div class="card-body">
                     <ul class="feature-list">
-                        <li><i class="fa-solid fa-infinity"></i> <span>Fichas Ilimitadas</span></li>
-                        <li><i class="fa-solid fa-file-pdf"></i> <span>Gerador de PDF Premium</span></li>
-                        <li><i class="fa-solid fa-chart-line"></i> <span>Gráficos de Carga & Peso</span></li>
-                        <li><i class="fa-solid fa-calendar-days"></i> <span>Periodização Automática</span></li>
+                        <li class="highlight"><i class="fa-solid fa-infinity"></i> <span>Fichas Ilimitadas</span></li>
+                        <li class="highlight"><i class="fa-solid fa-file-pdf"></i> <span>Gerador de PDF Premium</span></li>
+                        <li class="highlight"><i class="fa-solid fa-chart-line"></i> <span>Gráficos de Carga & Peso</span></li>
+                        <li class="highlight"><i class="fa-solid fa-calendar-days"></i> <span>Periodização Automática</span></li>
                         <li><i class="fa-solid fa-database"></i> <span>Histórico Vitalício</span></li>
                     </ul>
-                    <a href="actions/auth_register.php?plan=pro" class="btn-plan pro">QUERO SER ELITE</a>
+                    <a href="actions/auth_register.php?plan=pro" class="btn-plan-pro">QUERO SER PRO</a>
+                </div>
+            </div>
+
+            <div class="plan-card coach">
+                <div class="card-header">
+                    <span class="plan-name">SOU PERSONAL</span>
+                    <div class="plan-price">
+                        <span class="currency">R$</span>
+                        <span class="amount">4</span>
+                        <span class="cents">,90</span>
+                        <span class="per-student">/aluno</span>
+                    </div>
+                    <p class="plan-desc">Gestão completa para seus alunos.</p>
+                </div>
+                
+                <div class="card-body">
+                    <ul class="feature-list">
+                        <li class="highlight"><i class="fa-solid fa-users"></i> <span>Alunos Ilimitados</span></li>
+                        <li class="highlight"><i class="fa-solid fa-laptop-file"></i> <span>Painel do Treinador</span></li>
+                        <li><i class="fa-solid fa-file-invoice-dollar"></i> <span>Gestão Financeira</span></li>
+                        <li><i class="fa-solid fa-file-pdf"></i> <span>Envio de PDF via Whats</span></li>
+                        <li><i class="fa-solid fa-clipboard-check"></i> <span>Avaliação Física Completa</span></li>
+                    </ul>
+                    <a href="actions/auth_register.php?plan=coach" class="btn-plan-coach">CRIAR CONTA COACH</a>
                 </div>
             </div>
 
@@ -94,7 +117,7 @@ require_once 'includes/head_main.php';
                 <i class="fa-solid fa-shield-halved"></i>
                 <div>
                     <h3>Garantia Blindada de 7 Dias</h3>
-                    <p>Teste a plataforma PRO. Se não gostar, devolvemos seu dinheiro na hora.</p>
+                    <p>Teste a plataforma. Se não gostar, devolvemos seu dinheiro na hora.</p>
                 </div>
             </div>
         </div>

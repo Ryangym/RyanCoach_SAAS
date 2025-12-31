@@ -143,8 +143,6 @@ CREATE TABLE series (
   quantidade INT DEFAULT 1,
   reps_fixas VARCHAR(50),
   descanso_fixo VARCHAR(50),
-  carga_prevista VARCHAR(50),
-  rpe_previsto INT,
   tecnica VARCHAR(50) DEFAULT 'normal',
   tecnica_valor VARCHAR(50) DEFAULT NULL, 
   FOREIGN KEY (exercicio_id) REFERENCES exercicios(id) ON DELETE CASCADE

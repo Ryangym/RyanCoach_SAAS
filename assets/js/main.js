@@ -248,14 +248,13 @@ function toggleTechniqueFields() {
     document.getElementById("div_cluster").style.display = (tipo === 'clusterset') ? 'block' : 'none';
 }
 
-// --- CORREÇÃO NA LÓGICA DE SÉRIES ---
+// --- LÓGICA DE SÉRIES  ---
 function addSetToList() {
     // 1. Pega os valores crus dos inputs
     const qtd = document.getElementById("set_qtd").value;
     const tipoSelecionado = document.getElementById("set_tipo").value; // Ex: 'dropset'
     let reps = document.getElementById("set_reps").value;
     const desc = document.getElementById("set_desc").value;
-    const rpe = document.getElementById("set_rpe").value;
     
     // 2. Variáveis Finais para o Banco de Dados
     let categoriaFinal = tipoSelecionado; // Por padrão, é o que foi selecionado
@@ -290,11 +289,10 @@ function addSetToList() {
     if (qtd > 0) {
         exerciseState[activeTabIndex].series.push({
             qtd: qtd, 
-            tipo: categoriaFinal, // Vai enviar 'work' em vez de 'dropset'
+            tipo: categoriaFinal, 
             reps: reps, 
             desc: desc, 
-            rpe: rpe, 
-            tecnica: tecnicaFinal, // Vai enviar 'dropset' aqui
+            tecnica: tecnicaFinal, 
             tecnica_valor: valorTecnica 
         });
         
@@ -404,7 +402,7 @@ function closeExercicioModal() {
     document.getElementById("modalExercicio").style.display = "none";
 }
 
-// --- MODO EDIÇÃO (ADAPTADO PARA A NOVA ESTRUTURA) ---
+// --- MODO EDIÇÃO ---
 function editarExercicio(exData, treinoId, divId) {
     // 1. Configura Estado Global
     currentMode = 'edit_single'; 
@@ -432,7 +430,7 @@ function editarExercicio(exData, treinoId, divId) {
                 tipo: s.categoria, 
                 reps: s.reps_fixas || "",
                 desc: s.descanso_fixo || "",
-                rpe: s.rpe_previsto || "",
+
                 tecnica: s.tecnica || "normal", 
                 tecnica_valor: s.tecnica_valor || ""
             });
@@ -443,14 +441,13 @@ function editarExercicio(exData, treinoId, divId) {
     updateTabButtons(); 
     loadDataToInputs(0); 
 
-    // 6. Ajusta Títulos e Botão (AGORA COM SEGURANÇA PELO ID)
-    document.querySelector("#modalExercicio .section-title").innerText = "Editar Exercício";
+    // 6. Ajusta Títulos e Botão
+    const titleEl = document.querySelector("#modalExercicio .section-title");
+    if(titleEl) titleEl.innerText = "Editar Exercício";
     
     const btnSave = document.getElementById("btn-save-modal");
     if (btnSave) {
         btnSave.innerText = "ATUALIZAR";
-        // Não precisamos mudar o onclick, pois ambos usam salvarBlocoExercicios
-        // O PHP saberá se é update pelo 'modal_exercicio_id' preenchido
     }
 
     document.getElementById("modalExercicio").style.display = "flex";

@@ -670,5 +670,16 @@
     font-weight: 900;
     letter-spacing: 0.5px;
     margin: 3px 0;
-    color: var(--gold); /* Ou use cores específicas se preferir */
+    color: #fff; /* Ou use cores específicas se preferir */
 }
+
+/* --------EDITOR DE TREINOS DO USUARIO---- */
+.meus-treinos-header{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;
+}
+@media (max-width: 768px){
+    .meus-treinos-header{
+        flex-direction: column;
+        gap: 15px;
+    }
+} 

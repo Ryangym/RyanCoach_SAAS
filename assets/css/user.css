@@ -63,12 +63,12 @@
 }
 
 /* ==========================================================================
-   1. VARIÁVEIS E RESET GLOBAL
+   1. VARIÁVEIS E RESET GLOBAL (SEU CÓDIGO ORIGINAL)
    ========================================================================== */
 :root {
     /* Cores do Sistema */
     --primary-bg: #0a0a0a;
-    --sidebar-bg: rgba(15, 15, 15, 0.65); /* Escuro e translúcido */
+    --sidebar-bg: rgba(15, 15, 15, 0.65);
     --gold: #FFBA42;
     --red-glow: #ac0f0f66;
     --red-dark: #360a03;
@@ -76,14 +76,13 @@
     --text-muted: #888888;
 
     --color-atleta: #FFBA42;
-    --color-coach:  #00a8ff; /* Azul */
-    --color-admin:  #ff4242; /* Vermelho */
+    --color-coach:  #00a8ff;
+    --color-admin:  #ff4242;
 
     --bg-atleta:  rgba(255, 186, 66, 0.2);
     --bg-coach:   rgba(0, 168, 255, 0.2);
     --bg-admin:   rgba(255, 66, 66, 0.2);
 
-    /* Dimensões */
     --sidebar-width: 280px;
 
     /* =========================================
@@ -121,9 +120,17 @@
     --badge-falha:   rgba(236, 239, 241, 0.15);
 
     /* 7. TÉCNICAS */
-    --color-drop:    #ff4081; --bg-drop: rgba(255, 64, 129, 0.05); --badge-drop: rgba(255, 64, 129, 0.15);
-    --color-rest:    #00e676; --bg-rest: rgba(0, 230, 118, 0.05); --badge-rest: rgba(0, 230, 118, 0.15);
-    --color-cluster: #ff9100; --bg-cluster: rgba(255, 145, 0, 0.05); --badge-cluster: rgba(255, 145, 0, 0.15);
+    --color-drop:    #ff4081; 
+    --bg-drop:       rgba(255, 64, 129, 0.05); 
+    --badge-drop:    rgba(255, 64, 129, 0.15);
+    
+    --color-rest:    #00e676; 
+    --bg-rest:       rgba(0, 230, 118, 0.05); 
+    --badge-rest:    rgba(0, 230, 118, 0.15);
+    
+    --color-cluster: #ff9100; 
+    --bg-cluster:    rgba(255, 145, 0, 0.05); 
+    --badge-cluster: rgba(255, 145, 0, 0.15);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -131,7 +138,6 @@
 body {
     font-family: 'Roboto', sans-serif;
     background-color: var(--primary-bg);
-    /* Background com Overlay */
     background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.9)), url('../img/save/teste.png');
     background-size: cover;
     background-attachment: fixed;
@@ -139,55 +145,196 @@ body {
     color: var(--text-main);
     height: 100dvh;
     display: flex;
-    overflow: hidden; /* Evita rolagem dupla no corpo */
+    overflow: hidden;
 }
 
 /* ============================================================
-   APLICAÇÃO DAS CLASSES (Visualização, Execução e Histórico)
+   ESTILOS BASE (ADICIONADO PARA O NOVO PHP)
+   ============================================================ */
+
+/* Estilo base do texto que indica o tipo da série (ex: WARMUP) */
+.set-type-label {
+    display: block;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    /* As cores virão das classes abaixo */
+}
+
+/* ============================================================
+   APLICAÇÃO DAS CLASSES (Visualização, Execução, Histórico e Texto)
    ============================================================ */
 
 /* --- 1. WARMUP --- */
-.set-item.warmup { border-color: var(--color-warmup) !important; color: var(--color-warmup); background: var(--bg-warmup); }
-.set-row-input.warmup { border-left-color: var(--color-warmup); }
-.badge-set-type.warmup { color: var(--color-warmup); background: var(--badge-warmup); border: 1px solid var(--color-warmup); }
+.set-item.warmup {
+    border-color: var(--color-warmup) !important;
+    color: var(--color-warmup) !important;
+    background: var(--bg-warmup) !important;
+}
+.set-row-input.warmup {
+    border-left-color: var(--color-warmup) !important;
+}
+.badge-set-type.warmup, .set-tag.warmup {
+    color: var(--color-warmup) !important;
+    background: var(--badge-warmup) !important;
+    border: 1px solid var(--color-warmup) !important;
+}
+.text-warmup {
+    color: var(--color-warmup) !important;
+}
 
 /* --- 2. FEEDER --- */
-.set-item.feeder { border-color: var(--color-feeder) !important; color: var(--color-feeder); background: var(--bg-feeder); }
-.set-row-input.feeder { border-left-color: var(--color-feeder); }
-.badge-set-type.feeder { color: var(--color-feeder); background: var(--badge-feeder); border: 1px solid var(--color-feeder); }
+.set-item.feeder {
+    border-color: var(--color-feeder) !important;
+    color: var(--color-feeder) !important;
+    background: var(--bg-feeder) !important;
+}
+.set-row-input.feeder {
+    border-left-color: var(--color-feeder) !important;
+}
+.badge-set-type.feeder, .set-tag.feeder {
+    color: var(--color-feeder) !important;
+    background: var(--badge-feeder) !important;
+    border: 1px solid var(--color-feeder) !important;
+}
+.text-feeder {
+    color: var(--color-feeder) !important;
+}
 
-/* --- 3. WORK --- */
-.set-item.work { border-color: var(--color-work) !important; color: var(--color-work); background: var(--bg-work); }
-.set-row-input.work { border-left-color: var(--color-work); }
-.badge-set-type.work { color: var(--color-work); background: var(--badge-work); border: 1px solid var(--color-work); }
+/* --- 3. WORK (WORKING SET) --- */
+.set-item.work, .set-item.working {
+    border-color: var(--color-work) !important;
+    color: var(--color-work) !important;
+    background: var(--bg-work) !important;
+}
+.set-row-input.work, .set-row-input.working {
+    border-left-color: var(--color-work) !important;
+}
+.badge-set-type.work, .set-tag.work, .set-tag.working {
+    color: var(--color-work) !important;
+    background: var(--badge-work) !important;
+    border: 1px solid var(--color-work) !important;
+}
+.text-work, .text-working {
+    color: var(--color-work) !important;
+}
 
 /* --- 4. TOP SET --- */
-.set-item.top { border-color: var(--color-top) !important; color: var(--color-top); background: var(--bg-top); box-shadow: -2px 0 10px var(--bg-top); }
-.set-row-input.top { border-left-color: var(--color-top); }
-.badge-set-type.top { color: var(--color-top); background: var(--badge-top); border: 1px solid var(--color-top); }
+.set-item.top {
+    border-color: var(--color-top) !important;
+    color: var(--color-top) !important;
+    background: var(--bg-top) !important;
+    box-shadow: -2px 0 10px var(--bg-top) !important;
+}
+.set-row-input.top {
+    border-left-color: var(--color-top) !important;
+}
+.badge-set-type.top, .set-tag.top {
+    color: var(--color-top) !important;
+    background: var(--badge-top) !important;
+    border: 1px solid var(--color-top) !important;
+}
+.text-top {
+    color: var(--color-top) !important;
+}
 
 /* --- 5. BACK-OFF --- */
-.set-item.backoff { border-color: var(--color-backoff) !important; color: var(--color-backoff); background: var(--bg-backoff); }
-.set-row-input.backoff { border-left-color: var(--color-backoff); }
-.badge-set-type.backoff { color: var(--color-backoff); background: var(--badge-backoff); border: 1px solid var(--color-backoff); }
+.set-item.backoff {
+    border-color: var(--color-backoff) !important;
+    color: var(--color-backoff) !important;
+    background: var(--bg-backoff) !important;
+}
+.set-row-input.backoff {
+    border-left-color: var(--color-backoff) !important;
+}
+.badge-set-type.backoff, .set-tag.backoff {
+    color: var(--color-backoff) !important;
+    background: var(--badge-backoff) !important;
+    border: 1px solid var(--color-backoff) !important;
+}
+.text-backoff {
+    color: var(--color-backoff) !important;
+}
 
 /* --- 6. FALHA --- */
-.set-item.falha { border-color: var(--color-falha) !important; color: var(--color-falha); background: var(--bg-falha); }
-.set-row-input.falha { border-left-color: var(--color-falha); }
-.badge-set-type.falha { color: var(--color-falha); background: var(--badge-falha); border: 1px solid var(--color-falha); }
+.set-item.falha {
+    border-color: var(--color-falha) !important;
+    color: var(--color-falha) !important;
+    background: var(--bg-falha) !important;
+}
+.set-row-input.falha {
+    border-left-color: var(--color-falha) !important;
+}
+.badge-set-type.falha, .set-tag.falha {
+    color: var(--color-falha) !important;
+    background: var(--badge-falha) !important;
+    border: 1px solid var(--color-falha) !important;
+}
+.text-falha {
+    color: var(--color-falha) !important;
+}
 
-/* --- 7. TÉCNICAS (Mantendo sua estrutura) --- */
-.set-item.technique-drop, .badge-set-type.technique-drop { border-color: var(--color-drop) !important; color: var(--color-drop); background: var(--bg-drop); }
-.badge-set-type.technique-drop { background: var(--badge-drop); border: 1px solid var(--color-drop); } /* Badge BG mais forte */
-.set-row-input.technique-drop { border-left-color: var(--color-drop); background: linear-gradient(90deg, rgba(255, 64, 129, 0.05) 0%, rgba(15,15,15,0) 100%); }
+/* --- 7. TÉCNICAS AVANÇADAS --- */
 
-.set-item.technique-rest, .badge-set-type.technique-rest { border-color: var(--color-rest) !important; color: var(--color-rest); background: var(--bg-rest); }
-.badge-set-type.technique-rest { background: var(--badge-rest); border: 1px solid var(--color-rest); }
-.set-row-input.technique-rest { border-left-color: var(--color-rest); background: linear-gradient(90deg, rgba(0, 230, 118, 0.05) 0%, rgba(15,15,15,0) 100%); }
+/* Drop Set */
+.set-item.technique-drop, .set-tag.technique-drop {
+    border-color: var(--color-drop) !important;
+    color: var(--color-drop) !important;
+    background: var(--bg-drop) !important;
+}
+.badge-set-type.technique-drop {
+    background: var(--badge-drop) !important;
+    border: 1px solid var(--color-drop) !important;
+    color: var(--color-drop) !important;
+}
+.set-row-input.technique-drop {
+    border-left-color: var(--color-drop) !important;
+    background: linear-gradient(90deg, rgba(255, 64, 129, 0.05) 0%, rgba(15,15,15,0) 100%) !important;
+}
+.text-drop {
+    color: var(--color-drop) !important;
+    text-shadow: 0 0 5px var(--glow-drop) !important;
+}
 
-.set-item.technique-cluster, .badge-set-type.technique-cluster { border-color: var(--color-cluster) !important; color: var(--color-cluster); background: var(--bg-cluster); }
-.badge-set-type.technique-cluster { background: var(--badge-cluster); border: 1px solid var(--color-cluster); }
-.set-row-input.technique-cluster { border-left-color: var(--color-cluster); background: linear-gradient(90deg, rgba(255, 145, 0, 0.05) 0%, rgba(15,15,15,0) 100%); }
+/* Rest Pause */
+.set-item.technique-rest, .set-tag.technique-rest {
+    border-color: var(--color-rest) !important;
+    color: var(--color-rest) !important;
+    background: var(--bg-rest) !important;
+}
+.badge-set-type.technique-rest {
+    background: var(--badge-rest) !important;
+    border: 1px solid var(--color-rest) !important;
+    color: var(--color-rest) !important;
+}
+.set-row-input.technique-rest {
+    border-left-color: var(--color-rest) !important;
+    background: linear-gradient(90deg, rgba(0, 230, 118, 0.05) 0%, rgba(15,15,15,0) 100%) !important;
+}
+.text-rest {
+    color: var(--color-rest) !important;
+    text-shadow: 0 0 5px var(--glow-rest) !important;
+}
+
+/* Cluster Set */
+.set-item.technique-cluster, .set-tag.technique-cluster {
+    border-color: var(--color-cluster) !important;
+    color: var(--color-cluster) !important;
+    background: var(--bg-cluster) !important;
+}
+.badge-set-type.technique-cluster {
+    background: var(--badge-cluster) !important;
+    border: 1px solid var(--color-cluster) !important;
+    color: var(--color-cluster) !important;
+}
+.set-row-input.technique-cluster {
+    border-left-color: var(--color-cluster) !important;
+    background: linear-gradient(90deg, rgba(255, 145, 0, 0.05) 0%, rgba(15,15,15,0) 100%) !important;
+}
+.text-cluster {
+    color: var(--color-cluster) !important;
+    text-shadow: 0 0 5px var(--glow-cluster) !important;
+}
 
 /* ==========================================================================
    2. LAYOUT PRINCIPAL (SIDEBAR E CONTEÚDO)
@@ -419,7 +566,12 @@ section {
     font-size: 0.85rem;
 }
 .btn-gold:hover { background: #fff; box-shadow: 0 0 15px var(--gold); }
-
+@media (max-width: 768px) {
+    .btn-gold {
+        width: 100%;
+        padding: 15px !important;
+    }
+}
 .glass-card{
     background: rgba(20, 20, 20, 0.6); backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -810,6 +962,10 @@ section {
 }
 
 /* Card de Exercício (Edição) */
+.editor-exercicio-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;}
+@media (max-width: 768px) {
+    .editor-exercicio-header{flex-direction: column; gap: 10px;}
+}
 .exercise-card-edit {
     background: rgba(30, 30, 30, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -838,6 +994,26 @@ section {
     border: 1px solid #444;
     color: #ccc;
     background: rgba(255,255,255,0.05);
+}
+
+@media (max-width: 500px) {
+    .exercise-card-edit {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+        padding: 5px;
+    }
+    .set-tag {
+        flex: 1 1 40%;
+    }
+    .ex-actions {
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .div-tab-btn {
+        flex: 1 1 45%;
+        text-align: center;
+    }
 }
 
 /* --------- Container do Bi-set/Tri-set ------------ */

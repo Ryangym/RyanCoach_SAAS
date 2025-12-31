@@ -524,18 +524,25 @@ switch ($pagina) {
                                 echo '<div class="'.$row_class.'">';
 
                                     // COLUNA 1: INFO
-                                    $style_label = "";
-                                    if ($has_technique) {
-                                        $style_label = "font-weight:bold; letter-spacing:0.5px;";
-                                        if ($is_drop)    $style_label .= " color: #ff4081;"; 
-                                        if ($is_rest)    $style_label .= " color: #00e676;"; 
-                                        if ($is_cluster) $style_label .= " color: #ff9100;"; 
+                                    $label_class = ""; // Classe extra para cor do texto
+
+                                    // 1. Prioridade para Técnicas (Cores Vibrantes)
+                                    if ($is_drop)    $label_class = "text-drop";
+                                    elseif ($is_rest)    $label_class = "text-rest";
+                                    elseif ($is_cluster) $label_class = "text-cluster";
+
+                                    // 2. Se não for técnica, usa a categoria da série (Cores Padrão)
+                                    else {
+                                        // warmup, feeder, working, top, backoff
+                                        $label_class = "text-" . $s['categoria']; 
                                     }
 
                                     echo '
                                     <div class="set-num">
                                         <span style="font-size:1.1rem; display:block;">'.$indicador_num.'</span>
-                                        <span class="set-type-label" style="font-size:0.65rem; '.$style_label.'">'.$label_serie.'</span>
+                                        
+                                        <span class="set-type-label '.$label_class.'" style="font-size:0.65rem;">'.$label_serie.'</span>
+                                        
                                         <small style="color: #666; font-size:0.65rem;">
                                             <i class="fa-solid fa-clock"></i> '.$meta_desc.'
                                         </small>
@@ -2047,7 +2054,7 @@ switch ($pagina) {
 
         // --- TELA DE FUNDO (LISTA DE TREINOS) ---
         echo '<section id="meus-treinos-painel" class="fade-in">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+                <div class="meus-treinos-header">
                     <div>
                         <h2 style="font-family:Orbitron; color:var(--gold); margin:0;">Meus Treinos</h2>
                         <p style="color:#888; font-size:0.9rem;">Gerencie seus planejamentos</p>
@@ -2380,7 +2387,7 @@ switch ($pagina) {
                 <div class="modal-content" style="max-width: 700px;">
                     <button class="modal-close" onclick="closeExercicioModal()">&times;</button>
                     
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <div class="editor-exercicio-header">
                         <h3 class="section-title" style="color:var(--gold); margin:0;">Novo Exercício</h3>
                         <div class="block-type-selector" style="display:flex; gap:5px; background:rgba(255,255,255,0.05); padding:4px; border-radius:6px;">
                             <button type="button" class="btn-type-select active" onclick="initBlockState(\'single\')" id="btn-mode-single">Padrão</button>
@@ -2444,7 +2451,6 @@ switch ($pagina) {
                                 </div>
                                 <div style="flex:0 0 70px;"><label class="input-label" style="font-size:0.7rem;">Reps</label><input type="text" id="set_reps" class="user-input" placeholder="10" style="padding:8px;"></div>
                                 <div style="flex:0 0 70px;"><label class="input-label" style="font-size:0.7rem;">Desc</label><input type="text" id="set_desc" class="user-input" placeholder="60s" style="padding:8px;"></div>
-                                <div style="flex:0 0 50px;"><label class="input-label" style="font-size:0.7rem;">RPE</label><input type="number" id="set_rpe" class="user-input" placeholder="-" style="padding:8px;"></div>
                                 <button type="button" class="btn-gold" onclick="addSetToList()" style="padding:8px 15px; height:38px;"><i class="fa-solid fa-plus"></i></button>
                             </div>
 

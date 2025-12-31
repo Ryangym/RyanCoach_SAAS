@@ -313,6 +313,12 @@ switch ($pagina) {
 
                     </div>
 
+                    <div style="margin-top:15px;">
+                        <button onclick="hubAcao(\'indicacoes_modal\')" style="width:100%; background:rgba(255,186,66,0.1); color:var(--gold); border:1px solid var(--gold); padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; transition:0.3s;">
+                            <i class="fa-solid fa-users-viewfinder"></i> VER INDICAÇÕES
+                        </button>
+                    </div>
+
                     <div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;">
                         <button onclick="hubAcao(\'excluir\')" style="width:100%; background:rgba(255,66,66,0.1); color:#ff4242; border:1px solid #ff4242; padding:10px; border-radius:8px; cursor:pointer; font-weight:bold;">
                             <i class="fa-solid fa-trash"></i> EXCLUIR USUÁRIO
@@ -392,6 +398,36 @@ switch ($pagina) {
 
                         <button type="submit" class="btn-gold" style="width: 100%; padding: 15px;">SALVAR ALTERAÇÕES</button>
                     </form>
+                </div>
+            </div>
+            <div id="modalListaIndicacoes" class="modal-overlay" style="display:none; align-items:center; justify-content:center;">
+                <div class="modal-content" style="max-width: 600px; width: 100%;">
+                    <button class="modal-close" onclick="document.getElementById(\'modalListaIndicacoes\').style.display=\'none\'">&times;</button>
+                    
+                    <h3 class="section-title" style="color: var(--gold); margin-bottom: 5px; text-align: center;">
+                        <i class="fa-solid fa-people-group"></i> Indicações
+                    </h3>
+                    <p style="text-align:center; color:#888; margin-bottom:20px; font-size:0.9rem;">
+                        Usuários que se cadastraram com o código deste aluno.
+                    </p>
+
+                    <div style="max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid #333;">
+                        <table class="admin-table" style="margin:0;">
+                            <thead>
+                                <tr>
+                                    <th style="background:#111; position:sticky; top:0;">Nome</th>
+                                    <th style="background:#111; position:sticky; top:0;">Plano</th>
+                                    <th style="background:#111; position:sticky; top:0;">Data</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody_indicacoes">
+                                </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 15px; color: #666; font-size: 0.8rem;">
+                        Total encontrado: <strong id="total_indicacoes_badge" style="color: #fff;">0</strong>
+                    </div>
                 </div>
             </div>
         ';
@@ -1514,43 +1550,41 @@ switch ($pagina) {
                                                         foreach ($series as $s) {
                                                             $qtd = $s['quantidade'];
                                                             $reps = $s['reps_fixas'];
-                                                            $tecnica = $s['tecnica'] ?? 'normal';
+                                                            
+                                                            // Normaliza os dados
+                                                            $tecnica = strtolower(trim($s['tecnica'] ?? 'normal'));
                                                             $valor   = $s['tecnica_valor'] ?? '';
 
+                                                            // Define o Rótulo Base e o Texto Extra
                                                             $badgeLabel = strtoupper($s['categoria']);
-                                                            $badgeClass = $s['categoria'];
-                                                            $badgeStyle = '';
                                                             $extraText  = $reps ? "(".$reps.")" : "";
+                                                            
+                                                            // Define a Classe Base (começa com a categoria: warmup, working, etc)
+                                                            $cssClass = $s['categoria']; 
 
-                                                            // Estilização das Técnicas
+                                                            // --- LÓGICA DE CLASSES PARA TÉCNICAS ---
                                                             if ($tecnica === 'dropset') {
                                                                 $badgeLabel = 'DROP SET';
-                                                                $badgeClass = '';
-                                                                $badgeStyle = 'background:rgba(255, 77, 77, 0.15); color:#ff4d4d; border:1px solid rgba(255, 77, 77, 0.3);';
-                                                                $extraText  = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor} drops)</small>";
+                                                                $cssClass  .= ' technique-drop'; // Adiciona a classe de Drop
+                                                                $extraText  = "<small style='opacity:0.8; margin-left:2px;'>({$valor} drops)</small>";
                                                             } 
                                                             elseif ($tecnica === 'restpause') {
                                                                 $badgeLabel = 'REST PAUSE';
-                                                                $badgeClass = '';
-                                                                $badgeStyle = 'background:rgba(0, 230, 118, 0.15); color:#00e676; border:1px solid rgba(0, 230, 118, 0.3);';
-                                                                $extraText  = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor}s)</small>";
+                                                                $cssClass  .= ' technique-rest'; // Adiciona a classe de Rest
+                                                                $extraText  = "<small style='opacity:0.8; margin-left:2px;'>({$valor}s)</small>";
                                                             } 
                                                             elseif ($tecnica === 'clusterset') {
                                                                 $badgeLabel = 'CLUSTER SET';
-                                                                $badgeClass = '';
-                                                                $badgeStyle = 'background:rgba(0, 191, 255, 0.15); color:#00bfff; border:1px solid rgba(0, 191, 255, 0.3);';
+                                                                $cssClass  .= ' technique-cluster'; // Adiciona a classe de Cluster
                                                                 
                                                                 $parts = explode('|', $valor);
                                                                 if(count($parts) === 3) {
-                                                                    $extraText = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$parts[0]}x{$parts[1]} | {$parts[2]}s)</small>";
+                                                                    $extraText = "<small style='opacity:0.8; margin-left:2px;'>({$parts[0]}x{$parts[1]} | {$parts[2]}s)</small>";
                                                                 } else { $extraText = ""; }
                                                             }
 
-                                                            if ($badgeStyle) {
-                                                                echo '<span class="set-tag" style="'.$badgeStyle.'">'.$qtd.'x '.$badgeLabel.' '.$extraText.'</span>';
-                                                            } else {
-                                                                echo '<span class="set-tag '.$badgeClass.'">'.$qtd.'x '.$badgeLabel.' '.$extraText.'</span>';
-                                                            }
+                                                            // Renderiza o SPAN limpo, apenas com classes
+                                                            echo '<span class="set-tag '.$cssClass.'">'.$qtd.'x '.$badgeLabel.' '.$extraText.'</span>';
                                                         }
                                                     echo '</div>
                                                 </div>
@@ -1586,7 +1620,7 @@ switch ($pagina) {
                 <div class="modal-content" style="max-width: 700px;">
                     <button class="modal-close" onclick="closeExercicioModal()">&times;</button>
                     
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <div class="editor-exercicio-header">
                         <h3 class="section-title" style="color:var(--gold); margin:0;">Novo Exercício</h3>
                         
                         <div class="block-type-selector" style="display:flex; gap:5px; background:rgba(255,255,255,0.05); padding:4px; border-radius:6px;">
@@ -1651,7 +1685,6 @@ switch ($pagina) {
                                 </div>
                                 <div style="flex:0 0 70px;"><label class="input-label" style="font-size:0.7rem;">Reps</label><input type="text" id="set_reps" class="admin-input" placeholder="10" style="padding:8px;"></div>
                                 <div style="flex:0 0 70px;"><label class="input-label" style="font-size:0.7rem;">Desc</label><input type="text" id="set_desc" class="admin-input" placeholder="60s" style="padding:8px;"></div>
-                                <div style="flex:0 0 50px;"><label class="input-label" style="font-size:0.7rem;">RPE</label><input type="number" id="set_rpe" class="admin-input" placeholder="-" style="padding:8px;"></div>
                                 <button type="button" class="btn-gold" onclick="addSetToList()" style="padding:8px 15px; height:38px;"><i class="fa-solid fa-plus"></i></button>
                             </div>
 

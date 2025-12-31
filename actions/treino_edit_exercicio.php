@@ -15,7 +15,7 @@ try {
         throw new Exception("Método inválido.");
     }
 
-    // 2. Lê o JSON (IMPORTANTE: agora lemos do input raw, não do $_POST)
+    // 2. Lê o JSON
     $raw_input = file_get_contents('php://input');
     $data = json_decode($raw_input, true);
 
@@ -69,18 +69,19 @@ try {
     $series = $exData['series'] ?? [];
     
     if (!empty($series) && is_array($series)) {
-        $sqlSerie = "INSERT INTO series (exercicio_id, categoria, quantidade, reps_fixas, descanso_fixo, rpe_previsto, tecnica, tecnica_valor) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+        $sqlSerie = "INSERT INTO series (exercicio_id, categoria, quantidade, reps_fixas, descanso_fixo, tecnica, tecnica_valor) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmtSerie = $pdo->prepare($sqlSerie);
 
         foreach ($series as $s) {
+
             $stmtSerie->execute([
                 $exercicio_id,
                 $s['tipo'] ?? 'work',
                 $s['qtd'] ?? 1,
                 $s['reps'] ?? '',
                 $s['desc'] ?? '',
-                !empty($s['rpe']) ? $s['rpe'] : null,
                 $s['tecnica'] ?? 'normal',
                 $s['tecnica_valor'] ?? ''
             ]);

@@ -45,7 +45,8 @@ try {
     $sqlEx = "INSERT INTO exercicios (divisao_id, nome_exercicio, tipo_mecanica, video_url, observacao_exercicio, ordem, agrupamento_hash) VALUES (?, ?, ?, ?, ?, ?, ?)";
     $stmtEx = $pdo->prepare($sqlEx);
 
-    $sqlSerie = "INSERT INTO series (exercicio_id, categoria, quantidade, reps_fixas, descanso_fixo, rpe_previsto, tecnica, tecnica_valor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+    $sqlSerie = "INSERT INTO series (exercicio_id, categoria, quantidade, reps_fixas, descanso_fixo, tecnica, tecnica_valor) VALUES (?, ?, ?, ?, ?, ?, ?)";
     $stmtSerie = $pdo->prepare($sqlSerie);
 
     foreach ($exercicios as $ex) {
@@ -68,13 +69,13 @@ try {
         // Salva Séries
         if (!empty($ex['series']) && is_array($ex['series'])) {
             foreach ($ex['series'] as $s) {
+
                 $stmtSerie->execute([
                     $exercicio_id,
                     $s['tipo'] ?? 'work',
                     $s['qtd'] ?? 1,
                     $s['reps'] ?? '',
                     $s['desc'] ?? '',
-                    !empty($s['rpe']) ? $s['rpe'] : null,
                     $s['tecnica'] ?? 'normal',
                     $s['tecnica_valor'] ?? ''
                 ]);

@@ -337,17 +337,21 @@ function hubAcao(acao) {
         return;
     }
 
+    // Fecha o modal principal (Hub) apenas se for ações de tela cheia, 
+    // mas se for modal sobre modal, podemos manter ou fechar. 
+    // Vamos fechar para ficar limpo.
     fecharPainelAluno();
 
     switch (acao) {
+        // ... seus cases anteriores (editar, historico, etc) ...
         case 'editar':
             openEditModal(alunoSelecionadoAtual);
             break;
-
+            
         case 'historico':
             carregarConteudo('aluno_historico&id=' + alunoSelecionadoAtual.id);
             break;
-
+            
         case 'avaliacao_lista':
             carregarConteudo('aluno_avaliacoes&id=' + alunoSelecionadoAtual.id);
             break;
@@ -355,9 +359,59 @@ function hubAcao(acao) {
         case 'dieta_editor':
             carregarConteudo('dieta_editor&id=' + alunoSelecionadoAtual.id);
             break;
+        
+        // --- NOVO CASE: MODAL DE INDICAÇÕES ---
+        case 'indicacoes_modal':
+            // 1. Limpa a tabela antes de abrir (Mostra carregando)
+            const tbody = document.getElementById('tbody_indicacoes');
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Carregando...</td></tr>';
+            document.getElementById('modalListaIndicacoes').style.display = 'flex';
+
+            // 2. Busca os dados via AJAX (Fetch)
+            fetch('actions/api_indicacoes.php?id=' + alunoSelecionadoAtual.id)
+                .then(response => response.json())
+                .then(data => {
+                    tbody.innerHTML = ''; // Limpa o "Carregando"
+                    document.getElementById('total_indicacoes_badge').innerText = data.length;
+
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#888;">Nenhuma indicação encontrada.</td></tr>';
+                    } else {
+                        // 3. Preenche a tabela
+                        data.forEach(user => {
+                            // Formata data
+                            const dataObj = new Date(user.data_cadastro);
+                            const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+                            
+                            // Cor do plano
+                            let corPlano = '#ccc';
+                            if(user.plano_atual === 'pro') corPlano = 'var(--gold)';
+                            if(user.plano_atual === 'coach') corPlano = '#00a8ff';
+
+                            const tr = `
+                                <tr>
+                                    <td style="text-align: center; color:#fff;">${user.nome}</td>
+                                    <td style="text-align: center;">
+                                        <span style="color:${corPlano}; border:1px solid ${corPlano}; padding:2px 8px; border-radius:4px; font-size:0.7rem; text-transform:uppercase;">
+                                            ${user.plano_atual}
+                                        </span>
+                                    </td>
+                                    <td style="text-align: center; color:#888; font-size:0.85rem;">${dataFormatada}</td>
+                                </tr>
+                            `;
+                            tbody.innerHTML += tr;
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:red;">Erro ao carregar.</td></tr>';
+                });
+            break;
             
         case 'excluir':
-            if(confirm("Tem certeza que deseja excluir " + alunoSelecionadoAtual.nome + "?\nEssa ação não pode ser desfeita.")) {
+             // ... seu código de excluir ...
+             if(confirm("Tem certeza que deseja excluir " + alunoSelecionadoAtual.nome + "?")) {
                 window.location.href = 'actions/admin_aluno.php?acao=excluir&id=' + alunoSelecionadoAtual.id;
             }
             break;

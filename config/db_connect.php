@@ -12,8 +12,8 @@ if(in_array($_SERVER['REMOTE_ADDR'], $whitelist)){
 } else {
     // --- CONFIGURAÇÃO DA HOSTINGER (ONLINE) ---
     $host = 'localhost'; 
-    $dbname = 'u231438946_ryan_coach_bd'; 
-    $username = 'u231438946_ryanborges';
+    $dbname = 'u231438946_ryancoach_saas'; 
+    $username = 'u231438946_ryan_admin';
     $password = '@Ry206443218';
     $is_dev = false;
 }

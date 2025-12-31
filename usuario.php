@@ -501,6 +501,32 @@ if ($dados_usuario['data_expiracao_plano']) {
         </div>
     </div>
 
+    <!-- ---------------------------------------------------------------------------->
+    <!--------------- HTML MODAL DE PREVIEW CARGAS DO ULTIMO TREINO ----------------->
+    <div id="modalHistoricoExercicio" class="modal-overlay" style="display:none; align-items:center; justify-content:center; z-index:9999;">
+        <div class="modal-content" style="max-width: 400px; width: 90%; background: #1a1a1a; border: 1px solid #333;">
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">
+                <h3 style="color:var(--gold); margin:0; font-size:1rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:85%;" id="tituloHistorico">
+                    Histórico
+                </h3>
+                <span onclick="document.getElementById('modalHistoricoExercicio').style.display='none'" style="color:#fff; font-size:1.5rem; cursor:pointer;">&times;</span>
+            </div>
+
+            <p style="color:#888; font-size:0.8rem; margin-bottom:15px; text-align:center;">
+                Dados do último treino realizado.
+            </p>
+
+            <div id="listaHistorico" style="max-height:300px; overflow-y:auto; padding-right:5px;">
+                </div>
+
+            <div style="margin-top:20px;">
+                <button onclick="document.getElementById('modalHistoricoExercicio').style.display='none'" class="btn-gold" style="width:100%; padding:10px; font-size:0.9rem;">FECHAR</button>
+            </div>
+        </div>
+    </div>
+
+
     <script>
 /* ==========================================================================
    USUARIO.JS - SCRIPT EXCLUSIVO DO PAINEL DO ATLETA
@@ -510,7 +536,7 @@ if ($dados_usuario['data_expiracao_plano']) {
    2. MÓDULO: DIETA (Check de Refeições)
    3. MÓDULO: CRONÔMETRO FLUTUANTE E MODAL DE TÉCNICAS AVANÇADAS
    4. MÓDULO: GESTÃO DE COACH (Vincular)
-   5. MÓDULO: HISTÓRICO (DELETE & EDIT)
+   5. MÓDULO: HISTÓRICO (DELETE & EDIT & PREVIEW)
    ========================================================================== */
 
 /* ==========================================================================
@@ -866,13 +892,11 @@ function confirmTechniqueData(id, type) {
 
 function abrirModalVincular() {
     const modal = document.getElementById("modalVincularCoach");
+    
     if (modal) {
-        // Mover para o body para garantir que fixed posicione relativo à viewport
-        document.body.appendChild(modal); 
-        
-        // Exibir e travar scroll
         modal.style.display = "flex";
-        document.body.style.overflow = "hidden"; 
+        document.body.style.overflow = "hidden"; // Bloqueia scroll do fundo
+        document.body.appendChild(modal); 
     }
 }
 
@@ -880,12 +904,20 @@ function fecharModalVincular() {
     const modal = document.getElementById("modalVincularCoach");
     if (modal) {
         modal.style.display = "none";
-        document.body.style.overflow = ""; // Restaurar scroll
+        document.body.style.overflow = ""; // Restaura scroll
     }
 }
 
+// Fechar ao clicar fora do modal
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById("modalVincularCoach");
+    if (event.target === modal) {
+        fecharModalVincular();
+    }
+});
+
 /* ==========================================================================
-   5. MÓDULO: HISTÓRICO (DELETE & EDIT)
+   5. MÓDULO: HISTÓRICO (DELETE & EDIT & PREVIEW)
    ========================================================================== */
 
 function deletarHistorico(dataRef) {
@@ -986,6 +1018,157 @@ function salvarEdicaoHistorico(inputs, btn, viewEls) {
         console.error(err);
         alert("Erro de conexão.");
     });
+}
+
+// HISTÓRICO APENAS DO ULTIMO TREINO NA PARTE DO REALIZAR EXERCICIO
+function abrirHistoricoExercicio(historicoData, nomeExercicio) {
+    const modal = document.getElementById('modalHistoricoExercicio');
+    const lista = document.getElementById('listaHistorico');
+    const titulo = document.getElementById('tituloHistorico');
+
+    titulo.innerText = nomeExercicio;
+    lista.innerHTML = '';
+
+    if (!historicoData || Object.keys(historicoData).length === 0) {
+        lista.innerHTML = '<div style="text-align:center; padding:30px; color:#666;">Nenhum histórico recente.</div>';
+        modal.style.display = 'flex';
+        return;
+    }
+
+    // Converter para array
+    let seriesParaExibir = [];
+    for (const sKey in historicoData) {
+        const seriesObj = historicoData[sKey];
+        for (const nKey in seriesObj) {
+            const records = seriesObj[nKey]; 
+            if (Array.isArray(records)) {
+                seriesParaExibir.push({ numero: nKey, registros: records });
+            }
+        }
+    }
+
+    // Ordenar
+    seriesParaExibir.sort((a, b) => parseInt(a.numero) - parseInt(b.numero));
+
+    // Monta Tabela
+    let tabelaHtml = `
+        <table class="hist-sets-table" style="width:100%; border-collapse: separate; border-spacing: 0 8px;">
+            <thead>
+                <tr>
+                    <th style="text-align:left; color:#666; font-size:0.7rem; padding-bottom:5px;" width="15%">#</th>
+                    <th style="text-align:left; color:#666; font-size:0.7rem; padding-bottom:5px;" width="30%">TIPO</th>
+                    <th style="text-align:center; color:#666; font-size:0.7rem; padding-bottom:5px;" width="25%">KG</th>
+                    <th style="text-align:right; color:#666; font-size:0.7rem; padding-bottom:5px;" width="30%">REPS</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    seriesParaExibir.forEach((item) => {
+        const registroPrincipal = item.registros[0];
+        
+        let dadosTecnicos = {};
+        if (registroPrincipal.dados_tecnicos) {
+            try {
+                dadosTecnicos = (typeof registroPrincipal.dados_tecnicos === 'object') 
+                                ? registroPrincipal.dados_tecnicos 
+                                : JSON.parse(registroPrincipal.dados_tecnicos);
+            } catch (e) { console.log("Erro JSON", e); }
+        }
+
+        let tecnicaTipo = (registroPrincipal.tecnica || dadosTecnicos.tecnica || 'normal').toLowerCase();
+        
+        // --- 1. DEFINE A COR BASEADA NA CATEGORIA (Warmup, Top, Work...) ---
+        let categoriaRaw = (registroPrincipal.categoria || 'work').toLowerCase();
+        
+        // Correção de nomes comuns
+        if(categoriaRaw === 'working') categoriaRaw = 'work';
+        
+        let catVisual = categoriaRaw; // Ex: 'warmup' (vai virar class="hist-badge warmup")
+        let labelVisual = categoriaRaw.toUpperCase(); 
+        let rowStyle = 'background: #222;';
+
+        // Ajuste de Labels específicos
+        if(categoriaRaw === 'top') labelVisual = 'TOP SET';
+        if(categoriaRaw === 'backoff') labelVisual = 'BACK-OFF';
+
+        // --- 2. SOBRESCEVE SE FOR TÉCNICA AVANÇADA ---
+        
+        // DROP SET
+        if (tecnicaTipo === 'dropset') {
+            catVisual = 'technique-drop'; // Usa a variável rosa
+            labelVisual = 'DROP SET';
+            
+            item.registros.forEach((reg, idx) => {
+                let isDrop = idx > 0;
+                let currentNumDisplay = isDrop 
+                    ? `<i class="fa-solid fa-turn-up fa-rotate-90" style="margin-right:2px; font-size:0.6rem; opacity:0.7;"></i> ${idx}`
+                    : `#${item.numero}`;
+                
+                let currentNumStyle = isDrop 
+                    ? "color:var(--color-drop); font-weight:bold; font-size:0.8rem; padding: 10px 0 10px 10px; border-radius: 6px 0 0 6px;"
+                    : "color:var(--color-drop); font-weight:bold; padding: 10px; border-radius: 6px 0 0 6px;";
+                
+                let currentRowStyle = isDrop 
+                    ? "background: linear-gradient(90deg, rgba(255, 64, 129, 0.1) 0%, rgba(20,20,20,1) 100%);"
+                    : "background: rgba(255, 64, 129, 0.05);"; // Fundo sutil rosa
+
+                tabelaHtml += `
+                    <tr style="${currentRowStyle}">
+                        <td style="${currentNumStyle}">${currentNumDisplay}</td>
+                        <td style="padding: 10px;">
+                            ${!isDrop ? `<span class="hist-badge ${catVisual}">${labelVisual}</span>` : ''}
+                        </td>
+                        <td style="text-align:center; padding: 10px;">
+                            <span style="color:#fff; font-weight:bold;">${parseFloat(reg.carga_kg)}</span>
+                        </td>
+                        <td style="text-align:right; padding: 10px; border-radius: 0 6px 6px 0;">
+                            <span style="color:#fff;">${reg.reps_realizadas}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+            return; 
+        }
+
+        // REST PAUSE
+        if (tecnicaTipo === 'restpause') {
+            catVisual = 'technique-rest'; // Usa a variável verde
+            labelVisual = 'REST PAUSE';
+            rowStyle = "background: rgba(0, 230, 118, 0.05);"; // Fundo sutil verde
+        } 
+        
+        // CLUSTER
+        else if (tecnicaTipo === 'clusterset') {
+            catVisual = 'technique-cluster'; // Usa a variável laranja
+            labelVisual = 'CLUSTER';
+            rowStyle = "background: rgba(255, 145, 0, 0.05);"; // Fundo sutil laranja
+        }
+
+        // Lógica de Reps (String composta ou número simples)
+        let repsDisplay = registroPrincipal.reps_realizadas;
+        if (dadosTecnicos.reps_string) repsDisplay = dadosTecnicos.reps_string;
+
+        // Renderiza Linha Única (Normal, Rest ou Cluster)
+        tabelaHtml += `
+            <tr style="${rowStyle}">
+                <td style="color: #666; font-weight: bold; padding: 10px; border-radius: 6px 0 0 6px;">#${item.numero}</td>
+                <td style="padding: 10px;">
+                    <span class="hist-badge ${catVisual}">${labelVisual}</span>
+                </td>
+                <td style="text-align:center; padding: 10px;">
+                    <span style="color:#fff; font-weight:bold;">${parseFloat(registroPrincipal.carga_kg)}</span>
+                </td>
+                <td style="text-align:right; padding: 10px; border-radius: 0 6px 6px 0;">
+                    <span style="color:#fff;">${repsDisplay}</span>
+                </td>
+            </tr>
+        `;
+    });
+
+    tabelaHtml += `</tbody></table>`;
+    lista.innerHTML = tabelaHtml;
+    modal.style.display = 'flex';
 }
 </script>
 

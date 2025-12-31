@@ -366,6 +366,17 @@
     color: #fff; font-weight: bold; text-align: center; font-size: 1rem;
 }
 
+/* Badges de Histórico no Modal */
+.hist-badge {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    display: inline-block;
+    white-space: nowrap;
+}
+.badge-normal { background: rgba(255,255,255,0.1); color: #aaa; border: 1px solid #444; }
+
 /* Inputs Grandes para Dedo */
 .input-exec {
     width: 100%;

@@ -391,41 +391,66 @@ switch ($pagina) {
                     echo '<span class="exec-agrupamento-badge">'.$label_grupo.'</span>';
                 }
 
-                // B. Loop dos Exercícios (Normal ou dentro do grupo)
                 foreach ($bloco['itens'] as $ex) {
                     
-                    // --- Busca de Séries e Histórico (Lógica Original) ---
+                    // 1. OBRIGATÓRIO: Busca as Séries (Isso estava faltando no bloco com problema)
                     $stmt_s = $pdo->prepare("SELECT * FROM series WHERE exercicio_id = ?");
                     $stmt_s->execute([$ex['id']]);
                     $series = $stmt_s->fetchAll(PDO::FETCH_ASSOC);
 
-                    // Busca Histórico (Mantida igual sua lógica)
+                    // 2. Busca Histórico (CORRIGIDO: JOIN e Estrutura de Lista)
                     $stmt_last_date = $pdo->prepare("SELECT MAX(data_treino) FROM treino_historico WHERE aluno_id = ? AND exercicio_id = ?");
                     $stmt_last_date->execute([$aluno_id, $ex['id']]);
                     $ultima_data = $stmt_last_date->fetchColumn();
 
                     $historico_map = []; 
                     if ($ultima_data) {
-                        $stmt_h = $pdo->prepare("SELECT serie_id, numero_serie, serie_numero, carga_kg, reps_realizadas 
-                                                FROM treino_historico 
-                                                WHERE aluno_id = ? AND exercicio_id = ? AND data_treino = ?");
+                        // Busca dados técnicos E o tipo de técnica da tabela original de séries
+                        $stmt_h = $pdo->prepare("SELECT th.serie_id, th.numero_serie, th.serie_numero, th.carga_kg, th.reps_realizadas, th.dados_tecnicos, 
+                                                        s.tecnica, s.categoria
+                                                 FROM treino_historico th
+                                                 LEFT JOIN series s ON th.serie_id = s.id
+                                                 WHERE th.aluno_id = ? AND th.exercicio_id = ? AND th.data_treino = ?
+                                                 ORDER BY th.id ASC"); // Importante ordenar por ID para manter a ordem de inserção (Principal -> Drop 1 -> Drop 2)
+                        
                         $stmt_h->execute([$aluno_id, $ex['id'], $ultima_data]);
                         $regs = $stmt_h->fetchAll(PDO::FETCH_ASSOC);
+                        
                         foreach ($regs as $r) {
                             $s_key = $r['serie_id'] ? $r['serie_id'] : $r['serie_numero'];
                             $n_key = $r['numero_serie'] ? $r['numero_serie'] : 1;
-                            $historico_map[$s_key][$n_key] = $r;
+                            
+                            // MUDANÇA CRUCIAL: Agora é um array de registros para esta série
+                            // Isso permite guardar [Principal, Drop1, Drop2] sem sobrescrever
+                            if (!isset($historico_map[$s_key][$n_key])) {
+                                $historico_map[$s_key][$n_key] = [];
+                            }
+                            $historico_map[$s_key][$n_key][] = $r;
                         }
                     }
 
-                    $video_html = $ex['video_url'] ? '<a href="'.$ex['video_url'].'" target="_blank" class="exec-video"><i class="fa-solid fa-circle-play"></i></a>' : '';
+                    // 3. Prepara dados para o botão JS
+                    $historico_json = htmlspecialchars(json_encode($historico_map), ENT_QUOTES, 'UTF-8');
+                    $nome_ex_safe   = htmlspecialchars($ex['nome_exercicio'], ENT_QUOTES, 'UTF-8');
+                    $video_html     = $ex['video_url'] ? '<a href="'.$ex['video_url'].'" target="_blank" class="exec-video"><i class="fa-solid fa-circle-play"></i></a>' : '';
 
-                    // Renderiza Cabeçalho do Card
+                    // 4. Renderiza Cabeçalho do Card
                     echo '
                     <div class="exec-card">
-                        <div class="exec-header">
-                            <span class="exec-title">'.$ex['nome_exercicio'].'</span>
-                            '.$video_html.'
+                        <div class="exec-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            
+                            <div style="flex:1;">
+                                <span class="exec-title">'.$ex['nome_exercicio'].'</span>
+                            </div>
+
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                '.$video_html.'
+                                
+                                <button type="button" onclick=\'abrirHistoricoExercicio('.$historico_json.', "'.$nome_ex_safe.'")\' 
+                                        style="background:rgba(255,186,66,0.15); border:1px solid var(--gold); color:var(--gold); width:32px; height:32px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                                    <i class="fa-solid fa-clock-rotate-left" style="font-size:0.9rem;"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="set-row-header">
@@ -435,16 +460,19 @@ switch ($pagina) {
                             <span>REPS</span>
                         </div>';
 
+                    // 5. Renderiza as Séries
                     if (count($series) > 0) {
-                        
-                        // --- AQUI ENTRA O FOREACH DAS SÉRIES (O CÓDIGO PERFEITO QUE FIZEMOS) ---
+                        // --- AQUI ENTRA O SEU FOREACH DAS SÉRIES (COM CORES E TÉCNICAS) ---
                         foreach ($series as $s) {
-                            // -----------------------------------------------------------
-                            // 1. PREPARAÇÃO DE DADOS
-                            // -----------------------------------------------------------
+                            // ... (Mantenha o código do foreach das séries que já estava funcionando aqui dentro) ...
+                            // ... (Vou colocar apenas o início para você saber onde colar) ...
+                            
                             $tecnica_raw = strtolower(trim($s['tecnica'] ?? 'normal'));
                             $valor_raw   = $s['tecnica_valor']; 
-
+                            
+                            // ... (Cole todo o restante da lógica de inputs aqui) ...
+                            // Lembre-se: O foreach das séries termina, fecha a div row_class e continua o loop
+                            
                             // Flags
                             $is_drop    = ($tecnica_raw === 'dropset');
                             $is_rest    = ($tecnica_raw === 'restpause');
@@ -481,25 +509,37 @@ switch ($pagina) {
                             // -----------------------------------------------------------
                             for ($i = 1; $i <= $qtd_series; $i++) {
                                 
-                                // Histórico
+                                // Histórico (CORRIGIDO PARA NOVA ESTRUTURA DE LISTA)
                                 $ph_carga = '-';
                                 $ph_reps = '-';
+                                
                                 if (isset($historico_map[$s['id']][$i])) {
-                                    $d = $historico_map[$s['id']][$i];
-                                    $ph_carga = ($d['carga_kg'] * 1);
-                                    $ph_reps  = $d['reps_realizadas'];
+                                    // Pega a LISTA de registros dessa série
+                                    $lista_regs = $historico_map[$s['id']][$i];
                                     
-                                    // Se tiver o detalhe da soma (string), usa ele no placeholder
-                                    if (!empty($d['dados_tecnicos'])) {
-                                        $dt_json = json_decode($d['dados_tecnicos'], true);
-                                        if (isset($dt_json['reps_string'])) {
-                                            $ph_reps = $dt_json['reps_string'];
+                                    // Pega o PRIMEIRO registro (Principal) para exibir no placeholder
+                                    if (!empty($lista_regs) && isset($lista_regs[0])) {
+                                        $d = $lista_regs[0];
+                                        $ph_carga = ($d['carga_kg'] * 1);
+                                        $ph_reps  = $d['reps_realizadas'];
+                                        
+                                        // Se tiver o detalhe da soma (string), usa ele no placeholder
+                                        if (!empty($d['dados_tecnicos'])) {
+                                            $dt_json = json_decode($d['dados_tecnicos'], true);
+                                            if (isset($dt_json['reps_string'])) {
+                                                $ph_reps = $dt_json['reps_string'];
+                                            }
                                         }
                                     }
-                                } elseif (isset($historico_map[$s['id']][1])) {
-                                    $d = $historico_map[$s['id']][1];
-                                    $ph_carga = ($d['carga_kg'] * 1);
-                                    $ph_reps  = $d['reps_realizadas'];
+                                } 
+                                // Fallback para Série 1 (caso não tenha histórico específico da série i)
+                                elseif (isset($historico_map[$s['id']][1])) {
+                                    $lista_regs = $historico_map[$s['id']][1];
+                                    if (!empty($lista_regs) && isset($lista_regs[0])) {
+                                        $d = $lista_regs[0];
+                                        $ph_carga = ($d['carga_kg'] * 1);
+                                        $ph_reps  = $d['reps_realizadas'];
+                                    }
                                 }
 
                                 // Labels e Estilos
@@ -524,25 +564,21 @@ switch ($pagina) {
                                 echo '<div class="'.$row_class.'">';
 
                                     // COLUNA 1: INFO
-                                    $label_class = ""; // Classe extra para cor do texto
+                                    $label_class = ""; 
 
-                                    // 1. Prioridade para Técnicas (Cores Vibrantes)
+                                    // 1. Prioridade para Técnicas
                                     if ($is_drop)    $label_class = "text-drop";
                                     elseif ($is_rest)    $label_class = "text-rest";
                                     elseif ($is_cluster) $label_class = "text-cluster";
-
-                                    // 2. Se não for técnica, usa a categoria da série (Cores Padrão)
+                                    // 2. Se não for técnica, usa a categoria
                                     else {
-                                        // warmup, feeder, working, top, backoff
                                         $label_class = "text-" . $s['categoria']; 
                                     }
 
                                     echo '
                                     <div class="set-num">
                                         <span style="font-size:1.1rem; display:block;">'.$indicador_num.'</span>
-                                        
                                         <span class="set-type-label '.$label_class.'" style="font-size:0.65rem;">'.$label_serie.'</span>
-                                        
                                         <small style="color: #666; font-size:0.65rem;">
                                             <i class="fa-solid fa-clock"></i> '.$meta_desc.'
                                         </small>
@@ -632,7 +668,7 @@ switch ($pagina) {
                                                         <p style="font-size:0.7rem; color:#666;">Falha > Iniciar Descanso > Repete > Anota Soma.</p>';
                                                 }
 
-                                                // CLUSTER SET (ALTERADO AQUI)
+                                                // CLUSTER SET
                                                 if ($is_cluster) {
                                                     $parts = explode('|', $valor_raw); 
                                                     $tempo_descanso_cluster = isset($parts[2]) ? (int)$parts[2] : 0;
@@ -646,9 +682,9 @@ switch ($pagina) {
                                                         <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;">';
                                                             for($b=1; $b<=$parts[0]; $b++) {
                                                                 echo '<div style="flex:1; background:#222; padding:10px; border-radius:4px; text-align:center; border:1px solid #444;">
-                                                                        <span style="font-size:0.7rem; color:#888;">B'.$b.'</span><br>
-                                                                        <strong style="color:#fff;">'.$parts[1].'</strong>
-                                                                    </div>';
+                                                                            <span style="font-size:0.7rem; color:#888;">B'.$b.'</span><br>
+                                                                            <strong style="color:#fff;">'.$parts[1].'</strong>
+                                                                        </div>';
                                                             }
                                                     echo '</div>
 
@@ -662,7 +698,7 @@ switch ($pagina) {
                                                         <input type="text" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Ex: 4+4+4+3">';
                                                 }
 
-                                        echo '  <div style="margin-top:20px;">
+                                            echo '  <div style="margin-top:20px;">
                                                     <button type="button" class="btn-gold" style="width:100%; border-radius:50px;" onclick="confirmTechniqueData(\''.$modal_id.'\', \''.$js_type_arg.'\')">SALVAR DADOS</button>
                                                 </div>
                                             </div>
@@ -691,7 +727,8 @@ switch ($pagina) {
                     }
 
                     echo '</div>'; // Fim exec-card
-                } // Fim foreach bloco items
+                }
+                // --- FIM DO FOREACH BLOCO ITENS ---
 
                 // C. Fecha o Wrapper se for Grupo
                 if ($bloco['tipo'] === 'grupo') {

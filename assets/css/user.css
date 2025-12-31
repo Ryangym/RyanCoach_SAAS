@@ -182,6 +182,7 @@ body {
 .text-warmup {
     color: var(--color-warmup) !important;
 }
+.hist-badge.warmup  { background: var(--badge-warmup);  color: var(--color-warmup);  border-color: var(--color-warmup); }
 
 /* --- 2. FEEDER --- */
 .set-item.feeder {
@@ -200,6 +201,7 @@ body {
 .text-feeder {
     color: var(--color-feeder) !important;
 }
+.hist-badge.feeder  { background: var(--badge-feeder);  color: var(--color-feeder);  border-color: var(--color-feeder); }
 
 /* --- 3. WORK (WORKING SET) --- */
 .set-item.work, .set-item.working {
@@ -218,6 +220,8 @@ body {
 .text-work, .text-working {
     color: var(--color-work) !important;
 }
+.hist-badge.work, 
+.hist-badge.working { background: var(--badge-work);    color: var(--color-work);    border-color: var(--color-work); }
 
 /* --- 4. TOP SET --- */
 .set-item.top {
@@ -237,6 +241,7 @@ body {
 .text-top {
     color: var(--color-top) !important;
 }
+.hist-badge.top     { background: var(--badge-top);     color: var(--color-top);     border-color: var(--color-top); }
 
 /* --- 5. BACK-OFF --- */
 .set-item.backoff {
@@ -255,6 +260,7 @@ body {
 .text-backoff {
     color: var(--color-backoff) !important;
 }
+.hist-badge.backoff { background: var(--badge-backoff); color: var(--color-backoff); border-color: var(--color-backoff); }
 
 /* --- 6. FALHA --- */
 .set-item.falha {
@@ -273,6 +279,7 @@ body {
 .text-falha {
     color: var(--color-falha) !important;
 }
+.hist-badge.falha   { background: var(--badge-falha);   color: var(--color-falha);   border-color: var(--color-falha); }
 
 /* --- 7. TÉCNICAS AVANÇADAS --- */
 
@@ -295,6 +302,7 @@ body {
     color: var(--color-drop) !important;
     text-shadow: 0 0 5px var(--glow-drop) !important;
 }
+.hist-badge.technique-drop{ background: var(--badge-drop); color: var(--color-drop); border-color: var(--color-drop); }
 
 /* Rest Pause */
 .set-item.technique-rest, .set-tag.technique-rest {
@@ -315,6 +323,7 @@ body {
     color: var(--color-rest) !important;
     text-shadow: 0 0 5px var(--glow-rest) !important;
 }
+.hist-badge.technique-rest{ background: var(--badge-rest); color: var(--color-rest); border-color: var(--color-rest); }
 
 /* Cluster Set */
 .set-item.technique-cluster, .set-tag.technique-cluster {
@@ -335,6 +344,7 @@ body {
     color: var(--color-cluster) !important;
     text-shadow: 0 0 5px var(--glow-cluster) !important;
 }
+.hist-badge.technique-cluster { background: var(--badge-cluster); color: var(--color-cluster); border-color: var(--color-cluster); }
 
 /* ==========================================================================
    2. LAYOUT PRINCIPAL (SIDEBAR E CONTEÚDO)

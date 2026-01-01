@@ -8,8 +8,20 @@
     --accent-red-border: #ac0f0f;
     --accent-red-shadow: rgba(194, 9, 9, 0.55);
     --accent-red-hover: #c70000;
+    --red-premium: #ce1111; 
     --accent-gold: #FFBA42;
     --text-white: #ffffff;
+}
+
+/* =========================================
+   NAVBAR
+   ========================================= */
+.saas-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    width: 100%;
 }
 
 .logo-container {
@@ -21,6 +33,27 @@
     letter-spacing: 1px;
 }
 .logo-container img { height: 40px; filter: drop-shadow(0 0 5px var(--red-premium)); }
+
+.title{
+    font-family: Orbitron, sans-serif;
+}
+
+.btn-login-nav {
+    background: rgba(255,0,0,0.1); /* Fundo avermelhado sutil */
+    color: #fff;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    backdrop-filter: blur(5px);
+    border: 1px solid var(--red-premium); /* Borda Vermelha */
+    transition: 0.3s;
+}
+.btn-login-nav:hover { 
+    background: var(--red-premium); 
+    box-shadow: 0 0 15px var(--red-glow);
+}
 
 /* =========================================
    PLANOS & PREÇOS (FINAL: ALUNO + COACH)

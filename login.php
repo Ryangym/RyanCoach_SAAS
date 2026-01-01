@@ -30,9 +30,11 @@
                     <input type="tel" id="reg-phone" name="telefone" placeholder=" " maxlength="15" required />
                     <label for="reg-phone">Telefone (Whatsapp)</label>
                 </div>
+                
                 <div class="input-group">
-                    <input type="password" name="senha" placeholder=" " required>
-                    <label>Senha</label>
+                    <input type="password" id="reg-pass" name="senha" placeholder=" " required>
+                    <label for="reg-pass">Senha</label>
+                    <i class="fa-solid fa-eye password-toggle" onclick="togglePassword('reg-pass', this)"></i>
                 </div>
 
                 <div class="input-group">
@@ -58,10 +60,13 @@
                     <input type="email" id="login-email" name="email" placeholder=" " required />
                     <label for="login-email">Email</label>
                 </div>
+                
                 <div class="input-group">
                     <input type="password" id="login-pass" name="senha" placeholder=" " required />
                     <label for="login-pass">Senha</label>
+                    <i class="fa-solid fa-eye password-toggle" onclick="togglePassword('login-pass', this)"></i>
                 </div>
+
                 <a href="#" class="form-link forgot-pass">Esqueceu sua senha?</a>
                 <button type="submit" class="btn-submit">Entrar</button>
 
@@ -93,6 +98,23 @@
     </div>
 
     <script>
+        // ---------------------------------------------------------------
+        // 0. FUNÇÃO PARA ALTERNAR VISIBILIDADE DA SENHA
+        // ---------------------------------------------------------------
+        function togglePassword(inputId, icon) {
+            const input = document.getElementById(inputId);
+            
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash'); // Olho cortado
+            } else {
+                input.type = "password";
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye'); // Olho normal
+            }
+        }
+
         // ---------------------------------------------------------------
         // 1. LÓGICA DE ALTERNÂNCIA DE TELAS (SIGN IN / SIGN UP)
         // ---------------------------------------------------------------

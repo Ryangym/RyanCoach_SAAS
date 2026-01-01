@@ -264,6 +264,20 @@ form {
 .form-link:hover {
     color: #fff;
 }
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #aaa;
+    z-index: 10;
+    font-size: 0.9rem;
+    transition: color 0.3s;
+}
+.password-toggle:hover {
+    color: var(--accent-gold);
+}
 
 /* --- Overlay Deslizante --- */
 .overlay-container {

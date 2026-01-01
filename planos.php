@@ -8,17 +8,16 @@ require_once 'includes/head_main.php';
 </head>
 
 <body class="saas-body">
-
-    <nav class="saas-nav">
-        <div class="logo-container">
-            <a href="index.php" style="text-decoration: none; color: #fff; display: flex; align-items: center; gap: 10px;">
-                <img src="assets/img/icones/LOGO LIMPA.png" alt="Logo">
-                <span>RYAN COACH</span>
-            </a>
-        </div>
-        <a href="login.php" class="btn-login-nav">ÁREA DO ALUNO</a>
-    </nav>
-
+    <a href="index.php">
+        <nav class="saas-nav">
+            <div class="logo-container">
+                <img src="assets/img/icones/icon-nav.png" alt="Ryan Coach">
+                <span class="title">Ryan Coach</span>
+            </div>
+            <a href="login.php" class="btn-login-nav">ENTRAR</a>
+        </nav>
+    </a>
+    
     <section class="planos-header">
         <div class="container">
             <h1 class="hero-title" style="margin-bottom: 10px;">
@@ -95,7 +94,7 @@ require_once 'includes/head_main.php';
                     <span class="plan-name">SOU PERSONAL</span>
                     <div class="plan-price">
                         <span class="currency">R$</span>
-                        <span class="amount">4</span>
+                        <span class="amount">9</span>
                         <span class="cents">,90</span>
                         <span class="per-student">/aluno</span>
                     </div>
@@ -110,7 +109,7 @@ require_once 'includes/head_main.php';
                         <li><i class="fa-solid fa-file-pdf"></i> <span>Envio de PDF via Whats</span></li>
                         <li><i class="fa-solid fa-clipboard-check"></i> <span>Avaliação Física Completa</span></li>
                     </ul>
-                    <a href="https://wa.me/5535999928473?text=Sou%20Personal%20Trainer%20e%20quero%20conhecer%20o%20plano%20para%20COACHES." 
+                    <a href="https://wa.me/5535999928473?text=Sou%20Personal%20Trainer%20e%20quero%20conhecer%20o%20plano%20para%20COACHS." 
                         target="_blank" class="btn-plan-coach">
                         <i class="fa-brands fa-whatsapp"></i> CRIAR CONTA COACH
                     </a>

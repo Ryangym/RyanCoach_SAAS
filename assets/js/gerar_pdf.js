@@ -849,7 +849,6 @@ function debugPreviewPDF() {
         // Altura do container
         const scaledHeight = (isLandscape ? 794 : 1123) * scale; 
         wrapper.style.height = `${scaledHeight + 50}px`;
-        wrapper.style.width = '100%';
         wrapper.style.display = 'flex';
         wrapper.style.justifyContent = 'center';
     };

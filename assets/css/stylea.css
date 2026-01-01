@@ -387,6 +387,7 @@ body.saas-body {
 .features-scroll {
     display: flex;
     flex-direction: column;
+    flex-wrap: wrap;
     gap: 25px;
 }
 
@@ -568,8 +569,12 @@ body.saas-body {
     }
     
     .hero-title { font-size: 3.5rem; }
-    
-    .features-scroll { flex-direction: row; }
+    .features-scroll { flex-direction: row; justify-content: center; }
+    .container{
+        max-width: 90%;
+    }
+
+    .feature-card {  width: 360px;}
     
     .auth-grid {
         flex-direction: row;

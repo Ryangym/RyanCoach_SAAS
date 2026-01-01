@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'config/db_connect.php';
+require_once 'verificar_plano.php';
 
 // 1. Verifica se está logado
 if (!isset($_SESSION['user_id'])) {

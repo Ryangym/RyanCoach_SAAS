@@ -9,13 +9,17 @@ require_once 'includes/head_main.php';
 
 <body class="saas-body">
 
-    <nav class="saas-nav">
-        <div class="logo-container">
-            <img src="assets/img/icones/icon-nav.png" alt="Ryan Coach">
-            <span class="title">Ryan Coach</span>
-        </div>
-        <a href="login.php" class="btn-login-nav">ENTRAR</a>
-    </nav>
+    
+        <nav class="saas-nav">
+            <a href="index.php">
+                <div class="logo-container">
+                    <img src="assets/img/icones/icon-nav.png" alt="Ryan Coach">
+                    <span class="title">Ryan Coach</span>
+                </div>
+            </a>
+            <a href="login.php" class="btn-login-nav">ENTRAR</a>
+        </nav>
+
 
     <header class="saas-hero">
         <div class="container">
@@ -131,6 +135,30 @@ require_once 'includes/head_main.php';
                     <div class="f-icon"><i class="fa-solid fa-calendar-days"></i></div>
                     <h3>Periodização Automática</h3>
                     <p>Organize macrociclos e microciclos. Saiba quando é semana de choque ou semana regenerativa.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="f-icon"><i class="fa-solid fa-utensils"></i></div>
+                    <h3>Dieta Inteligente</h3>
+                    <p>Acesse seu plano alimentar completo com cálculo de macros e opções de substituição de alimentos.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="f-icon"><i class="fa-solid fa-bolt"></i></div>
+                    <h3>Técnicas Avançadas</h3>
+                    <p>Suporte nativo para Drop-set, Rest-pause e Cluster. Registre cada quebra e falha com precisão.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="f-icon"><i class="fa-solid fa-camera"></i></div>
+                    <h3>Comparativo de Fotos</h3>
+                    <p>Acompanhe sua transformação. Armazene fotos de "Antes e Depois", registre peso e medidas corporais.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="f-icon"><i class="fa-solid fa-circle-play"></i></div>
+                    <h3>Biblioteca de Vídeos</h3>
+                    <p>Nunca mais tenha dúvida na execução. Cada exercício possui vídeos demonstrativos integrados.</p>
                 </div>
 
             </div>

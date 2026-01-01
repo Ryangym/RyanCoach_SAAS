@@ -378,12 +378,6 @@
             </div>
 
         </div>
-        
-        <div style="margin-top: 60px; background: linear-gradient(45deg, #222, #111); border: 1px solid #333; border-radius: 20px; padding: 40px; text-align: center;">
-            <h2 style="color: #fff; font-family: 'Orbitron'; margin-bottom: 15px;">Não sabe o que fazer com esses números?</h2>
-            <p style="color: #aaa; margin-bottom: 30px;">Ter os dados é o primeiro passo. O segundo é ter um plano nutricional e de treino alinhado a eles.</p>
-            <a href="planos.php" class="CTA-rounded"><span>Assinar Consultoria</span></a>
-        </div>
 
     </div>
 

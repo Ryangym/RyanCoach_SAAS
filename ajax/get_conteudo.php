@@ -2642,7 +2642,7 @@ switch ($pagina) {
         
         $foto = !empty($user['foto']) ? $user['foto'] : 'assets/img/user-default.png';
         $codigo = $user['codigo_convite'] ?? '---';
-        $link_indica = "https://ryancoach.com/login.php?ref=" . $codigo;
+        $link_indica = "https://ryanborges.com/login.php?ref=" . $codigo;
         
         // Verifica se tem coach para decidir o layout do botão e do modal
         $tem_coach = !empty($user['coach_id']);

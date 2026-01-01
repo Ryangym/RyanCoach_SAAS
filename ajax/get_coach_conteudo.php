@@ -608,7 +608,7 @@ switch ($pagina) {
         $codigo = $coach['codigo_convite'] ?? 'SEMCODIGO';
         
         // Link de Indicação (Ajuste o domínio se necessário)
-        $link_indica = "https://ryancoach.com/login.php?ref=" . $codigo;
+        $link_indica = "https://ryanborges.com/login.php?ref=" . $codigo;
 
         echo '<section id="admin-hub" class="fade-in">
                 

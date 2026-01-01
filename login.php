@@ -1,3 +1,12 @@
+<?php
+// Verifica se existe a variável de sessão do usuário (ajuste 'id_usuario' pelo nome que vc usa no login)
+if (isset($_SESSION['id_usuario']) && !empty($_SESSION['id_usuario'])) {
+    // O usuário JÁ está logado. Manda ele direto pro painel.
+    header("Location: usuario_painel.php"); // <--- Coloque aqui o nome da página do dashboard dele
+    exit; // Importante: para o script aqui para não carregar a tela de login à toa
+}
+?>
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>

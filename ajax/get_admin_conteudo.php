@@ -1073,7 +1073,6 @@ switch ($pagina) {
                                     <select name="nivel" class="admin-input" id="selectNivel" onchange="togglePeriodizacao()" required>
                                         <option value="basico">Básico (Ficha Fixa)</option>
                                         <option value="avancado">Avançado (Periodizado)</option>
-                                        <option value="premium">Premium (Periodizado +)</option>
                                     </select>
                                 </div>
                                 <div class="form-col">

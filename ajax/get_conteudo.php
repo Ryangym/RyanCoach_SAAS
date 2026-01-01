@@ -6,6 +6,13 @@ $aluno_id = $_SESSION['user_id'];
 $pagina_raw = $_GET['pagina'] ?? 'dashboard';
 $partes = explode('&', $pagina_raw);
 $pagina = $partes[0];
+
+// --- BUSCA O PLANO DO USUÁRIO NO INÍCIO ---
+$stmt_plano = $pdo->prepare("SELECT plano_atual FROM usuarios WHERE id = ?");
+$stmt_plano->execute([$aluno_id]);
+$dado_user = $stmt_plano->fetch(PDO::FETCH_ASSOC);
+$plano_aluno = $dado_user['plano_atual'] ?? 'start'; // 'start', 'pro', 'coach'
+
 $hoje = date('Y-m-d');
 $divisao_req = $_GET['divisao_id'] ?? null; // Usado no Realizar Treino
 $treino_req  = $_GET['treino_id'] ?? null;  // Usado no Visualizar Treino
@@ -1042,6 +1049,13 @@ switch ($pagina) {
 
     
     case 'historico':
+
+    if ($plano_aluno === 'start') {
+        $titulo_bloqueio = "Histórico Detalhado";
+        $texto_bloqueio  = "A análise de evolução de cargas e histórico completo é exclusiva para alunos <strong>PRO</strong>.";
+        include '../includes/aviso_bloqueio.php';
+        break; 
+    }
     require_once '../config/db_connect.php';
     $aluno_id = $_SESSION['user_id'];
     $data_ref = $_GET['data_ref'] ?? null;
@@ -1519,6 +1533,13 @@ switch ($pagina) {
 
     // --- TELA 2: MEU PROGRESSO (COM DELTAS E GRÁFICO FIX) ---
     case 'progresso':
+
+        if ($plano_aluno === 'start') {
+            $titulo_bloqueio = "Progresso de Avaliações";
+            $texto_bloqueio  = "A comparação de medidas entre avaliações e visualização de gráficos é exclusivo para alunos <strong>PRO</strong>.";
+            include '../includes/aviso_bloqueio.php';
+            break; 
+        }
         require_once '../config/db_connect.php';
         $aluno_id = $_SESSION['user_id'];
 
@@ -1825,6 +1846,14 @@ switch ($pagina) {
         break;
 
     case 'gerar_pdf':
+    
+    if ($plano_aluno === 'start') {
+        $titulo_bloqueio = "Geração de PDF";
+        $texto_bloqueio  = "Gerar PDF de treinos, periodização e avaliação física é exclusivo para alunos <strong>PRO</strong>.";
+        include '../includes/aviso_bloqueio.php';
+        break; 
+    }
+
     require_once '../config/db_connect.php';
     $aluno_id = $_SESSION['user_id'];
 
@@ -2082,7 +2111,13 @@ switch ($pagina) {
         require_once '../config/db_connect.php';
         $user_id = $_SESSION['user_id'];
 
-        // 1. Busca os treinos para listar na tela de fundo
+        // 1. Busca o Plano Atual do Aluno (Para validar permissão)
+        $stmt_p = $pdo->prepare("SELECT plano_atual FROM usuarios WHERE id = ?");
+        $stmt_p->execute([$user_id]);
+        $dados_user = $stmt_p->fetch(PDO::FETCH_ASSOC);
+        $plano_atual = $dados_user['plano_atual'] ?? 'start'; // start, pro, coach
+
+        // 2. Busca os treinos para listar na tela de fundo
         $sql = "SELECT * FROM treinos WHERE aluno_id = ? AND ativo = 1 ORDER BY id DESC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$user_id]);
@@ -2140,7 +2175,7 @@ switch ($pagina) {
         echo '  </div>
               </section>';
 
-        // --- MODAL DE NOVO TREINO (ESTRUTURA IDÊNTICA AO ADMIN) ---
+        // --- MODAL DE NOVO TREINO ATUALIZADO ---
         echo '
         <div id="box-novo-treino" class="modal-overlay" style="display:none;">
             <div class="modal-content selection-modal" style="max-width: 650px; text-align: left; position: relative;">
@@ -2151,10 +2186,8 @@ switch ($pagina) {
                     <i class="fa-solid fa-dumbbell"></i> Criar Nova Estrutura
                 </h3>
                 
-                <form id="formNovoTreino" onsubmit="criarTreino(event)">';
-                    
-                    // --- O RESTANTE DO FORMULÁRIO (CÓPIA FIEL DO ADMIN) ---
-             echo ' <div class="form-row">
+                <form id="formNovoTreino" onsubmit="criarTreino(event)">
+                    <div class="form-row">
                         <div class="form-col">
                             <label class="input-label">Nome do Planejamento</label>
                             <input type="text" name="nome" class="user-input" placeholder="Ex: Hipertrofia Fase 1" required>
@@ -2164,11 +2197,20 @@ switch ($pagina) {
                     <div class="form-row">
                         <div class="form-col">
                             <label class="input-label">Tipo de Plano</label>
-                            <select name="nivel" class="user-input" id="selectNivel" onchange="togglePeriodizacao()" required>
-                                <option value="basico">Básico (Ficha Fixa)</option>
-                                <option value="avancado" selected>Avançado (Periodizado)</option>
-                                <option value="premium">Premium (Periodizado +)</option>
-                            </select>
+                            <select name="nivel" class="user-input" id="selectNivel" onchange="togglePeriodizacao()" required>';
+                                
+                                // LÓGICA DE EXIBIÇÃO DAS OPÇÕES
+                                if ($plano_atual === 'start') {
+                                    // Se for START: Básico selecionado, Avançado bloqueado
+                                    echo '<option value="basico" selected>Básico (Ficha Fixa)</option>';
+                                    echo '<option value="avancado" disabled>Avançado (Bloqueado - Alunos PRO)</option>';
+                                } else {
+                                    // Se for PRO/COACH: Pode escolher ambos, Avançado padrão
+                                    echo '<option value="basico">Básico (Ficha Fixa)</option>';
+                                    echo '<option value="avancado" selected>Avançado (Periodizado)</option>';
+                                }
+
+                        echo '</select>
                         </div>
                         <div class="form-col">
                             <label class="input-label">Data de Início</label>
@@ -2193,7 +2235,7 @@ switch ($pagina) {
                                 </div>
                             </div>
 
-                            <div id="aviso-periodizacao" class="alert-box">
+                            <div id="aviso-periodizacao" class="alert-box" '.($plano_atual === 'start' ? 'style="display:none;"' : '').'>
                                 <span class="alert-title">Modo Periodização Ativo</span>
                                 <p class="alert-text">Serão gerados 12 Microciclos automaticamente.</p>
                             </div>
@@ -2202,7 +2244,7 @@ switch ($pagina) {
                         </form>
                     </div>
         </div>';
-        break;
+    break;
     
 
     case 'treino_painel':
@@ -2567,6 +2609,23 @@ switch ($pagina) {
 
     // --- MENU GERAL (HUB DE NAVEGAÇÃO) ---
     case 'menu':
+
+        // --- LÓGICA DO LINK DE INDICAÇÃO ---
+        $codigo = $user['codigo_convite'] ?? 'ERRO'; // Pega o código do usuário logado
+
+        // Detecta protocolo e domínio
+        $protocolo = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
+        $dominio = $_SERVER['HTTP_HOST'];
+
+        // Ajusta o diretório (remove '/ajax' se estiver sendo chamado de dentro dessa pasta)
+        $caminho = dirname($_SERVER['PHP_SELF']);
+        $caminho = str_replace('\\', '/', $caminho); // Corrige barras no Windows
+        $caminho = str_replace('/ajax', '', $caminho); // Remove a pasta ajax para apontar pra raiz
+        $caminho = rtrim($caminho, '/'); // Remove barra final se tiver
+
+        // Monta o link final
+        $link_indica = "{$protocolo}://{$dominio}{$caminho}/login.php?ref={$codigo}";
+
         require_once '../config/db_connect.php';
         $user_id = $_SESSION['user_id'];
         
@@ -2632,8 +2691,12 @@ switch ($pagina) {
                 <div class="settings-list">
                     
                     <div class="setting-item" onclick="copiarLinkIndicacao(\''.$link_indica.'\')" style="cursor:pointer;">
-                        <div class="st-left"><i class="fa-solid fa-ticket" style="color: var(--gold);"></i>
-                            <div><span style="display:block;">Indique e Ganhe</span><span style="display:block; font-size:0.7rem; color:#666;">Cód: <strong style="color:var(--gold)">'.$codigo.'</strong></span></div>
+                        <div class="st-left">
+                            <i class="fa-solid fa-ticket" style="color: var(--gold);"></i>
+                            <div>
+                                <span style="display:block;">Indique e Ganhe</span>
+                                <span style="display:block; font-size:0.7rem; color:#666;">Cód: <strong style="color:var(--gold)">'.$codigo.'</strong></span>
+                            </div>
                         </div>
                         <i class="fa-regular fa-copy" style="font-size: 0.8rem; color: #666;"></i>
                     </div>

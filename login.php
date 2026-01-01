@@ -205,11 +205,19 @@
         document.addEventListener("DOMContentLoaded", function() {
             const urlParams = new URLSearchParams(window.location.search);
             const refCode = urlParams.get('ref'); // Pega ?ref=CODIGO
+            
             if (refCode) {
-                const input = document.getElementById('input-cupom');
+                // Tenta achar o input
+                const input = document.getElementById('input-cupom'); 
+                
+                // Se achou, preenche e abre a tela de cadastro
                 if (input) {
                     input.value = refCode;
                     input.readOnly = true; // Trava para não editar
+                    
+                    // Força a abertura do painel de cadastro (se estiver usando aquele layout deslizante)
+                    const container = document.getElementById('container');
+                    if(container) container.classList.add('active');
                 }
             }
         });

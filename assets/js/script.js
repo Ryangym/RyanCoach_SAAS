@@ -137,13 +137,30 @@ function criarTreino(event) {
 }
 
 function copiarLinkIndicacao(link) {
-    navigator.clipboard.writeText(link).then(() => {
-        alert("Link copiado! Envie para seu aluno.");
-    })
-    .catch(err => {
-        console.error("Erro ao copiar: ", err);
-        alert("Não foi possível copiar automaticamente. Seu código é: " + link.split("ref=")[1]);
-    });
+    // Tenta usar a API moderna de Clipboard
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(link).then(() => {
+            alert("Link copiado com sucesso!");
+        }).catch(err => {
+            console.error('Erro ao copiar: ', err);
+            copiarLinkManual(link); // Fallback
+        });
+    } else {
+        // Fallback para navegadores antigos ou sem HTTPS
+        copiarLinkManual(link);
+    }
+}
+
+function copiarLinkManual(texto) {
+    // Cria um input temporário para selecionar e copiar
+    let tempInput = document.createElement("input");
+    tempInput.value = texto;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    tempInput.setSelectionRange(0, 99999); /* Para mobile */
+    document.execCommand("copy");
+    document.body.removeChild(tempInput);
+    alert("Link de indicação copiado!");
 }
 
 // ------------------FINANCEIRO ------------------

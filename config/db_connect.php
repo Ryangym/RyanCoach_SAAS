@@ -1,10 +1,4 @@
 <?php
-// Configura a sessão para durar 30 dias (em segundos: 60*60*24*30)
-$tempo_vida = 2592000; 
-ini_set('session.gc_maxlifetime', $tempo_vida);
-session_set_cookie_params($tempo_vida);
-
-session_start(); // Inicia a sessão com as novas regras
 // --- AJUSTE DE FUSO HORÁRIO ---
 // Usamos 'America/Recife' pois é o mesmo fuso de Brasília (UTC-3),
 // mas não sofre com bugs de "Horário de Verão Fantasma" em servidores desatualizados.

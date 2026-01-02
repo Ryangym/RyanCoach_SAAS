@@ -2603,6 +2603,183 @@ switch ($pagina) {
         ';
         break;              
 
+    case 'dieta_editor':
+        require_once '../config/db_connect.php';
+        $aluno_id = $_SESSION['user_id']; // <--- MUDANÇA PRINCIPAL: Pega o ID de quem está logado
+
+        // 1. Busca Dieta ATIVA
+        $stmt_d = $pdo->prepare("SELECT * FROM dietas WHERE aluno_id = ? LIMIT 1");
+        $stmt_d->execute([$aluno_id]);
+        $dieta = $stmt_d->fetch(PDO::FETCH_ASSOC);
+
+        echo '<section id="minha-dieta-editor">
+                <header class="dash-header" style="margin-bottom: 20px;">
+                    <div>
+                        <h1 style="font-size:1.8rem; margin:0;">MONTAR <span class="highlight-text">DIETA</span></h1>
+                        <p class="text-desc" style="margin:0;">Gerencie suas refeições e macros.</p>
+                    </div>
+                </header>';
+
+        // --- ESTADO 1: SEM DIETA (CRIAR) ---
+        if (!$dieta) {
+            echo '<div class="glass-card" style="text-align:center; padding:50px;">
+                    <i class="fa-solid fa-utensils" style="font-size:3rem; color:#333; margin-bottom:20px;"></i>
+                    <h3 style="color:#fff; margin-bottom:10px;">Você ainda não tem uma dieta</h3>
+                    <p style="color:#888; margin-bottom:30px;">Crie seu plano alimentar agora mesmo para começar o monitoramento.</p>
+                    
+                    <form action="actions/dieta_save.php" method="POST" style="max-width:400px; margin:auto;">
+                        <input type="hidden" name="acao" value="criar_dieta">
+                        <input type="hidden" name="aluno_id" value="'.$aluno_id.'">
+                        <input type="hidden" name="origem" value="usuario"> 
+                        
+                        <input type="text" name="titulo" class="user-input" placeholder="Nome da Dieta (Ex: Hipertrofia)" required style="margin-bottom:10px;">
+                        <input type="text" name="objetivo" class="user-input" placeholder="Objetivo (Ex: 2500 Kcal)" required style="margin-bottom:20px;">
+                        
+                        <button type="submit" class="btn-gold" style="width:100%;">CRIAR MINHA DIETA</button>
+                    </form>
+                </div>';
+        } 
+        // --- ESTADO 2: COM DIETA (EDITOR) ---
+        else {
+            // Cálculo de Aderência (Mantive pois é legal o usuário ver)
+            $hoje = date('Y-m-d');
+            $stmt_total = $pdo->prepare("SELECT COUNT(*) FROM refeicoes WHERE dieta_id = ?");
+            $stmt_total->execute([$dieta['id']]);
+            $total_refs = $stmt_total->fetchColumn();
+
+            $stmt_feito = $pdo->prepare("SELECT COUNT(*) FROM dieta_registro WHERE aluno_id = ? AND data_registro = ?");
+            $stmt_feito->execute([$aluno_id, $hoje]);
+            $feitos = $stmt_feito->fetchColumn();
+
+            $porcentagem = ($total_refs > 0) ? round(($feitos / $total_refs) * 100) : 0;
+
+            echo '<div class="glass-card mb-large">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px; margin-bottom:20px;">
+                        <div>
+                            <h3 style="color:var(--gold); margin:0;">'.$dieta['titulo'].'</h3>
+                            <span style="color:#888; font-size:0.9rem;">'.$dieta['objetivo'].'</span>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <a href="actions/dieta_save.php?acao=excluir_dieta&id='.$dieta['id'].'&aluno_id='.$aluno_id.'&origem=usuario" class="btn-action-icon btn-delete" onclick="return confirm(\'Tem certeza? Isso apagará todas as suas refeições configuradas.\')">
+                                <i class="fa-solid fa-trash"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:30px;">
+                        <button class="btn-gold" onclick="abrirModalRefeicao('.$dieta['id'].')">
+                            <i class="fa-solid fa-plus"></i> NOVA REFEIÇÃO
+                        </button>
+                    </div>
+
+                    <div class="diet-editor-list">';
+
+                    // Busca Refeições
+                    $stmt_ref = $pdo->prepare("SELECT * FROM refeicoes WHERE dieta_id = ? ORDER BY ordem ASC");
+                    $stmt_ref->execute([$dieta['id']]);
+                    $refeicoes = $stmt_ref->fetchAll(PDO::FETCH_ASSOC);
+
+                    if (empty($refeicoes)) {
+                        echo '<p style="text-align:center; color:#666; padding:20px; border: 1px dashed #333; border-radius: 8px;">Nenhuma refeição cadastrada. Clique no botão acima para começar.</p>';
+                    }
+
+                    foreach($refeicoes as $ref) {
+                        echo '<div class="meal-edit-card" style="background:#1a1a1a; border:1px solid #333; border-radius:12px; margin-bottom:20px; overflow:hidden;">
+                                
+                                <div class="meal-header" style="background:#222; padding:15px; display:flex; justify-content:space-between; align-items:center;">
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <span style="background:var(--gold); color:#000; padding:4px 8px; border-radius:6px; font-weight:bold; font-size:0.8rem;">'.date('H:i', strtotime($ref['horario'])).'</span>
+                                        <strong style="color:#fff;">'.$ref['nome'].'</strong>
+                                    </div>
+                                    <div style="display:flex; gap:10px;">
+                                        <button class="btn-action-icon" onclick="abrirModalAlimento('.$ref['id'].')" title="Adicionar Alimento"><i class="fa-solid fa-plus"></i></button>
+                                        <a href="actions/dieta_save.php?acao=excluir_refeicao&id='.$ref['id'].'&aluno_id='.$aluno_id.'&origem=usuario" class="btn-action-icon btn-delete"><i class="fa-solid fa-trash"></i></a>
+                                    </div>
+                                </div>
+
+                                <div class="meal-items" style="padding:15px;">';
+                                
+                                // Busca Itens
+                                $stmt_it = $pdo->prepare("SELECT * FROM itens_dieta WHERE refeicao_id = ? ORDER BY opcao_numero ASC");
+                                $stmt_it->execute([$ref['id']]);
+                                $itens = $stmt_it->fetchAll(PDO::FETCH_ASSOC);
+
+                                if(empty($itens)) {
+                                    echo '<p style="color:#666; font-style:italic; font-size:0.9rem; text-align:center; margin:0;">Nenhum alimento nesta refeição.</p>';
+                                } else {
+                                    foreach($itens as $it) {
+                                        $tipo = ($it['opcao_numero'] == 1) ? '<span style="color:#00e676; font-size:0.7rem; font-weight:bold;">[PRINCIPAL]</span>' : '<span style="color:#ff9100; font-size:0.7rem; font-weight:bold;">[OPÇÃO '.$it['opcao_numero'].']</span>';
+                                        
+                                        echo '<div style="display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px solid #2a2a2a;">
+                                                <div style="flex:1;">
+                                                    '.$tipo.'
+                                                    <strong style="display:block; color:#eee; font-size:0.95rem;">'.$it['descricao'].'</strong>
+                                                    '.($it['observacao'] ? '<small style="color:#888;">Obs: '.$it['observacao'].'</small>' : '').'
+                                                </div>
+                                                <a href="actions/dieta_save.php?acao=excluir_item&id='.$it['id'].'&aluno_id='.$aluno_id.'&origem=usuario" style="color:#666; margin-left:10px;"><i class="fa-solid fa-xmark"></i></a>
+                                            </div>';
+                                    }
+                                }
+
+                        echo '  </div>
+                            </div>';
+                    }
+
+            echo '  </div>
+                </div>';
+        }
+        echo '</section>
+
+
+        <div id="modalNovaRefeicao" class="modal-overlay" style="display:none;">
+            <div class="modal-content selection-modal" style="text-align:left; max-width:400px;">
+                <button class="modal-close" onclick="fecharModalRefeicao()">&times;</button>
+                <h3 class="modal-title" style="text-align:center;">Nova Refeição</h3>
+                <form action="actions/dieta_save.php" method="POST">
+                    <input type="hidden" name="acao" value="add_refeicao">
+                    <input type="hidden" name="dieta_id" id="modal_dieta_id">
+                    <input type="hidden" name="aluno_id" value="<?php echo $aluno_id; ?>">
+                    <input type="hidden" name="origem" value="usuario"> <label class="input-label">Nome (Ex: Café da Manhã)</label>
+                    <input type="text" name="nome" class="user-input" required style="margin-bottom:15px;">
+                    
+                    <label class="input-label">Horário Sugerido</label>
+                    <input type="time" name="horario" class="user-input" required style="margin-bottom:15px;">
+                    
+                    <label class="input-label">Ordem</label>
+                    <input type="number" name="ordem" class="user-input" value="1" required style="margin-bottom:20px;">
+                    
+                    <button type="submit" class="btn-gold" style="width:100%;">CRIAR REFEIÇÃO</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="modalNovoAlimento" class="modal-overlay" style="display:none;">
+            <div class="modal-content selection-modal" style="text-align:left; max-width:400px;">
+                <button class="modal-close" onclick="fecharModalAlimento()">&times;</button>
+                <h3 class="modal-title" style="text-align:center;">Adicionar Alimento</h3>
+                <form action="actions/dieta_save.php" method="POST">
+                    <input type="hidden" name="acao" value="add_item">
+                    <input type="hidden" name="refeicao_id" id="modal_refeicao_id">
+                    <input type="hidden" name="aluno_id" value="<?php echo $aluno_id; ?>">
+                    <input type="hidden" name="origem" value="usuario"> <label class="input-label">Tipo</label>
+                    <select name="opcao_numero" class="user-input" style="margin-bottom:15px;">
+                        <option value="1">Opção Principal</option>
+                        <option value="2">Opção 2 (Substituição)</option>
+                        <option value="3">Opção 3 (Substituição)</option>
+                    </select>
+                    
+                    <label class="input-label">Descrição</label>
+                    <textarea name="descricao" class="user-input" rows="3" placeholder="Ex: 2 Ovos mexidos + 1 Banana" required style="margin-bottom:15px;"></textarea>
+                    
+                    <label class="input-label">Observação (Opcional)</label>
+                    <input type="text" name="observacao" class="user-input" placeholder="Ex: Sem açúcar" style="margin-bottom:20px;">
+                    
+                    <button type="submit" class="btn-gold" style="width:100%;">ADICIONAR</button>
+                </form>
+            </div>
+        </div>';
+
+        break;
 
 
 
@@ -2685,6 +2862,9 @@ switch ($pagina) {
                     <div class="menu-card" onclick="carregarConteudo(\'novo_treino\')">
                         <div class="mc-icon" style="background: rgba(150, 50, 255, 0.1); color: #a855f7; border: 1px solid #a855f7;"><i class="fa-solid fa-pen-to-square"></i></div><span>Novo Treino</span>
                     </div>
+                    <div class="menu-card" onclick="carregarConteudo(\'dieta_editor\')">
+                        <div class="mc-icon" style="background: rgba(150, 50, 255, 0.1); color: #a855f7; border: 1px solid #a855f7;"><i class="fa-solid fa-pen-to-square"></i></div><span>Nova Dieta</span>
+                    </div>
                 </div>
 
                 <h3 class="section-label" style="margin-left: 10px; margin-top: 30px;">SISTEMA</h3>
@@ -2752,7 +2932,7 @@ switch ($pagina) {
                             
                             <form action="actions/aluno_vincular.php" method="POST">
                                 <input type="hidden" name="acao" value="vincular">
-                                <input type="text" name="codigo_coach" class="admin-input" placeholder="Ex: RYAN10" style="text-align:center; text-transform:uppercase; font-size:1.2rem; letter-spacing:2px; margin-bottom:20px; max-width:100%;" required>
+                                <input type="text" name="codigo_coach" class="user-input" placeholder="Ex: RYAN10" style="text-align:center; text-transform:uppercase; font-size:1.2rem; letter-spacing:2px; margin-bottom:20px; max-width:100%;" required>
                                 <button type="submit" class="btn-gold" style="width:100%; padding:12px;">CONECTAR</button>
                             </form>';
                         } else {

@@ -122,7 +122,17 @@ if ($dados_usuario['data_expiracao_plano']) {
     
     // TELA INICIAL AO ABRIR A PAGINA (DASHBOARD)
     document.addEventListener('DOMContentLoaded', () => {
-        carregarConteudo('dashboard'); // Ou 'treinos' se preferir iniciar lá
+    // 1. Tenta pegar a página da URL (ex: usuario.php?page=dieta)
+    const urlParams = new URLSearchParams(window.location.search);
+    const paginaUrl = urlParams.get('page');
+
+    // 2. Se tiver parâmetro, carrega ele. Se não, carrega dashboard.
+    if (paginaUrl) {
+        carregarConteudo(paginaUrl);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+        carregarConteudo('dashboard');
+    }
 
         // Listener do Menu Lateral
         document.getElementById('main-aside').addEventListener('click', (e) => {

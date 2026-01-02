@@ -1848,6 +1848,11 @@ switch ($pagina) {
         require_once '../config/db_connect.php';
         $aluno_id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT);
         
+        // --- CORREÇÃO: DETECTA QUEM ESTÁ VENDO (ADMIN OU COACH) ---
+        // Se for personal/coach, define a origem como 'coach'. Senão, 'admin'.
+        $tipo_logado = $_SESSION['tipo_conta'] ?? 'admin';
+        $origem_form = ($tipo_logado === 'coach' || $tipo_logado === 'personal') ? 'coach' : 'admin';
+
         // 1. Busca Aluno
         $stmt = $pdo->prepare("SELECT nome, foto FROM usuarios WHERE id = ?");
         $stmt->execute([$aluno_id]);
@@ -1880,6 +1885,7 @@ switch ($pagina) {
                     <form action="actions/dieta_save.php" method="POST" style="max-width:400px; margin:auto;">
                         <input type="hidden" name="acao" value="criar_dieta">
                         <input type="hidden" name="aluno_id" value="'.$aluno_id.'">
+                        <input type="hidden" name="origem" value="'.$origem_form.'">
                         
                         <input type="text" name="titulo" class="admin-input" placeholder="Título (Ex: Protocolo Cutting)" required style="margin-bottom:10px;">
                         <input type="text" name="objetivo" class="admin-input" placeholder="Objetivo (Ex: 2200 Kcal)" required style="margin-bottom:20px;">
@@ -1926,7 +1932,7 @@ switch ($pagina) {
                             <span style="color:#888; font-size:0.9rem;">'.$dieta['objetivo'].'</span>
                         </div>
                         <div style="display:flex; gap:10px;">
-                            <a href="actions/dieta_save.php?acao=excluir_dieta&id='.$dieta['id'].'&aluno_id='.$aluno_id.'" class="btn-action-icon btn-delete" onclick="return confirm(\'Apagar toda a dieta?\')"><i class="fa-solid fa-trash"></i></a>
+                            <a href="actions/dieta_save.php?acao=excluir_dieta&id='.$dieta['id'].'&aluno_id='.$aluno_id.'&origem='.$origem_form.'" class="btn-action-icon btn-delete" onclick="return confirm(\'Apagar toda a dieta?\')"><i class="fa-solid fa-trash"></i></a>
                         </div>
                     </div>
 
@@ -1961,7 +1967,7 @@ switch ($pagina) {
                             </div>
                             <div style="display:flex; gap:10px;">
                                 <button class="btn-action-icon" onclick="abrirModalAlimento('.$ref['id'].')" title="Add Alimento"><i class="fa-solid fa-plus"></i></button>
-                                <a href="actions/dieta_save.php?acao=excluir_refeicao&id='.$ref['id'].'&aluno_id='.$aluno_id.'" class="btn-action-icon btn-delete"><i class="fa-solid fa-trash"></i></a>
+                                <a href="actions/dieta_save.php?acao=excluir_refeicao&id='.$ref['id'].'&aluno_id='.$aluno_id.'&origem='.$origem_form.'" class="btn-action-icon btn-delete"><i class="fa-solid fa-trash"></i></a>
                             </div>
                         </div>
 
@@ -1984,7 +1990,7 @@ switch ($pagina) {
                                             <strong style="display:block; color:#eee; font-size:0.95rem;">'.$it['descricao'].'</strong>
                                             '.($it['observacao'] ? '<small style="color:#888;">Obs: '.$it['observacao'].'</small>' : '').'
                                         </div>
-                                        <a href="actions/dieta_save.php?acao=excluir_item&id='.$it['id'].'&aluno_id='.$aluno_id.'" style="color:#666; margin-left:10px;"><i class="fa-solid fa-xmark"></i></a>
+                                        <a href="actions/dieta_save.php?acao=excluir_item&id='.$it['id'].'&aluno_id='.$aluno_id.'&origem='.$origem_form.'" style="color:#666; margin-left:10px;"><i class="fa-solid fa-xmark"></i></a>
                                       </div>';
                             }
                         }
@@ -2009,6 +2015,7 @@ switch ($pagina) {
                     <input type="hidden" name="acao" value="add_refeicao">
                     <input type="hidden" name="dieta_id" id="modal_dieta_id">
                     <input type="hidden" name="aluno_id" value="'.$aluno_id.'">
+                    <input type="hidden" name="origem" value="'.$origem_form.'">
                     
                     <label class="input-label">Nome (Ex: Café da Manhã)</label>
                     <input type="text" name="nome" class="admin-input" required style="margin-bottom:15px;">
@@ -2033,6 +2040,7 @@ switch ($pagina) {
                     <input type="hidden" name="acao" value="add_item">
                     <input type="hidden" name="refeicao_id" id="modal_refeicao_id">
                     <input type="hidden" name="aluno_id" value="'.$aluno_id.'">
+                    <input type="hidden" name="origem" value="'.$origem_form.'">
                     
                     <label class="input-label">Tipo</label>
                     <select name="opcao_numero" class="admin-input" style="margin-bottom:15px;">
@@ -2065,6 +2073,7 @@ switch ($pagina) {
                 <form action="actions/dieta_save.php" method="POST">
                     <input type="hidden" name="acao" value="importar_dieta">
                     <input type="hidden" name="aluno_destino_id" value="'.$aluno_id.'">
+                    <input type="hidden" name="origem" value="'.$origem_form.'">
                     
                     <label class="input-label">Copiar de qual aluno?</label>
                     <select name="aluno_origem_id" class="admin-input" required style="margin-bottom:20px;">

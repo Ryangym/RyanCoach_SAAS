@@ -1,9 +1,27 @@
 <?php
-// Verifica se existe a variável de sessão do usuário (ajuste 'id_usuario' pelo nome que vc usa no login)
-if (isset($_SESSION['id_usuario']) && !empty($_SESSION['id_usuario'])) {
-    // O usuário JÁ está logado. Manda ele direto pro painel.
-    header("Location: usuario_painel.php"); // <--- Coloque aqui o nome da página do dashboard dele
-    exit; // Importante: para o script aqui para não carregar a tela de login à toa
+// 1. Aumenta o tempo da sessão para 30 dias (Para não deslogar ao fechar o app)
+// 2592000 segundos = 30 dias
+ini_set('session.gc_maxlifetime', 2592000);
+session_set_cookie_params(2592000);
+
+session_start();
+
+// 2. Verifica se o usuário JÁ está logado
+if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
+    
+    $tipo = $_SESSION['tipo_conta'] ?? 'atleta'; 
+
+    if ($tipo === 'admin') {
+        header("Location: admin.php");
+    } 
+    elseif ($tipo === 'coach') {
+        header("Location: coach.php");
+    } 
+    else {
+        header("Location: usuario.php");
+    }
+    
+    exit;
 }
 ?>
 

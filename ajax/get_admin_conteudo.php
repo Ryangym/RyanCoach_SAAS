@@ -1114,37 +1114,47 @@ switch ($pagina) {
     case 'financeiro':
         require_once '../config/db_connect.php';
         
-        // --- 1. FILTROS E CÁLCULOS ---
+        // --- 1. OTIMIZAÇÃO DE DATAS (Para usar Índices) ---
+        // Em vez de MONTH() e YEAR(), usamos BETWEEN (muito mais rápido no SQL)
+        $primeiro_dia = date('Y-m-01 00:00:00');
+        $ultimo_dia   = date('Y-m-t 23:59:59');
 
-        // Filtro: O que é considerado "Caixa do Admin"?
-        // Usuários sem coach (NULL/0) OU o próprio usuário é do tipo 'coach'/'personal' (pagando mensalidade)
+        // Filtro: "Caixa do Admin"
+        // Usuários sem coach (NULL/0) OU tipo 'coach'/'personal'
         $filtro_admin_sql = " AND (u.coach_id IS NULL OR u.coach_id = 0 OR u.tipo_conta IN ('coach', 'personal')) ";
 
-        // CARD 1: Faturamento GLOBAL (Tudo que entrou na plataforma: Alunos de Personal + Diretos)
-        $sql_fat_global = "SELECT SUM(valor) as total FROM pagamentos WHERE status = 'pago' AND MONTH(data_pagamento) = MONTH(CURRENT_DATE()) AND YEAR(data_pagamento) = YEAR(CURRENT_DATE())";
-        $fat_global = $pdo->query($sql_fat_global)->fetchColumn() ?? 0;
+        // --- 2. CÁLCULOS TOTAIS (OTIMIZADOS) ---
+        
+        // CARD 1: Faturamento GLOBAL (Mês Atual)
+        // Usa índice na data_pagamento
+        $stmt_fat = $pdo->prepare("SELECT SUM(valor) FROM pagamentos WHERE status = 'pago' AND data_pagamento BETWEEN ? AND ?");
+        $stmt_fat->execute([$primeiro_dia, $ultimo_dia]);
+        $fat_global = $stmt_fat->fetchColumn() ?? 0;
 
-        // CARD 2: Faturamento ADMIN (Apenas receitas diretas do Admin)
-        $sql_fat_admin = "SELECT SUM(p.valor) as total FROM pagamentos p 
+        // CARD 2: Faturamento ADMIN (Mês Atual)
+        // Otimizado com JOIN direto
+        $sql_fat_admin = "SELECT SUM(p.valor) FROM pagamentos p 
                           JOIN usuarios u ON p.usuario_id = u.id 
                           WHERE p.status = 'pago' 
-                          AND MONTH(p.data_pagamento) = MONTH(CURRENT_DATE()) 
-                          AND YEAR(p.data_pagamento) = YEAR(CURRENT_DATE())" 
+                          AND p.data_pagamento BETWEEN ? AND ?" 
                           . $filtro_admin_sql;
-        $fat_admin = $pdo->query($sql_fat_admin)->fetchColumn() ?? 0;
+        $stmt_fat_adm = $pdo->prepare($sql_fat_admin);
+        $stmt_fat_adm->execute([$primeiro_dia, $ultimo_dia]);
+        $fat_admin = $stmt_fat_adm->fetchColumn() ?? 0;
 
-        // CARD 3: Pendente ADMIN (Apenas o que o Admin tem para receber)
-        $sql_pend_admin = "SELECT SUM(p.valor) as total FROM pagamentos p 
+        // CARD 3: Pendente ADMIN (Total Geral Pendente)
+        $sql_pend_admin = "SELECT SUM(p.valor) FROM pagamentos p 
                            JOIN usuarios u ON p.usuario_id = u.id 
                            WHERE p.status = 'pendente'" 
                            . $filtro_admin_sql;
         $pend_admin = $pdo->query($sql_pend_admin)->fetchColumn() ?? 0;
 
 
-        // --- 2. QUERY PARA AS LISTAS ---
+        // --- 3. LISTAS (PAGINADAS / LIMITADAS) ---
         
         // Lista A: CAIXA ADMIN
-        $sql_lista_admin = "SELECT p.*, u.nome as nome_pagador, u.foto as foto_pagador, u.tipo_conta,
+        $sql_lista_admin = "SELECT p.id, p.descricao, p.valor, p.status, p.data_pagamento, p.data_vencimento,
+                                   u.nome as nome_pagador, u.foto as foto_pagador, u.tipo_conta,
                                    c.nome as nome_coach
                             FROM pagamentos p 
                             LEFT JOIN usuarios u ON p.usuario_id = u.id 
@@ -1154,7 +1164,8 @@ switch ($pagina) {
         $lista_admin = $pdo->query($sql_lista_admin)->fetchAll(PDO::FETCH_ASSOC);
 
         // Lista B: GLOBAL (Tudo)
-        $sql_lista_global = "SELECT p.*, u.nome as nome_pagador, u.foto as foto_pagador, u.tipo_conta,
+        $sql_lista_global = "SELECT p.id, p.descricao, p.valor, p.status, p.data_pagamento, p.data_vencimento,
+                                    u.nome as nome_pagador, u.foto as foto_pagador, u.tipo_conta,
                                     c.nome as nome_coach
                              FROM pagamentos p 
                              LEFT JOIN usuarios u ON p.usuario_id = u.id 
@@ -1163,8 +1174,10 @@ switch ($pagina) {
         $lista_global = $pdo->query($sql_lista_global)->fetchAll(PDO::FETCH_ASSOC);
 
 
-        // --- 3. LISTA DE USUÁRIOS PARA O MODAL (Admin vê TODOS) ---
-        $usuarios_list = $pdo->query("SELECT id, nome, foto, tipo_conta FROM usuarios WHERE tipo_conta IN ('atleta', 'aluno', 'coach', 'personal') ORDER BY nome ASC")->fetchAll(PDO::FETCH_ASSOC);
+        // --- 4. OTIMIZAÇÃO DO MODAL DE USUÁRIOS ---
+        // Buscamos apenas colunas essenciais e limitamos se for muito grande
+        // Se tiver mais de 200 usuários, o ideal seria buscar via AJAX ao digitar
+        $usuarios_list = $pdo->query("SELECT id, nome, foto, tipo_conta FROM usuarios WHERE tipo_conta IN ('atleta', 'aluno', 'coach', 'personal') ORDER BY nome ASC LIMIT 300")->fetchAll(PDO::FETCH_ASSOC);
 
 
         echo '
@@ -1248,7 +1261,7 @@ switch ($pagina) {
                                         $dataExibicao = date('d/m/y', strtotime($dataShow));
                                         $foto = !empty($t['foto_pagador']) ? $t['foto_pagador'] : 'assets/img/user-default.png';
                                         $nomePagador = $t['nome_pagador'] ?: 'Desconhecido';
-                                        $tipoConta = $t['tipo_conta'] == 'coach' ? '<span style="color:var(--color-coach); font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
+                                        $tipoConta = ($t['tipo_conta'] == 'coach' || $t['tipo_conta'] == 'personal') ? '<span style="color:var(--color-coach); font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
 
                                         echo '<tr>
                                             <td><div class="user-cell"><img src="'.$foto.'" class="table-avatar"><span>'.$nomePagador.'</span></div></td>
@@ -1283,9 +1296,8 @@ switch ($pagina) {
                                         $dataExibicao = date('d/m/y', strtotime($dataShow));
                                         $foto = !empty($t['foto_pagador']) ? $t['foto_pagador'] : 'assets/img/user-default.png';
                                         $nomePagador = $t['nome_pagador'] ?: 'Desconhecido';
-                                        $tipoConta = $t['tipo_conta'] == 'coach' ? '<span style="color: var(--color-coach); font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
+                                        $tipoConta = ($t['tipo_conta'] == 'coach' || $t['tipo_conta'] == 'personal') ? '<span style="color: var(--color-coach); font-size:0.7rem; font-weight:bold;">COACH</span>' : '<span style="color:#888; font-size:0.7rem;">ALUNO</span>';
                                         
-                                        // Na Global mostra o Coach
                                         $infoCoach = '';
                                         if(!empty($t['nome_coach'])) {
                                             $infoCoach = '<br><span style="color:#666; font-size:0.7rem;">Coach: '.$t['nome_coach'].'</span>';
@@ -1336,6 +1348,8 @@ switch ($pagina) {
                             <input type="hidden" name="usuario_id" id="id-user-adm" required>
                             
                             <div id="dropdown-users-adm" class="custom-dropdown-list" style="display:none; position:absolute; width:100%; max-height:200px; overflow-y:auto; background:#222; border:1px solid #444; z-index:1000;">';
+                                
+                                // OTIMIZAÇÃO: Limita a 300 usuários para não travar. Em produção grande, use AJAX no input.
                                 foreach($usuarios_list as $u) {
                                     $ft = !empty($u['foto']) ? $u['foto'] : 'assets/img/user-default.png';
                                     $nomeSafe = addslashes($u['nome']);
@@ -1367,15 +1381,24 @@ switch ($pagina) {
     
     case 'treino_painel':
         require_once '../config/db_connect.php';
+        
         $treino_id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT);
 
-        if (!$treino_id) { echo "ID Inválido"; break; }
+        if (!$treino_id) { 
+            echo "<div class='glass-card'>ID do treino não fornecido.</div>"; 
+            break; 
+        }
 
-        // 1. BUSCAR DADOS GERAIS
+        // 1. BUSCAR DADOS DO TREINO
         $sql = "SELECT t.*, u.nome as nome_aluno FROM treinos t JOIN usuarios u ON t.aluno_id = u.id WHERE t.id = :id";
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['id' => $treino_id]);
         $treino = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$treino) {
+            echo "<div class='glass-card'>Treino não encontrado.</div>";
+            break;
+        }
 
         // 2. BUSCAR DIVISÕES
         $sql_div = "SELECT * FROM treino_divisoes WHERE treino_id = :id ORDER BY letra ASC";
@@ -1383,7 +1406,41 @@ switch ($pagina) {
         $stmt_div->execute(['id' => $treino_id]);
         $divisoes = $stmt_div->fetchAll(PDO::FETCH_ASSOC);
 
-        // 3. BUSCAR PERIODIZAÇÃO E MICROCICLOS
+        // --- OTIMIZAÇÃO: CARREGAR TUDO EM LOTE ---
+        $exercicios_por_divisao = [];
+        $series_por_exercicio = [];
+
+        if (!empty($divisoes)) {
+            // A. Busca TODOS os exercícios dessas divisões
+            $div_ids = array_column($divisoes, 'id');
+            $placeholders_div = implode(',', array_fill(0, count($div_ids), '?'));
+            
+            $stmt_ex = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id IN ($placeholders_div) ORDER BY ordem ASC");
+            $stmt_ex->execute($div_ids);
+            $todos_exercicios = $stmt_ex->fetchAll(PDO::FETCH_ASSOC);
+
+            if (!empty($todos_exercicios)) {
+                $ex_ids = [];
+                foreach ($todos_exercicios as $ex) {
+                    $exercicios_por_divisao[$ex['divisao_id']][] = $ex;
+                    $ex_ids[] = $ex['id'];
+                }
+
+                // B. Busca TODAS as séries desses exercícios
+                if (!empty($ex_ids)) {
+                    $placeholders_ex = implode(',', array_fill(0, count($ex_ids), '?'));
+                    $stmt_series = $pdo->prepare("SELECT * FROM series WHERE exercicio_id IN ($placeholders_ex) ORDER BY id ASC");
+                    $stmt_series->execute($ex_ids);
+                    $todas_series = $stmt_series->fetchAll(PDO::FETCH_ASSOC);
+
+                    foreach ($todas_series as $s) {
+                        $series_por_exercicio[$s['exercicio_id']][] = $s;
+                    }
+                }
+            }
+        }
+
+        // 3. BUSCAR PERIODIZAÇÃO (Mantido igual)
         $microciclos = [];
         if ($treino['nivel_plano'] !== 'basico') {
             $stmt_per = $pdo->prepare("SELECT id FROM periodizacoes WHERE treino_id = ?");
@@ -1397,37 +1454,33 @@ switch ($pagina) {
             }
         }
         
-        // --- INICIO HTML ---
+        // --- CABEÇALHO ---
         echo '
-            <section id="painel-treino">
+            <section id="painel-treino" class="fade-in">
                 <div style="display:flex; align-items:center; gap:20px; margin-bottom:30px;">
                     <button class="btn-action-icon" onclick="carregarConteudo(\'treinos_editor\')"><i class="fa-solid fa-arrow-left"></i></button>
                     <div>
                         <h2 style="color:#fff; font-family:Orbitron; margin:0;">'.$treino['nome'].'</h2>
                         <p style="color:#888; font-size:0.9rem;">Aluno: <strong style="color:var(--gold);">'.$treino['nome_aluno'].'</strong> • '.strtoupper($treino['nivel_plano']).'</p>
                     </div>
-                </div>
-
-                ';
+                </div>';
+                
+                // TIMELINE
                 if (!empty($microciclos)) {
                     echo '<h3 class="section-title" style="font-size:1rem; margin-bottom:10px;">PERIODIZAÇÃO (12 SEMANAS)</h3>
                           <div class="timeline-wrapper">';
-                    
                     foreach ($microciclos as $m) {
                         $inicio = date('d/m', strtotime($m['data_inicio_semana']));
                         $fim = date('d/m', strtotime($m['data_fim_semana']));
-                        
                         $hoje = date('Y-m-d');
                         $activeClass = ($hoje >= $m['data_inicio_semana'] && $hoje <= $m['data_fim_semana']) ? 'active' : '';
-                        
                         $m_json = htmlspecialchars(json_encode($m), ENT_QUOTES, 'UTF-8');
 
-                        echo '
-                        <div class="micro-card '.$activeClass.'" onclick=\'openMicroModal('.$m_json.', '.$treino_id.')\'>
-                            <span class="micro-week">SEMANA '.$m['semana_numero'].' <i class="fa-solid fa-pen" style="font-size:0.6rem; margin-left:5px;"></i></span>
-                            <span class="micro-date">'.$inicio.' - '.$fim.'</span>
-                            <div style="margin-top:5px; font-size:0.7rem; color: inherit; opacity:0.7;">'.$m['nome_fase'].'</div>
-                        </div>';
+                        echo '<div class="micro-card '.$activeClass.'" onclick=\'openMicroModal('.$m_json.', '.$treino_id.')\'>
+                                <span class="micro-week">SEMANA '.$m['semana_numero'].' <i class="fa-solid fa-pen" style="font-size:0.6rem; margin-left:5px;"></i></span>
+                                <span class="micro-date">'.$inicio.' - '.$fim.'</span>
+                                <div style="margin-top:5px; font-size:0.7rem; opacity:0.7;">'.$m['nome_fase'].'</div>
+                              </div>';
                     }
                     echo '</div>';
                 }
@@ -1443,178 +1496,130 @@ switch ($pagina) {
                         }
         echo '      </div>';
 
-                    // CONTEÚDO DAS ABAS (Lista de Exercícios)
+                    // --- CONTEÚDO DAS DIVISÕES ---
                     $firstContent = true;
                     foreach ($divisoes as $div) {
                         $display = $firstContent ? 'active' : '';
+                        
+                        // Pega exercícios da memória (Otimização)
+                        $exercicios_raw = $exercicios_por_divisao[$div['id']] ?? [];
 
-                        // 1. Busca todos os exercícios ordenados
-                        $sqlEx = "SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC";
-                        $stmtEx = $pdo->prepare($sqlEx);
-                        $stmtEx->execute([$div['id']]);
-                        $exercicios_raw = $stmtEx->fetchAll(PDO::FETCH_ASSOC);
-
-                        // 2. LÓGICA DE AGRUPAMENTO (O GRANDE TRUQUE)
+                        // AGRUPAMENTO (Bi-set / Tri-set)
                         $lista_final = [];
-                        $grupos_temp = []; // Auxiliar para mapear hash -> índice no array final
+                        $grupos_temp = []; 
 
                         foreach ($exercicios_raw as $ex) {
                             $hash = $ex['agrupamento_hash'];
-
                             if ($hash) {
-                                // É parte de um Bi-set/Tri-set
                                 if (!isset($grupos_temp[$hash])) {
-                                    // Cria o grupo na lista final se não existir
                                     $idx = count($lista_final);
-                                    $lista_final[$idx] = [
-                                        'tipo' => 'grupo',
-                                        'itens' => []
-                                    ];
+                                    $lista_final[$idx] = ['tipo' => 'grupo', 'itens' => []];
                                     $grupos_temp[$hash] = $idx;
                                 }
-                                // Adiciona o exercício dentro do grupo correspondente
                                 $lista_final[$grupos_temp[$hash]]['itens'][] = $ex;
                             } else {
-                                // É exercício único (Single)
-                                $lista_final[] = [
-                                    'tipo' => 'single',
-                                    'itens' => [$ex] // Array com 1 item para facilitar o loop de renderização
-                                ];
+                                $lista_final[] = ['tipo' => 'single', 'itens' => [$ex]];
                             }
                         }
 
                         echo '
-                        <div id="div_'.$div['letra'].'" class="division-content '.$display.'">
-                            
-                            <div class="div-header" id="div-treino">
-                                <div>
-                                    <div style="display:flex; align-items:center; gap: 10px;">
-                                        <h3 style="color:#fff; margin:0; font-size: 1.2rem;">TREINO '.$div['letra'].'</h3>
-                                        <button onclick="renomearDivisao('.$div['id'].', \''.$div['letra'].'\', \''.($div['nome'] ?? '').'\')" 
-                                                style="background: transparent; border: none; color: #666; cursor: pointer; font-size: 0.9rem;"
-                                                title="Editar Nome do Treino">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
+                            <div id="div_'.$div['letra'].'" class="division-content '.$display.'">
+                                
+                                <div class="div-header" id="div-treino">
+                                    <div>
+                                        <div style="display:flex; align-items:center; gap: 10px;">
+                                            <h3 style="color:#fff; margin:0; font-size: 1.2rem;">TREINO '.$div['letra'].'</h3>
+                                            <button onclick="renomearDivisao('.$div['id'].', \''.$div['letra'].'\', \''.($div['nome'] ?? '').'\')" 
+                                                    style="background: transparent; border: none; color: #666; cursor: pointer; font-size: 0.9rem;"
+                                                    title="Editar Nome do Treino">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </button>
+                                        </div>
+                                        <span id="label_nome_div_'.$div['id'].'" style="color:var(--gold); font-size: 0.9rem; font-weight: bold; text-transform: uppercase; display: block; margin-top: 2px;">
+                                            '.($div['nome'] ? $div['nome'] : 'SEM NOME DEFINIDO').'
+                                        </span>
                                     </div>
-                                    <span id="label_nome_div_'.$div['id'].'" style="color:var(--gold); font-size: 0.9rem; font-weight: bold; text-transform: uppercase; display: block; margin-top: 2px;">
-                                        '.($div['nome'] ? $div['nome'] : 'SEM NOME DEFINIDO').'
-                                    </span>
+                                    <button class="btn-gerenciar" onclick="openExercicioModal('.$div['id'].', '.$treino_id.')">
+                                        <i class="fa-solid fa-plus"></i> ADD EXERCÍCIO
+                                    </button>
                                 </div>
-                                <button class="btn-gerenciar" onclick="openExercicioModal('.$div['id'].', '.$treino_id.')">
-                                    <i class="fa-solid fa-plus"></i> ADD EXERCÍCIO
-                                </button>
-                            </div>
 
-                            <div class="exercise-list">';
+                                <div class="exercise-list">';
                                 
                                 if (empty($lista_final)) {
                                     echo '<p style="text-align:center; color:#666; padding:30px;">Nenhum exercício cadastrado.</p>';
                                 } else {
-                                    
-                                    // 3. LOOP DE EXIBIÇÃO
                                     foreach ($lista_final as $bloco) {
-                                        
-                                        // Se for Grupo, abre a div de estilo (Bi-set)
                                         if ($bloco['tipo'] === 'grupo') {
-                                            $qtd = count($bloco['itens']);
-                                            $labelGrupo = ($qtd === 2) ? 'BI-SET' : (($qtd === 3) ? 'TRI-SET' : 'GRUPO');
-                                            
-                                            echo '<div class="agrupamento-wrapper">';
-                                            echo '<span class="agrupamento-badge">'.$labelGrupo.'</span>';
+                                            $label = (count($bloco['itens']) === 2) ? 'BI-SET' : 'TRI-SET';
+                                            echo '<div class="agrupamento-wrapper"><span class="agrupamento-badge">'.$label.'</span>';
                                         }
 
-                                        // Loop interno (Renderiza os cards)
-                                        // Se for Single, roda 1 vez. Se for Grupo, roda N vezes.
                                         foreach ($bloco['itens'] as $ex) {
+                                            // Pega as séries da memória
+                                            $series = $series_por_exercicio[$ex['id']] ?? [];
                                             
-                                            // Busca Séries
-                                            $sqlSeries = "SELECT * FROM series WHERE exercicio_id = ?";
-                                            $stmtSeries = $pdo->prepare($sqlSeries);
-                                            $stmtSeries->execute([$ex['id']]);
-                                            $series = $stmtSeries->fetchAll(PDO::FETCH_ASSOC);
-                                            
-                                            // Prepara JSON para o botão editar
+                                            // Prepara JSON para edição
                                             $ex_data = $ex;
                                             $ex_data['series'] = $series;
                                             $ex_json = htmlspecialchars(json_encode($ex_data), ENT_QUOTES, 'UTF-8');
 
-                                            // RENDERIZAÇÃO DO CARD (Seu código original, mantido)
                                             echo '
-                                            <div class="exercise-card-edit">
+                                            <div class="exercise-card-edit" style="margin-bottom:10px;">
                                                 <div class="ex-info">
                                                     <span class="ex-meta">'.strtoupper($ex['tipo_mecanica']).'</span>
                                                     <h4>'.$ex['nome_exercicio'].'</h4>
                                                     <div class="sets-container">';
-                                                        
                                                         foreach ($series as $s) {
                                                             $qtd = $s['quantidade'];
                                                             $reps = $s['reps_fixas'];
+                                                            $tecnica = $s['tecnica'] ?? 'normal';
+                                                            $valor = $s['tecnica_valor'] ?? '';
                                                             
-                                                            // Normaliza os dados
-                                                            $tecnica = strtolower(trim($s['tecnica'] ?? 'normal'));
-                                                            $valor   = $s['tecnica_valor'] ?? '';
+                                                            $style = '';
+                                                            $label = strtoupper($s['categoria']);
+                                                            $extra = $reps ? "(".$reps.")" : "";
 
-                                                            // Define o Rótulo Base e o Texto Extra
-                                                            $badgeLabel = strtoupper($s['categoria']);
-                                                            $extraText  = $reps ? "(".$reps.")" : "";
-                                                            
-                                                            // Define a Classe Base (começa com a categoria: warmup, working, etc)
-                                                            $cssClass = $s['categoria']; 
-
-                                                            // --- LÓGICA DE CLASSES PARA TÉCNICAS ---
                                                             if ($tecnica === 'dropset') {
-                                                                $badgeLabel = 'DROP SET';
-                                                                $cssClass  .= ' technique-drop'; // Adiciona a classe de Drop
-                                                                $extraText  = "<small style='opacity:0.8; margin-left:2px;'>({$valor} drops)</small>";
-                                                            } 
-                                                            elseif ($tecnica === 'restpause') {
-                                                                $badgeLabel = 'REST PAUSE';
-                                                                $cssClass  .= ' technique-rest'; // Adiciona a classe de Rest
-                                                                $extraText  = "<small style='opacity:0.8; margin-left:2px;'>({$valor}s)</small>";
-                                                            } 
-                                                            elseif ($tecnica === 'clusterset') {
-                                                                $badgeLabel = 'CLUSTER SET';
-                                                                $cssClass  .= ' technique-cluster'; // Adiciona a classe de Cluster
-                                                                
+                                                                $style = 'background:rgba(255, 64, 129, 0.1); color:#ff4081; border:1px solid rgba(255, 64, 129, 0.3);';
+                                                                $label = 'DROP SET';
+                                                                $extra = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor} drops)</small>";
+                                                            } elseif ($tecnica === 'restpause') {
+                                                                $style = 'background:rgba(0, 188, 212, 0.1); color:#00bcd4; border:1px solid rgba(0, 188, 212, 0.3);';
+                                                                $label = 'REST PAUSE';
+                                                                $extra = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor}s)</small>";
+                                                            } elseif ($tecnica === 'clusterset') {
+                                                                $style = 'background:rgba(255, 145, 0, 0.1); color:#ff9100; border:1px solid rgba(255, 145, 0, 0.3);';
+                                                                $label = 'CLUSTER SET';
                                                                 $parts = explode('|', $valor);
-                                                                if(count($parts) === 3) {
-                                                                    $extraText = "<small style='opacity:0.8; margin-left:2px;'>({$parts[0]}x{$parts[1]} | {$parts[2]}s)</small>";
-                                                                } else { $extraText = ""; }
+                                                                if(count($parts)===3) $extra = "<small>({$parts[0]}x{$parts[1]})</small>";
                                                             }
 
-                                                            // Renderiza o SPAN limpo, apenas com classes
-                                                            echo '<span class="set-tag '.$cssClass.'">'.$qtd.'x '.$badgeLabel.' '.$extraText.'</span>';
+                                                            if($style) echo '<span class="set-tag" style="'.$style.'">'.$qtd.'x '.$label.' '.$extra.'</span>';
+                                                            else echo '<span class="set-tag '.$s['categoria'].'">'.$qtd.'x '.$label.' '.$extra.'</span>';
                                                         }
-                                                    echo '</div>
+                                                echo '  </div>
                                                 </div>
                                                 <div class="ex-actions">
-                                                    <button class="btn-action-icon" onclick=\'editarExercicio('.$ex_json.', '.$treino_id.', '.$div['id'].')\'>
-                                                        <i class="fa-solid fa-pen"></i>
-                                                    </button>
-                                                    
-                                                    <button class="btn-action-icon btn-delete" onclick="deletarExercicio('.$ex['id'].', '.$treino_id.')">
-                                                        <i class="fa-solid fa-trash"></i>
-                                                    </button>
+                                                    <button class="btn-action-icon" onclick=\'editarExercicio('.$ex_json.', '.$treino_id.', '.$div['id'].')\'><i class="fa-solid fa-pen"></i></button>
+                                                    <button class="btn-action-icon btn-delete" onclick="deletarExercicio('.$ex['id'].', '.$treino_id.')"><i class="fa-solid fa-trash"></i></button>
                                                 </div>
                                             </div>';
-                                        } // Fim do loop interno (itens)
-
-                                        // Se for Grupo, fecha a div do wrapper
-                                        if ($bloco['tipo'] === 'grupo') {
-                                            echo '</div>'; // Fecha .agrupamento-wrapper
                                         }
 
-                                    } // Fim do loop principal
+                                        if ($bloco['tipo'] === 'grupo') echo '</div>'; // Fecha wrapper
+                                    }
                                 }
-
-                            echo '</div>
-                        </div>';
+                        echo '</div></div>';
                         $firstContent = false;
                     }
 
         echo '  </div>
-            </section>
-
+            </section>';
+            
+        // Os modais (HTML no final) podem ser mantidos iguais
+        // Cole aqui os modais modalExercicio e modalMicro (são iguais aos do Coach)
+        echo '
             <div id="modalExercicio" class="modal-overlay">
                 <div class="modal-content" style="max-width: 700px;">
                     <button class="modal-close" onclick="closeExercicioModal()">&times;</button>

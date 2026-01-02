@@ -281,11 +281,10 @@ switch ($pagina) {
             break;
         }
 
-        // 2. Lógica de Seleção Automática do Dia (CORRIGIDA)
+        // 2. Lógica de Seleção Automática do Dia
         if (!$divisao_req) {
-            $hoje_dia_num = date('w'); // 0 (Domingo) a 6 (Sábado)
+            $hoje_dia_num = date('w'); // 0 (Dom) a 6 (Sáb)
             
-            // Tratamento legado: Se for domingo (0), verifica também se foi salvo como 7 no banco antigo
             $check_dias = [$hoje_dia_num];
             if ($hoje_dia_num == 0) $check_dias[] = 7; 
 
@@ -299,13 +298,8 @@ switch ($pagina) {
             $divisao_sugerida = null;
             $qtd_divisoes = count($divisoes);
             
-            // Verifica se hoje é dia de treino (checando 0 ou 7)
             if (count(array_intersect($check_dias, $dias_treino)) > 0 && $qtd_divisoes > 0) {
-                
-                // Tenta achar o índice do dia atual no array de dias do treino
                 $indice_hoje = array_search($hoje_dia_num, $dias_treino);
-                
-                // Se não achou com 0 e hoje é domingo, tenta achar com 7
                 if ($indice_hoje === false && $hoje_dia_num == 0) {
                     $indice_hoje = array_search(7, $dias_treino);
                 }
@@ -335,7 +329,6 @@ switch ($pagina) {
                 }
             }
             
-            // Se chegou aqui, não é dia de treino ou houve erro
             echo '<section class="fade-in">
                     <h2 class="workout-title">QUAL O TREINO DE HOJE?</h2>
                     <div class="workout-selection-grid">';
@@ -359,9 +352,67 @@ switch ($pagina) {
 
         if (!$div_atual) { echo '<p>Erro: Divisão não encontrada.</p>'; break; }
 
+        // --- CARREGAMENTO OTIMIZADO (AGORA COM AS COLUNAS CERTAS) ---
+        
+        // A. Busca Exercícios
         $stmt_ex = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC");
         $stmt_ex->execute([$divisao_id]);
         $exercicios = $stmt_ex->fetchAll(PDO::FETCH_ASSOC);
+        
+        $series_por_exercicio = [];
+        $historico_por_exercicio = [];
+
+        if (count($exercicios) > 0) {
+            $exercicio_ids = array_column($exercicios, 'id');
+            $ids_placeholder = implode(',', array_fill(0, count($exercicio_ids), '?'));
+
+            // B. Busca TODAS as Séries
+            $stmt_all_series = $pdo->prepare("SELECT * FROM series WHERE exercicio_id IN ($ids_placeholder) ORDER BY id ASC");
+            $stmt_all_series->execute($exercicio_ids);
+            $todas_series = $stmt_all_series->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($todas_series as $s) {
+                $series_por_exercicio[$s['exercicio_id']][] = $s;
+            }
+
+            // C. Busca Histórico (CORRIGIDO: Com JOIN para trazer a técnica e categoria)
+            $data_limite_hist = date('Y-m-d', strtotime('-60 days'));
+            $sql_hist = "SELECT th.exercicio_id, th.serie_id, th.numero_serie, th.serie_numero, th.carga_kg, th.reps_realizadas, th.dados_tecnicos, th.data_treino,
+                                s.tecnica, s.categoria
+                         FROM treino_historico th
+                         LEFT JOIN series s ON th.serie_id = s.id
+                         WHERE th.aluno_id = ? 
+                         AND th.exercicio_id IN ($ids_placeholder) 
+                         AND th.data_treino >= ?
+                         ORDER BY th.data_treino DESC, th.id ASC";
+            
+            $params_hist = array_merge([$aluno_id], $exercicio_ids, [$data_limite_hist]);
+            $stmt_hist = $pdo->prepare($sql_hist);
+            $stmt_hist->execute($params_hist);
+            $historico_raw = $stmt_hist->fetchAll(PDO::FETCH_ASSOC);
+
+            $ultima_data_por_exercicio = [];
+
+            foreach ($historico_raw as $h) {
+                $eid = $h['exercicio_id'];
+                $data = $h['data_treino'];
+
+                if (!isset($ultima_data_por_exercicio[$eid])) {
+                    $ultima_data_por_exercicio[$eid] = $data;
+                }
+
+                // Apenas dados do último treino desse exercício
+                if ($ultima_data_por_exercicio[$eid] === $data) {
+                    $s_key = $h['serie_id'] ? $h['serie_id'] : $h['serie_numero'];
+                    $n_key = $h['numero_serie'] ? $h['numero_serie'] : 1;
+                    
+                    if (!isset($historico_por_exercicio[$eid][$s_key][$n_key])) {
+                        $historico_por_exercicio[$eid][$s_key][$n_key] = [];
+                    }
+                    $historico_por_exercicio[$eid][$s_key][$n_key][] = $h;
+                }
+            }
+        }
 
         // Periodização
         $micro_atual = null;
@@ -405,41 +456,25 @@ switch ($pagina) {
 
         if (count($exercicios) > 0) {
             
-            // ---------------------------------------------------------
-            // 1. PRÉ-PROCESSAMENTO: AGRUPAMENTO (Lógica de Bi-set)
-            // ---------------------------------------------------------
             $lista_final = [];
             $grupos_temp = []; 
 
             foreach ($exercicios as $ex) {
                 $hash = $ex['agrupamento_hash'];
-
                 if ($hash) {
-                    // É parte de um grupo
                     if (!isset($grupos_temp[$hash])) {
                         $idx = count($lista_final);
-                        $lista_final[$idx] = [
-                            'tipo' => 'grupo',
-                            'itens' => []
-                        ];
+                        $lista_final[$idx] = ['tipo' => 'grupo', 'itens' => []];
                         $grupos_temp[$hash] = $idx;
                     }
                     $lista_final[$grupos_temp[$hash]]['itens'][] = $ex;
                 } else {
-                    // É Single
-                    $lista_final[] = [
-                        'tipo' => 'single',
-                        'itens' => [$ex]
-                    ];
+                    $lista_final[] = ['tipo' => 'single', 'itens' => [$ex]];
                 }
             }
 
-            // ---------------------------------------------------------
-            // 2. RENDERIZAÇÃO DA LISTA PROCESSADA
-            // ---------------------------------------------------------
             foreach ($lista_final as $bloco) {
 
-                // A. Se for Grupo, abre o Wrapper Visual
                 if ($bloco['tipo'] === 'grupo') {
                     $qtd_grupo = count($bloco['itens']);
                     $label_grupo = ($qtd_grupo === 2) ? 'BI-SET' : 'TRI-SET';
@@ -449,59 +484,21 @@ switch ($pagina) {
 
                 foreach ($bloco['itens'] as $ex) {
                     
-                    // 1. OBRIGATÓRIO: Busca as Séries (Isso estava faltando no bloco com problema)
-                    $stmt_s = $pdo->prepare("SELECT * FROM series WHERE exercicio_id = ?");
-                    $stmt_s->execute([$ex['id']]);
-                    $series = $stmt_s->fetchAll(PDO::FETCH_ASSOC);
+                    $series = $series_por_exercicio[$ex['id']] ?? [];
+                    $historico_map = $historico_por_exercicio[$ex['id']] ?? [];
 
-                    // 2. Busca Histórico (CORRIGIDO: JOIN e Estrutura de Lista)
-                    $stmt_last_date = $pdo->prepare("SELECT MAX(data_treino) FROM treino_historico WHERE aluno_id = ? AND exercicio_id = ?");
-                    $stmt_last_date->execute([$aluno_id, $ex['id']]);
-                    $ultima_data = $stmt_last_date->fetchColumn();
-
-                    $historico_map = []; 
-                    if ($ultima_data) {
-                        // Busca dados técnicos E o tipo de técnica da tabela original de séries
-                        $stmt_h = $pdo->prepare("SELECT th.serie_id, th.numero_serie, th.serie_numero, th.carga_kg, th.reps_realizadas, th.dados_tecnicos, 
-                                                        s.tecnica, s.categoria
-                                                 FROM treino_historico th
-                                                 LEFT JOIN series s ON th.serie_id = s.id
-                                                 WHERE th.aluno_id = ? AND th.exercicio_id = ? AND th.data_treino = ?
-                                                 ORDER BY th.id ASC"); // Importante ordenar por ID para manter a ordem de inserção (Principal -> Drop 1 -> Drop 2)
-                        
-                        $stmt_h->execute([$aluno_id, $ex['id'], $ultima_data]);
-                        $regs = $stmt_h->fetchAll(PDO::FETCH_ASSOC);
-                        
-                        foreach ($regs as $r) {
-                            $s_key = $r['serie_id'] ? $r['serie_id'] : $r['serie_numero'];
-                            $n_key = $r['numero_serie'] ? $r['numero_serie'] : 1;
-                            
-                            // MUDANÇA CRUCIAL: Agora é um array de registros para esta série
-                            // Isso permite guardar [Principal, Drop1, Drop2] sem sobrescrever
-                            if (!isset($historico_map[$s_key][$n_key])) {
-                                $historico_map[$s_key][$n_key] = [];
-                            }
-                            $historico_map[$s_key][$n_key][] = $r;
-                        }
-                    }
-
-                    // 3. Prepara dados para o botão JS
                     $historico_json = htmlspecialchars(json_encode($historico_map), ENT_QUOTES, 'UTF-8');
                     $nome_ex_safe   = htmlspecialchars($ex['nome_exercicio'], ENT_QUOTES, 'UTF-8');
                     $video_html     = $ex['video_url'] ? '<a href="'.$ex['video_url'].'" target="_blank" class="exec-video"><i class="fa-solid fa-circle-play"></i></a>' : '';
 
-                    // 4. Renderiza Cabeçalho do Card
                     echo '
                     <div class="exec-card">
                         <div class="exec-header" style="display:flex; justify-content:space-between; align-items:center;">
-                            
                             <div style="flex:1;">
                                 <span class="exec-title">'.$ex['nome_exercicio'].'</span>
                             </div>
-
                             <div style="display:flex; align-items:center; gap:10px;">
                                 '.$video_html.'
-                                
                                 <button type="button" onclick=\'abrirHistoricoExercicio('.$historico_json.', "'.$nome_ex_safe.'")\' 
                                         style="background:rgba(255,186,66,0.15); border:1px solid var(--gold); color:var(--gold); width:32px; height:32px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">
                                     <i class="fa-solid fa-clock-rotate-left" style="font-size:0.9rem;"></i>
@@ -516,20 +513,11 @@ switch ($pagina) {
                             <span>REPS</span>
                         </div>';
 
-                    // 5. Renderiza as Séries
                     if (count($series) > 0) {
-                        // --- AQUI ENTRA O SEU FOREACH DAS SÉRIES (COM CORES E TÉCNICAS) ---
                         foreach ($series as $s) {
-                            // ... (Mantenha o código do foreach das séries que já estava funcionando aqui dentro) ...
-                            // ... (Vou colocar apenas o início para você saber onde colar) ...
-                            
                             $tecnica_raw = strtolower(trim($s['tecnica'] ?? 'normal'));
                             $valor_raw   = $s['tecnica_valor']; 
                             
-                            // ... (Cole todo o restante da lógica de inputs aqui) ...
-                            // Lembre-se: O foreach das séries termina, fecha a div row_class e continua o loop
-                            
-                            // Flags
                             $is_drop    = ($tecnica_raw === 'dropset');
                             $is_rest    = ($tecnica_raw === 'restpause');
                             $is_cluster = ($tecnica_raw === 'clusterset');
@@ -560,35 +548,23 @@ switch ($pagina) {
                             $qtd_series = (int)$s['quantidade'];
                             if ($qtd_series < 1) $qtd_series = 1;
 
-                            // -----------------------------------------------------------
-                            // 2. RENDERIZAÇÃO
-                            // -----------------------------------------------------------
                             for ($i = 1; $i <= $qtd_series; $i++) {
                                 
-                                // Histórico (CORRIGIDO PARA NOVA ESTRUTURA DE LISTA)
                                 $ph_carga = '-';
                                 $ph_reps = '-';
                                 
                                 if (isset($historico_map[$s['id']][$i])) {
-                                    // Pega a LISTA de registros dessa série
                                     $lista_regs = $historico_map[$s['id']][$i];
-                                    
-                                    // Pega o PRIMEIRO registro (Principal) para exibir no placeholder
                                     if (!empty($lista_regs) && isset($lista_regs[0])) {
                                         $d = $lista_regs[0];
                                         $ph_carga = ($d['carga_kg'] * 1);
                                         $ph_reps  = $d['reps_realizadas'];
-                                        
-                                        // Se tiver o detalhe da soma (string), usa ele no placeholder
                                         if (!empty($d['dados_tecnicos'])) {
                                             $dt_json = json_decode($d['dados_tecnicos'], true);
-                                            if (isset($dt_json['reps_string'])) {
-                                                $ph_reps = $dt_json['reps_string'];
-                                            }
+                                            if (isset($dt_json['reps_string'])) $ph_reps = $dt_json['reps_string'];
                                         }
                                     }
                                 } 
-                                // Fallback para Série 1 (caso não tenha histórico específico da série i)
                                 elseif (isset($historico_map[$s['id']][1])) {
                                     $lista_regs = $historico_map[$s['id']][1];
                                     if (!empty($lista_regs) && isset($lista_regs[0])) {
@@ -598,7 +574,6 @@ switch ($pagina) {
                                     }
                                 }
 
-                                // Labels e Estilos
                                 if ($has_technique) {
                                     if ($is_drop) $label_serie = "DROP SET";
                                     elseif ($is_rest) $label_serie = "REST PAUSE";
@@ -608,9 +583,7 @@ switch ($pagina) {
                                 }
 
                                 $indicador_num = ($qtd_series > 1) ? '#'.$i : '1';
-                                if ($qtd_series > 1) {
-                                    $label_serie .= " <small style='font-size:0.6rem; opacity:0.7;'>(".$i."/".$qtd_series.")</small>";
-                                }
+                                if ($qtd_series > 1) $label_serie .= " <small style='font-size:0.6rem; opacity:0.7;'>(".$i."/".$qtd_series.")</small>";
 
                                 $row_class = "set-row-input " . $s['categoria'];
                                 if ($is_drop) $row_class .= " technique-drop";
@@ -621,15 +594,10 @@ switch ($pagina) {
 
                                     // COLUNA 1: INFO
                                     $label_class = ""; 
-
-                                    // 1. Prioridade para Técnicas
                                     if ($is_drop)    $label_class = "text-drop";
                                     elseif ($is_rest)    $label_class = "text-rest";
                                     elseif ($is_cluster) $label_class = "text-cluster";
-                                    // 2. Se não for técnica, usa a categoria
-                                    else {
-                                        $label_class = "text-" . $s['categoria']; 
-                                    }
+                                    else $label_class = "text-" . $s['categoria']; 
 
                                     echo '
                                     <div class="set-num">
@@ -647,7 +615,7 @@ switch ($pagina) {
                                         <span style="display:block; font-size:0.6rem; color:#aaa;">ALVO</span>
                                     </div>';
 
-                                    // COLUNAS 3 e 4: BOTÃO OU INPUTS
+                                    // COLUNAS 3 e 4
                                     if ($has_technique) {
                                         $modal_id = "modal_".$s['id']."_".$i;
                                         $btn_text = "REGISTRAR";
@@ -678,7 +646,7 @@ switch ($pagina) {
                                             </button>
                                         </div>';
 
-                                        // --- MODAL ---
+                                        // MODAL
                                         echo '
                                         <div id="'.$modal_id.'" class="tq-modal-overlay">
                                             <div class="tq-modal-content">
@@ -692,7 +660,6 @@ switch ($pagina) {
                                                     <span style="color:#aaa; font-size:0.8rem; margin-left:15px;">DESC: </span> <b style="color:#fff">'.$meta_desc.'</b>
                                                 </div>';
 
-                                                // DROP SET
                                                 if ($is_drop) {
                                                     echo '<label style="font-size:0.7rem; color:#888;">Série Principal</label>
                                                         <div style="display:flex; gap:10px; margin-bottom:15px;">
@@ -709,7 +676,6 @@ switch ($pagina) {
                                                     }
                                                 }
 
-                                                // REST PAUSE
                                                 if ($is_rest) {
                                                     echo '<label style="font-size:0.7rem; color:#00e676;">Carga & Reps Totais</label>
                                                         <div style="display:flex; gap:10px; margin-bottom:10px;">
@@ -724,7 +690,6 @@ switch ($pagina) {
                                                         <p style="font-size:0.7rem; color:#666;">Falha > Iniciar Descanso > Repete > Anota Soma.</p>';
                                                 }
 
-                                                // CLUSTER SET
                                                 if ($is_cluster) {
                                                     $parts = explode('|', $valor_raw); 
                                                     $tempo_descanso_cluster = isset($parts[2]) ? (int)$parts[2] : 0;
@@ -776,21 +741,17 @@ switch ($pagina) {
                                 echo '</div>'; // Fecha set-row-input
                             }
                         }
-                        // --- FIM DO FOREACH DAS SÉRIES ---
-
                     } else {
                         echo '<p style="color:#666; padding:10px;">Sem séries cadastradas.</p>';
                     }
 
                     echo '</div>'; // Fim exec-card
                 }
-                // --- FIM DO FOREACH BLOCO ITENS ---
 
-                // C. Fecha o Wrapper se for Grupo
                 if ($bloco['tipo'] === 'grupo') {
                     echo '</div>'; // Fecha exec-agrupamento
                 }
-            } // Fim foreach lista_final
+            } 
 
         } else {
             echo '<p style="text-align:center; margin-top:20px; color:#888;">Nenhum exercício encontrado nesta divisão.</p>';
@@ -875,6 +836,41 @@ switch ($pagina) {
         $stmt->execute([$treino['id']]);
         $divisoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // --- E. OTIMIZAÇÃO: BUSCA EXERCÍCIOS E SÉRIES EM LOTE ---
+        $exercicios_por_divisao = [];
+        $series_por_exercicio = [];
+
+        if (!empty($divisoes)) {
+            // 1. Pega IDs das divisões
+            $div_ids = array_column($divisoes, 'id');
+            $placeholders_div = implode(',', array_fill(0, count($div_ids), '?'));
+
+            // 2. Busca TODOS exercícios dessas divisões
+            $stmt_ex = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id IN ($placeholders_div) ORDER BY ordem ASC");
+            $stmt_ex->execute($div_ids);
+            $todos_exercicios = $stmt_ex->fetchAll(PDO::FETCH_ASSOC);
+
+            if (!empty($todos_exercicios)) {
+                $ex_ids = [];
+                foreach ($todos_exercicios as $ex) {
+                    $exercicios_por_divisao[$ex['divisao_id']][] = $ex;
+                    $ex_ids[] = $ex['id'];
+                }
+
+                // 3. Busca TODAS as séries desses exercícios
+                if (!empty($ex_ids)) {
+                    $placeholders_ex = implode(',', array_fill(0, count($ex_ids), '?'));
+                    $stmt_series = $pdo->prepare("SELECT * FROM series WHERE exercicio_id IN ($placeholders_ex) ORDER BY id ASC");
+                    $stmt_series->execute($ex_ids);
+                    $todas_series = $stmt_series->fetchAll(PDO::FETCH_ASSOC);
+
+                    foreach ($todas_series as $s) {
+                        $series_por_exercicio[$s['exercicio_id']][] = $s;
+                    }
+                }
+            }
+        }
+
         // --- RENDERIZAÇÃO ---
         echo '<section id="meu-treino" class="fade-in">';
         
@@ -905,7 +901,6 @@ switch ($pagina) {
             if ($micro_atual) {
                 $reps_comp = $micro_atual['reps_compostos'] ?: '-';
                 $desc_comp = $micro_atual['descanso_compostos'] ? $micro_atual['descanso_compostos'].'s' : '-';
-                
                 $reps_iso = $micro_atual['reps_isoladores'] ?: '-';
                 $desc_iso = $micro_atual['descanso_isoladores'] ? $micro_atual['descanso_isoladores'].'s' : '-';
 
@@ -949,10 +944,8 @@ switch ($pagina) {
         foreach ($divisoes as $d) {
             $display = $first ? 'block' : 'none';
             
-            // Busca Exercícios
-            $stmt = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC");
-            $stmt->execute([$d['id']]);
-            $exercicios_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // Pega Exercícios da Memória (Otimização)
+            $exercicios_raw = $exercicios_por_divisao[$d['id']] ?? [];
 
             // AGRUPAMENTO (Bi-set / Tri-set)
             $lista_final = [];
@@ -990,9 +983,8 @@ switch ($pagina) {
 
                     foreach ($bloco['itens'] as $ex) {
                         
-                        $stmt = $pdo->prepare("SELECT * FROM series WHERE exercicio_id = ?");
-                        $stmt->execute([$ex['id']]);
-                        $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        // Pega Séries da Memória (Otimização)
+                        $series = $series_por_exercicio[$ex['id']] ?? [];
 
                         echo '<div class="exercise-card">
                                 <div class="ex-header">
@@ -1007,7 +999,7 @@ switch ($pagina) {
                                     <div class="sets-grid">';
                                     
                                     foreach ($series as $s) {
-                                        // Regras de Reps/Descanso (Periodização)
+                                        // Regras de Reps/Descanso
                                         $reps = $s['reps_fixas'];
                                         $desc = $s['descanso_fixo'];
 
@@ -1030,43 +1022,33 @@ switch ($pagina) {
                                         if(empty($reps)) $reps = "Falha";
                                         if(empty($desc)) $desc = "-";
 
-                                        // ---------------------------------------------------------
                                         // LÓGICA DE TÉCNICAS (SEM CSS INLINE)
-                                        // ---------------------------------------------------------
                                         $tecnica = strtolower(trim($s['tecnica'] ?? 'normal'));
                                         $valor   = $s['tecnica_valor'] ?? '';
                                         
-                                        // 1. Classe Base: set-item + categoria (ex: set-item work)
                                         $cssClass = 'set-item ' . $s['categoria'];
-                                        
-                                        // 2. Labels e Infos
                                         $labelSet = $s['quantidade'].'x '.strtoupper($s['categoria']);
                                         $extraInfo = '';
 
-                                        // A. DROP-SET (Adiciona classe técnica)
                                         if ($tecnica === 'dropset') {
-                                            $cssClass .= ' technique-drop'; // Classe do CSS
+                                            $cssClass .= ' technique-drop';
                                             $labelSet = $s['quantidade'].'x DROP SET';
                                             $extraInfo = '<div class="tech-info">+ '.$valor.' Drops</div>';
                                         }
-                                        // B. REST-PAUSE
                                         elseif ($tecnica === 'restpause') {
-                                            $cssClass .= ' technique-rest'; // Classe do CSS
+                                            $cssClass .= ' technique-rest';
                                             $labelSet = $s['quantidade'].'x REST PAUSE';
                                             $extraInfo = '<div class="tech-info">Pausa Intra: '.$valor.'s</div>';
                                         }
-                                        // C. CLUSTER SET
                                         elseif ($tecnica === 'clusterset') {
-                                            $cssClass .= ' technique-cluster'; // Classe do CSS
+                                            $cssClass .= ' technique-cluster';
                                             $labelSet = $s['quantidade'].'x CLUSTER';
-                                            
                                             $parts = explode('|', $valor);
                                             if(count($parts) === 3) {
                                                 $extraInfo = '<div class="tech-info">'.$parts[0].' blocos de '.$parts[1].' reps ('.$parts[2].'s)</div>';
                                             }
                                         }
 
-                                        // Renderiza Item da Série (Sem style inline)
                                         echo '<div class="'.$cssClass.'">
                                                 <div class="set-top">'.$labelSet.'</div>
                                                 <div class="set-bottom">
@@ -1074,7 +1056,7 @@ switch ($pagina) {
                                                     <small><i class="fa-solid fa-clock" style="font-size:0.6rem;"></i> '.$desc.'</small>
                                                 </div>
                                                 '.$extraInfo.'
-                                            </div>';
+                                              </div>';
                                     }
                                 echo '</div>
                                 </div>
@@ -1082,7 +1064,7 @@ switch ($pagina) {
                     }
 
                     if ($bloco['tipo'] === 'grupo') {
-                        echo '</div>';
+                        echo '</div>'; // Fecha agrupamento-wrapper
                     }
                 }
 
@@ -1293,7 +1275,7 @@ switch ($pagina) {
                   LEFT JOIN treinos t ON th.treino_id = t.id
                   LEFT JOIN treino_divisoes td ON th.divisao_id = td.id
                   WHERE th.aluno_id = :uid
-                  GROUP BY th.data_treino
+                  GROUP BY th.data_treino, t.nome, td.letra
                   ORDER BY th.data_treino DESC";
                   
     $stmt = $pdo->prepare($sql_lista);
@@ -1526,7 +1508,7 @@ switch ($pagina) {
                                     
                                     foreach ($arquivos as $arq) {
                                         if ($arq['tipo'] == 'foto') {
-                                            echo '<div class="strip-item"><img src="assets/uploads/'.$arq['caminho_ou_url'].'" onclick="window.open(this.src)"></div>';
+                                            echo '<div class="strip-item"><img src="assets/uploads/'.$arq['caminho_ou_url'].'" loading="lazy" onclick="window.open(this.src)"></div>';
                                         } else {
                                             echo '<a href="'.$arq['caminho_ou_url'].'" target="_blank" class="strip-item video-item"><i class="fa-solid fa-play"></i></a>';
                                         }
@@ -2297,220 +2279,244 @@ switch ($pagina) {
     
 
     case 'treino_painel':
-    require_once '../config/db_connect.php';
-    
-    $treino_id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT);
+        require_once '../config/db_connect.php';
+        
+        $treino_id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT);
 
-    if (!$treino_id) { 
-        echo "<div class='glass-card'>ID do treino não fornecido.</div>"; 
-        break; 
-    }
-
-    // 1. BUSCAR DADOS
-    $sql = "SELECT t.*, u.nome as nome_aluno FROM treinos t JOIN usuarios u ON t.aluno_id = u.id WHERE t.id = :id";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute(['id' => $treino_id]);
-    $treino = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$treino) {
-        echo "<div class='glass-card'>Treino não encontrado.</div>";
-        break;
-    }
-
-    // 2. BUSCAR DIVISÕES
-    $sql_div = "SELECT * FROM treino_divisoes WHERE treino_id = :id ORDER BY letra ASC";
-    $stmt_div = $pdo->prepare($sql_div);
-    $stmt_div->execute(['id' => $treino_id]);
-    $divisoes = $stmt_div->fetchAll(PDO::FETCH_ASSOC);
-
-    // 3. BUSCAR PERIODIZAÇÃO
-    $microciclos = [];
-    if ($treino['nivel_plano'] !== 'basico') {
-        $stmt_per = $pdo->prepare("SELECT id FROM periodizacoes WHERE treino_id = ?");
-        $stmt_per->execute([$treino_id]);
-        $periodizacao_id = $stmt_per->fetchColumn();
-
-        if ($periodizacao_id) {
-            $stmt_micro = $pdo->prepare("SELECT * FROM microciclos WHERE periodizacao_id = ? ORDER BY semana_numero ASC");
-            $stmt_micro->execute([$periodizacao_id]);
-            $microciclos = $stmt_micro->fetchAll(PDO::FETCH_ASSOC);
+        if (!$treino_id) { 
+            echo "<div class='glass-card'>ID do treino não fornecido.</div>"; 
+            break; 
         }
-    }
-    
-    // --- CABEÇALHO ---
-    echo '
-        <section id="painel-treino" class="fade-in">
-            <div style="display:flex; align-items:center; gap:20px; margin-bottom:30px;">
-                <button class="btn-action-icon" onclick="carregarConteudo(\'novo_treino\')"><i class="fa-solid fa-arrow-left"></i></button>
-                <div>
-                    <h2 style="color:#fff; font-family:Orbitron; margin:0;">'.$treino['nome'].'</h2>
-                    <p style="color:#888; font-size:0.9rem;">Aluno: <strong style="color:var(--gold);">'.$treino['nome_aluno'].'</strong> • '.strtoupper($treino['nivel_plano']).'</p>
-                </div>
-            </div>';
+
+        // 1. BUSCAR DADOS DO TREINO
+        $sql = "SELECT t.*, u.nome as nome_aluno FROM treinos t JOIN usuarios u ON t.aluno_id = u.id WHERE t.id = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(['id' => $treino_id]);
+        $treino = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$treino) {
+            echo "<div class='glass-card'>Treino não encontrado.</div>";
+            break;
+        }
+
+        // 2. BUSCAR DIVISÕES
+        $sql_div = "SELECT * FROM treino_divisoes WHERE treino_id = :id ORDER BY letra ASC";
+        $stmt_div = $pdo->prepare($sql_div);
+        $stmt_div->execute(['id' => $treino_id]);
+        $divisoes = $stmt_div->fetchAll(PDO::FETCH_ASSOC);
+
+        // --- OTIMIZAÇÃO: CARREGAR TUDO EM LOTE ---
+        $exercicios_por_divisao = [];
+        $series_por_exercicio = [];
+
+        if (!empty($divisoes)) {
+            // A. Busca TODOS os exercícios dessas divisões
+            $div_ids = array_column($divisoes, 'id');
+            $placeholders_div = implode(',', array_fill(0, count($div_ids), '?'));
             
-            // TIMELINE (Mantida igual)
-            if (!empty($microciclos)) {
-                echo '<h3 class="section-title" style="font-size:1rem; margin-bottom:10px;">PERIODIZAÇÃO</h3>
-                      <div class="timeline-wrapper">';
-                foreach ($microciclos as $m) {
-                    $inicio = date('d/m', strtotime($m['data_inicio_semana']));
-                    $fim = date('d/m', strtotime($m['data_fim_semana']));
-                    $hoje = date('Y-m-d');
-                    $activeClass = ($hoje >= $m['data_inicio_semana'] && $hoje <= $m['data_fim_semana']) ? 'active' : '';
-                    $m_json = htmlspecialchars(json_encode($m), ENT_QUOTES, 'UTF-8');
+            $stmt_ex = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id IN ($placeholders_div) ORDER BY ordem ASC");
+            $stmt_ex->execute($div_ids);
+            $todos_exercicios = $stmt_ex->fetchAll(PDO::FETCH_ASSOC);
 
-                    echo '<div class="micro-card '.$activeClass.'" onclick=\'openMicroModal('.$m_json.', '.$treino_id.')\'>
-                            <span class="micro-week">SEMANA '.$m['semana_numero'].'</span>
-                            <span class="micro-date">'.$inicio.' - '.$fim.'</span>
-                            <div style="margin-top:5px; font-size:0.7rem; opacity:0.7;">'.$m['nome_fase'].'</div>
-                          </div>';
+            if (!empty($todos_exercicios)) {
+                $ex_ids = [];
+                foreach ($todos_exercicios as $ex) {
+                    $exercicios_por_divisao[$ex['divisao_id']][] = $ex;
+                    $ex_ids[] = $ex['id'];
                 }
-                echo '</div>';
+
+                // B. Busca TODAS as séries desses exercícios
+                if (!empty($ex_ids)) {
+                    $placeholders_ex = implode(',', array_fill(0, count($ex_ids), '?'));
+                    $stmt_series = $pdo->prepare("SELECT * FROM series WHERE exercicio_id IN ($placeholders_ex) ORDER BY id ASC");
+                    $stmt_series->execute($ex_ids);
+                    $todas_series = $stmt_series->fetchAll(PDO::FETCH_ASSOC);
+
+                    foreach ($todas_series as $s) {
+                        $series_por_exercicio[$s['exercicio_id']][] = $s;
+                    }
+                }
             }
-    
-    echo '
-            <div class="glass-card">
-                <div class="division-tabs">';
-                    $first = true;
-                    foreach ($divisoes as $div) {
-                        $active = $first ? 'active' : '';
-                        echo '<button class="div-tab-btn '.$active.'" onclick="openTab(event, \'div_'.$div['letra'].'\')">TREINO '.$div['letra'].'</button>';
-                        $first = false;
+        }
+
+        // 3. BUSCAR PERIODIZAÇÃO (Mantido igual)
+        $microciclos = [];
+        if ($treino['nivel_plano'] !== 'basico') {
+            $stmt_per = $pdo->prepare("SELECT id FROM periodizacoes WHERE treino_id = ?");
+            $stmt_per->execute([$treino_id]);
+            $periodizacao_id = $stmt_per->fetchColumn();
+
+            if ($periodizacao_id) {
+                $stmt_micro = $pdo->prepare("SELECT * FROM microciclos WHERE periodizacao_id = ? ORDER BY semana_numero ASC");
+                $stmt_micro->execute([$periodizacao_id]);
+                $microciclos = $stmt_micro->fetchAll(PDO::FETCH_ASSOC);
+            }
+        }
+        
+        // --- CABEÇALHO ---
+        echo '
+            <section id="painel-treino" class="fade-in">
+                <div style="display:flex; align-items:center; gap:20px; margin-bottom:30px;">
+                    <button class="btn-action-icon" onclick="carregarConteudo(\'novo_treino\')"><i class="fa-solid fa-arrow-left"></i></button>
+                    <div>
+                        <h2 style="color:#fff; font-family:Orbitron; margin:0;">'.$treino['nome'].'</h2>
+                        <p style="color:#888; font-size:0.9rem;">Aluno: <strong style="color:var(--gold);">'.$treino['nome_aluno'].'</strong> • '.strtoupper($treino['nivel_plano']).'</p>
+                    </div>
+                </div>';
+                
+                // TIMELINE
+                if (!empty($microciclos)) {
+                    echo '<h3 class="section-title" style="font-size:1rem; margin-bottom:10px;">PERIODIZAÇÃO</h3>
+                          <div class="timeline-wrapper">';
+                    foreach ($microciclos as $m) {
+                        $inicio = date('d/m', strtotime($m['data_inicio_semana']));
+                        $fim = date('d/m', strtotime($m['data_fim_semana']));
+                        $hoje = date('Y-m-d');
+                        $activeClass = ($hoje >= $m['data_inicio_semana'] && $hoje <= $m['data_fim_semana']) ? 'active' : '';
+                        $m_json = htmlspecialchars(json_encode($m), ENT_QUOTES, 'UTF-8');
+
+                        echo '<div class="micro-card '.$activeClass.'" onclick=\'openMicroModal('.$m_json.', '.$treino_id.')\'>
+                                <span class="micro-week">SEMANA '.$m['semana_numero'].'</span>
+                                <span class="micro-date">'.$inicio.' - '.$fim.'</span>
+                                <div style="margin-top:5px; font-size:0.7rem; opacity:0.7;">'.$m['nome_fase'].'</div>
+                              </div>';
                     }
-    echo '      </div>';
-
-                // --- LOOP DAS DIVISÕES COM LÓGICA DE BI-SET ---
-                $firstContent = true;
-                foreach ($divisoes as $div) {
-                    $display = $firstContent ? 'active' : '';
-                    
-                    // 1. Busca Exercícios
-                    $sqlEx = "SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC";
-                    $stmtEx = $pdo->prepare($sqlEx);
-                    $stmtEx->execute([$div['id']]);
-                    $exercicios_raw = $stmtEx->fetchAll(PDO::FETCH_ASSOC);
-
-                    // 2. AGRUPAMENTO (Bi-set / Tri-set)
-                    $lista_final = [];
-                    $grupos_temp = []; 
-
-                    foreach ($exercicios_raw as $ex) {
-                        $hash = $ex['agrupamento_hash'];
-                        if ($hash) {
-                            if (!isset($grupos_temp[$hash])) {
-                                $idx = count($lista_final);
-                                $lista_final[$idx] = ['tipo' => 'grupo', 'itens' => []];
-                                $grupos_temp[$hash] = $idx;
-                            }
-                            $lista_final[$grupos_temp[$hash]]['itens'][] = $ex;
-                        } else {
-                            $lista_final[] = ['tipo' => 'single', 'itens' => [$ex]];
-                        }
-                    }
-
-                    echo '
-                        <div id="div_'.$div['letra'].'" class="division-content '.$display.'">
-                            
-                            <div class="div-header" id="div-treino">
-                                <div>
-                                    <div style="display:flex; align-items:center; gap: 10px;">
-                                        <h3 style="color:#fff; margin:0; font-size: 1.2rem;">TREINO '.$div['letra'].'</h3>
-                                        <button onclick="renomearDivisao('.$div['id'].', \''.$div['letra'].'\', \''.($div['nome'] ?? '').'\')" 
-                                                style="background: transparent; border: none; color: #666; cursor: pointer; font-size: 0.9rem;"
-                                                title="Editar Nome do Treino">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
-                                    </div>
-                                    <span id="label_nome_div_'.$div['id'].'" style="color:var(--gold); font-size: 0.9rem; font-weight: bold; text-transform: uppercase; display: block; margin-top: 2px;">
-                                        '.($div['nome'] ? $div['nome'] : 'SEM NOME DEFINIDO').'
-                                    </span>
-                                </div>
-                                <button class="btn-gerenciar" onclick="openExercicioModal('.$div['id'].', '.$treino_id.')">
-                                    <i class="fa-solid fa-plus"></i> ADD EXERCÍCIO
-                                </button>
-                            </div>
-
-                            <div class="exercise-list">';
-                            
-                            if (empty($lista_final)) {
-                                echo '<p style="text-align:center; color:#666; padding:30px;">Nenhum exercício cadastrado.</p>';
-                            } else {
-                                // 3. RENDERIZAÇÃO
-                                foreach ($lista_final as $bloco) {
-                                    if ($bloco['tipo'] === 'grupo') {
-                                        $label = (count($bloco['itens']) === 2) ? 'BI-SET' : 'TRI-SET';
-                                        echo '<div class="agrupamento-wrapper"><span class="agrupamento-badge">'.$label.'</span>';
-                                    }
-
-                                    foreach ($bloco['itens'] as $ex) {
-                                        // Busca as Séries
-                                        $stmtSeries = $pdo->prepare("SELECT * FROM series WHERE exercicio_id = ?");
-                                        $stmtSeries->execute([$ex['id']]);
-                                        $series = $stmtSeries->fetchAll(PDO::FETCH_ASSOC);
-                                        
-                                        $ex_data = $ex;
-                                        $ex_data['series'] = $series;
-                                        $ex_json = htmlspecialchars(json_encode($ex_data), ENT_QUOTES, 'UTF-8');
-
-                                        echo '
-                                        <div class="exercise-card-edit" style="margin-bottom:10px;">
-                                            <div class="ex-info">
-                                                <span class="ex-meta">'.strtoupper($ex['tipo_mecanica']).'</span>
-                                                <h4>'.$ex['nome_exercicio'].'</h4>
-                                                <div class="sets-container">';
-                                                    foreach ($series as $s) {
-                                                        $qtd = $s['quantidade'];
-                                                        $reps = $s['reps_fixas'];
-                                                        $tecnica = $s['tecnica'] ?? 'normal';
-                                                        $valor = $s['tecnica_valor'] ?? '';
-                                                        
-                                                        // Visual das Tags
-                                                        $style = '';
-                                                        $label = strtoupper($s['categoria']);
-                                                        $extra = $reps ? "(".$reps.")" : "";
-
-                                                        // --- AJUSTE DE CORES AQUI ---
-                                                        if ($tecnica === 'dropset') {
-                                                            // Rosa Choque (Magenta)
-                                                            $style = 'background:rgba(255, 64, 129, 0.1); color:#ff4081; border:1px solid rgba(255, 64, 129, 0.3);';
-                                                            $label = 'DROP SET';
-                                                            $extra = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor} drops)</small>";
-                                                        } elseif ($tecnica === 'restpause') {
-                                                            // Ciano (Turquesa)
-                                                            $style = 'background:rgba(0, 188, 212, 0.1); color:#00bcd4; border:1px solid rgba(0, 188, 212, 0.3);';
-                                                            $label = 'REST PAUSE';
-                                                            $extra = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor}s)</small>";
-                                                        } elseif ($tecnica === 'clusterset') {
-                                                            // Laranja Intenso
-                                                            $style = 'background:rgba(255, 145, 0, 0.1); color:#ff9100; border:1px solid rgba(255, 145, 0, 0.3);';
-                                                            $label = 'CLUSTER SET';
-                                                            $parts = explode('|', $valor);
-                                                            if(count($parts)===3) $extra = "<small>({$parts[0]}x{$parts[1]})</small>";
-                                                        }
-                                                        // -----------------------------
-
-                                                        if($style) echo '<span class="set-tag" style="'.$style.'">'.$qtd.'x '.$label.' '.$extra.'</span>';
-                                                        else echo '<span class="set-tag '.$s['categoria'].'">'.$qtd.'x '.$label.' '.$extra.'</span>';
-                                                    }
-                                            echo '  </div>
-                                            </div>
-                                            <div class="ex-actions">
-                                                <button class="btn-action-icon" onclick=\'editarExercicio('.$ex_json.', '.$treino_id.', '.$div['id'].')\'><i class="fa-solid fa-pen"></i></button>
-                                                <button class="btn-action-icon btn-delete" onclick="deletarExercicio('.$ex['id'].', '.$treino_id.')"><i class="fa-solid fa-trash"></i></button>
-                                            </div>
-                                        </div>';
-                                    }
-
-                                    if ($bloco['tipo'] === 'grupo') echo '</div>'; // Fecha wrapper
-                                }
-                            }
-                    echo '</div></div>';
-                    $firstContent = false;
+                    echo '</div>';
                 }
+        
+        echo '
+                <div class="glass-card">
+                    <div class="division-tabs">';
+                        $first = true;
+                        foreach ($divisoes as $div) {
+                            $active = $first ? 'active' : '';
+                            echo '<button class="div-tab-btn '.$active.'" onclick="openTab(event, \'div_'.$div['letra'].'\')">TREINO '.$div['letra'].'</button>';
+                            $first = false;
+                        }
+        echo '      </div>';
 
-    echo '  </div>
-        </section>
+                    // --- CONTEÚDO DAS DIVISÕES ---
+                    $firstContent = true;
+                    foreach ($divisoes as $div) {
+                        $display = $firstContent ? 'active' : '';
+                        
+                        // Pega exercícios da memória (Otimização)
+                        $exercicios_raw = $exercicios_por_divisao[$div['id']] ?? [];
 
+                        // AGRUPAMENTO (Bi-set / Tri-set)
+                        $lista_final = [];
+                        $grupos_temp = []; 
+
+                        foreach ($exercicios_raw as $ex) {
+                            $hash = $ex['agrupamento_hash'];
+                            if ($hash) {
+                                if (!isset($grupos_temp[$hash])) {
+                                    $idx = count($lista_final);
+                                    $lista_final[$idx] = ['tipo' => 'grupo', 'itens' => []];
+                                    $grupos_temp[$hash] = $idx;
+                                }
+                                $lista_final[$grupos_temp[$hash]]['itens'][] = $ex;
+                            } else {
+                                $lista_final[] = ['tipo' => 'single', 'itens' => [$ex]];
+                            }
+                        }
+
+                        echo '
+                            <div id="div_'.$div['letra'].'" class="division-content '.$display.'">
+                                
+                                <div class="div-header" id="div-treino">
+                                    <div>
+                                        <div style="display:flex; align-items:center; gap: 10px;">
+                                            <h3 style="color:#fff; margin:0; font-size: 1.2rem;">TREINO '.$div['letra'].'</h3>
+                                            <button onclick="renomearDivisao('.$div['id'].', \''.$div['letra'].'\', \''.($div['nome'] ?? '').'\')" 
+                                                    style="background: transparent; border: none; color: #666; cursor: pointer; font-size: 0.9rem;"
+                                                    title="Editar Nome do Treino">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </button>
+                                        </div>
+                                        <span id="label_nome_div_'.$div['id'].'" style="color:var(--gold); font-size: 0.9rem; font-weight: bold; text-transform: uppercase; display: block; margin-top: 2px;">
+                                            '.($div['nome'] ? $div['nome'] : 'SEM NOME DEFINIDO').'
+                                        </span>
+                                    </div>
+                                    <button class="btn-gerenciar" onclick="openExercicioModal('.$div['id'].', '.$treino_id.')">
+                                        <i class="fa-solid fa-plus"></i> ADD EXERCÍCIO
+                                    </button>
+                                </div>
+
+                                <div class="exercise-list">';
+                                
+                                if (empty($lista_final)) {
+                                    echo '<p style="text-align:center; color:#666; padding:30px;">Nenhum exercício cadastrado.</p>';
+                                } else {
+                                    foreach ($lista_final as $bloco) {
+                                        if ($bloco['tipo'] === 'grupo') {
+                                            $label = (count($bloco['itens']) === 2) ? 'BI-SET' : 'TRI-SET';
+                                            echo '<div class="agrupamento-wrapper"><span class="agrupamento-badge">'.$label.'</span>';
+                                        }
+
+                                        foreach ($bloco['itens'] as $ex) {
+                                            // Pega as séries da memória
+                                            $series = $series_por_exercicio[$ex['id']] ?? [];
+                                            
+                                            // Prepara JSON para edição
+                                            $ex_data = $ex;
+                                            $ex_data['series'] = $series;
+                                            $ex_json = htmlspecialchars(json_encode($ex_data), ENT_QUOTES, 'UTF-8');
+
+                                            echo '
+                                            <div class="exercise-card-edit" style="margin-bottom:10px;">
+                                                <div class="ex-info">
+                                                    <span class="ex-meta">'.strtoupper($ex['tipo_mecanica']).'</span>
+                                                    <h4>'.$ex['nome_exercicio'].'</h4>
+                                                    <div class="sets-container">';
+                                                        foreach ($series as $s) {
+                                                            $qtd = $s['quantidade'];
+                                                            $reps = $s['reps_fixas'];
+                                                            $tecnica = $s['tecnica'] ?? 'normal';
+                                                            $valor = $s['tecnica_valor'] ?? '';
+                                                            
+                                                            $style = '';
+                                                            $label = strtoupper($s['categoria']);
+                                                            $extra = $reps ? "(".$reps.")" : "";
+
+                                                            if ($tecnica === 'dropset') {
+                                                                $style = 'background:rgba(255, 64, 129, 0.1); color:#ff4081; border:1px solid rgba(255, 64, 129, 0.3);';
+                                                                $label = 'DROP SET';
+                                                                $extra = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor} drops)</small>";
+                                                            } elseif ($tecnica === 'restpause') {
+                                                                $style = 'background:rgba(0, 188, 212, 0.1); color:#00bcd4; border:1px solid rgba(0, 188, 212, 0.3);';
+                                                                $label = 'REST PAUSE';
+                                                                $extra = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor}s)</small>";
+                                                            } elseif ($tecnica === 'clusterset') {
+                                                                $style = 'background:rgba(255, 145, 0, 0.1); color:#ff9100; border:1px solid rgba(255, 145, 0, 0.3);';
+                                                                $label = 'CLUSTER SET';
+                                                                $parts = explode('|', $valor);
+                                                                if(count($parts)===3) $extra = "<small>({$parts[0]}x{$parts[1]})</small>";
+                                                            }
+
+                                                            if($style) echo '<span class="set-tag" style="'.$style.'">'.$qtd.'x '.$label.' '.$extra.'</span>';
+                                                            else echo '<span class="set-tag '.$s['categoria'].'">'.$qtd.'x '.$label.' '.$extra.'</span>';
+                                                        }
+                                                echo '  </div>
+                                                </div>
+                                                <div class="ex-actions">
+                                                    <button class="btn-action-icon" onclick=\'editarExercicio('.$ex_json.', '.$treino_id.', '.$div['id'].')\'><i class="fa-solid fa-pen"></i></button>
+                                                    <button class="btn-action-icon btn-delete" onclick="deletarExercicio('.$ex['id'].', '.$treino_id.')"><i class="fa-solid fa-trash"></i></button>
+                                                </div>
+                                            </div>';
+                                        }
+
+                                        if ($bloco['tipo'] === 'grupo') echo '</div>'; // Fecha wrapper
+                                    }
+                                }
+                        echo '</div></div>';
+                        $firstContent = false;
+                    }
+
+        echo '  </div>
+            </section>';
+            
+        echo '
             <div id="modalExercicio" class="modal-overlay">
                 <div class="modal-content" style="max-width: 700px;">
                     <button class="modal-close" onclick="closeExercicioModal()">&times;</button>
@@ -2650,7 +2656,7 @@ switch ($pagina) {
                 </div>
             </div>
         ';
-        break;              
+        break;            
 
     case 'dieta_editor':
         require_once '../config/db_connect.php';

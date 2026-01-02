@@ -3058,5 +3058,5 @@ switch ($pagina) {
         ';
         break;
 }
-
+$pdo = null;
 ?>

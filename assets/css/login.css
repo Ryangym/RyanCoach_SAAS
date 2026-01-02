@@ -36,7 +36,7 @@ html {
 
 body {
   font-family: "Roboto", sans-serif;
-  background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.381)), url(../img/background-gym.png);
+  background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.381)), url(../img/background-gym.webp);
   background-size: 100%;
   background-position: center;
   background-attachment: fixed;

@@ -138,7 +138,7 @@
 body {
     font-family: 'Roboto', sans-serif;
     background-color: var(--primary-bg);
-    background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.9)), url('../img/save/teste.png');
+    background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.9)), url('../img/background/userpagebg.webp');
     background-size: cover;
     background-attachment: fixed;
     background-position: center;

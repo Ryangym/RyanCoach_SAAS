@@ -1088,13 +1088,13 @@ switch ($pagina) {
                             <div style="margin-bottom: 25px;">
                                 <label class="input-label">Dias de Treino</label>
                                 <div class="days-selector">
+                                    <label><input type="checkbox" name="dias_semana[]" value="0" class="day-checkbox"><span class="day-label">DOM</span></label>
                                     <label><input type="checkbox" name="dias_semana[]" value="1" class="day-checkbox"><span class="day-label">SEG</span></label>
                                     <label><input type="checkbox" name="dias_semana[]" value="2" class="day-checkbox"><span class="day-label">TER</span></label>
                                     <label><input type="checkbox" name="dias_semana[]" value="3" class="day-checkbox"><span class="day-label">QUA</span></label>
                                     <label><input type="checkbox" name="dias_semana[]" value="4" class="day-checkbox"><span class="day-label">QUI</span></label>
                                     <label><input type="checkbox" name="dias_semana[]" value="5" class="day-checkbox"><span class="day-label">SEX</span></label>
                                     <label><input type="checkbox" name="dias_semana[]" value="6" class="day-checkbox"><span class="day-label">SÁB</span></label>
-                                    <label><input type="checkbox" name="dias_semana[]" value="7" class="day-checkbox"><span class="day-label">DOM</span></label>
                                 </div>
                             </div>
 

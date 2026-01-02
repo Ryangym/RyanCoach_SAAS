@@ -42,9 +42,12 @@ switch ($pagina) {
     case 'dashboard':
         require_once '../config/db_connect.php';
         
-        // --- LÓGICA DE DADOS ---
-        $start_week = date('Y-m-d 00:00:00', strtotime('monday this week'));
-        $end_week   = date('Y-m-d 23:59:59', strtotime('sunday this week'));
+        // --- LÓGICA DE DADOS (DOMINGO A SÁBADO) ---
+        $dia_semana_atual = date('w'); // 0 (Dom) a 6 (Sáb)
+        
+        // Subtrai os dias passados para voltar ao Domingo
+        $start_week = date('Y-m-d 00:00:00', strtotime("-$dia_semana_atual days"));
+        $end_week   = date('Y-m-d 23:59:59', strtotime($start_week . " +6 days"));
         
         // 1. Frequência
         $stmt_w = $pdo->prepare("SELECT COUNT(DISTINCT data_treino) FROM treino_historico WHERE aluno_id = ? AND data_treino BETWEEN ? AND ?");
@@ -57,18 +60,35 @@ switch ($pagina) {
         $volume = $stmt_vol->fetchColumn() ?: 0;
         $vol_fmt = ($volume > 1000) ? number_format($volume/1000, 1).'k' : $volume;
 
-        // 3. Streak (Ofensiva)
+        // 3. Streak (Ofensiva) - OTIMIZADO (1 Query em vez de 30)
         $streak = 0;
+        $data_limite = date('Y-m-d', strtotime('-30 days'));
+        
+        // Busca TODOS os dias treinados nos últimos 30 dias de uma vez
+        $stmt_chk = $pdo->prepare("SELECT DISTINCT DATE(data_treino) as dia FROM treino_historico WHERE aluno_id = ? AND data_treino >= ? ORDER BY data_treino DESC");
+        $stmt_chk->execute([$aluno_id, $data_limite]);
+        $dias_treinados = $stmt_chk->fetchAll(PDO::FETCH_COLUMN);
+
         for ($i = 0; $i < 30; $i++) {
             $check = date('Y-m-d', strtotime("-$i days"));
-            $stmt_chk = $pdo->prepare("SELECT id FROM treino_historico WHERE aluno_id = ? AND DATE(data_treino) = ? LIMIT 1");
-            $stmt_chk->execute([$aluno_id, $check]);
-            if ($stmt_chk->fetch()) $streak++;
-            else if ($i > 0) break; 
+            
+            // Se o dia verificado está na lista do banco
+            if (in_array($check, $dias_treinados)) {
+                $streak++;
+            } 
+            // Se furou um dia (e não é hoje, pois hoje pode não ter treinado ainda)
+            else if ($i > 0) { 
+                break; 
+            }
         }
 
-        // --- 4. LÓGICA DO "TREINO DE HOJE" (Igual ao realizar_treino) ---
-        $hoje_dia_num = date('N'); // 1 (Seg) a 7 (Dom)
+        // --- 4. LÓGICA DO "TREINO DE HOJE"  ---
+        $hoje_dia_num = date('w'); // 0 (Dom) a 6 (Sáb)
+        
+        // Tratamento de legado: Se hoje for 0 (Domingo), aceita também 7 (banco antigo)
+        $check_dias = [$hoje_dia_num];
+        if ($hoje_dia_num == 0) $check_dias[] = 7;
+
         $stmt_ativo = $pdo->prepare("SELECT * FROM treinos WHERE aluno_id = ? ORDER BY criado_em DESC LIMIT 1");
         $stmt_ativo->execute([$aluno_id]);
         $treino_ativo = $stmt_ativo->fetch(PDO::FETCH_ASSOC);
@@ -78,46 +98,56 @@ switch ($pagina) {
         $card_badge = "Off";
         $card_letra = "-";
         $is_rest_day = false;
-        $divisao_hoje_id = ''; // Se vazio, vai pra lista geral
+        $divisao_hoje_id = ''; 
 
         if ($treino_ativo) {
             $dias_treino = json_decode($treino_ativo['dias_semana']);
             if (!is_array($dias_treino)) $dias_treino = [];
 
-            // Verifica se hoje é dia de treino
-            if (in_array($hoje_dia_num, $dias_treino)) {
-                // É dia de treino! Calcula qual divisão (A, B, C...)
+            // Verifica se hoje está nos dias de treino (usando a lista segura check_dias)
+            if (count(array_intersect($check_dias, $dias_treino)) > 0) {
+                
+                // Busca as divisões
                 $stmt_divs = $pdo->prepare("SELECT * FROM treino_divisoes WHERE treino_id = ? ORDER BY letra ASC");
                 $stmt_divs->execute([$treino_ativo['id']]);
                 $divisoes = $stmt_divs->fetchAll(PDO::FETCH_ASSOC);
 
                 if (count($divisoes) > 0) {
+                    // Descobre o índice
                     $indice_hoje = array_search($hoje_dia_num, $dias_treino);
-                    $indice_divisao = $indice_hoje % count($divisoes);
-                    $div_hoje = $divisoes[$indice_divisao];
-
-                    $card_letra = $div_hoje['letra'];
-                    $card_titulo = "Treino " . $div_hoje['letra'];
-                    $card_subtitulo = $div_hoje['nome'] ? $div_hoje['nome'] : 'Toque para iniciar';
-                    $divisao_hoje_id = '&divisao_id=' . $div_hoje['id']; // Parâmetro para abrir direto
                     
-                    // Pega a fase da periodização se houver
-                    if ($treino_ativo['nivel_plano'] !== 'basico') {
-                        $stmt_per = $pdo->prepare("SELECT id FROM periodizacoes WHERE treino_id = ?");
-                        $stmt_per->execute([$treino_ativo['id']]);
-                        $pid = $stmt_per->fetchColumn();
-                        if($pid) {
-                            $hoje_date = date('Y-m-d');
-                            $stmt_m = $pdo->prepare("SELECT nome_fase FROM microciclos WHERE periodizacao_id = ? AND data_inicio_semana <= ? AND data_fim_semana >= ? LIMIT 1");
-                            $stmt_m->execute([$pid, $hoje_date, $hoje_date]);
-                            $m = $stmt_m->fetch(PDO::FETCH_ASSOC);
-                            if($m) $card_badge = $m['nome_fase'];
-                            else $card_badge = "Periodizado";
+                    // Fallback: se não achou 0 e hoje é domingo, procura o 7
+                    if ($indice_hoje === false && $hoje_dia_num == 0) {
+                        $indice_hoje = array_search(7, $dias_treino);
+                    }
+
+                    if ($indice_hoje !== false) {
+                        $indice_divisao = $indice_hoje % count($divisoes);
+                        $div_hoje = $divisoes[$indice_divisao];
+
+                        $card_letra = $div_hoje['letra'];
+                        $card_titulo = "Treino " . $div_hoje['letra'];
+                        $card_subtitulo = $div_hoje['nome'] ? $div_hoje['nome'] : 'Toque para iniciar';
+                        $divisao_hoje_id = '&divisao_id=' . $div_hoje['id']; 
+                        
+                        // Periodização
+                        if ($treino_ativo['nivel_plano'] !== 'basico') {
+                            $stmt_per = $pdo->prepare("SELECT id FROM periodizacoes WHERE treino_id = ?");
+                            $stmt_per->execute([$treino_ativo['id']]);
+                            $pid = $stmt_per->fetchColumn();
+                            if($pid) {
+                                $hoje_date = date('Y-m-d');
+                                $stmt_m = $pdo->prepare("SELECT nome_fase FROM microciclos WHERE periodizacao_id = ? AND data_inicio_semana <= ? AND data_fim_semana >= ? LIMIT 1");
+                                $stmt_m->execute([$pid, $hoje_date, $hoje_date]);
+                                $m = $stmt_m->fetch(PDO::FETCH_ASSOC);
+                                if($m) $card_badge = $m['nome_fase'];
+                                else $card_badge = "Periodizado";
+                            } else {
+                                $card_badge = "Geral";
+                            }
                         } else {
-                            $card_badge = "Geral";
+                            $card_badge = "Básico";
                         }
-                    } else {
-                        $card_badge = "Básico";
                     }
                 }
             } else {
@@ -216,18 +246,20 @@ switch ($pagina) {
                             <strong>'.$treinos_semana.'/5</strong>
                         </div>
                         <div class="week-pills">';
-                            $dias = ['S','T','Q','Q','S','S','D'];
-                            $hoje_n = date('N');
+                            
+                            // Array visual começando no Domingo
+                            $dias = ['D','S','T','Q','Q','S','S']; 
+                            $hoje_w = date('w'); // 0 a 6
                             
                             $stmt_d = $pdo->prepare("SELECT DATE(data_treino) FROM treino_historico WHERE aluno_id = ? AND data_treino BETWEEN ? AND ?");
                             $stmt_d->execute([$aluno_id, $start_week, $end_week]);
                             $dias_feitos = $stmt_d->fetchAll(PDO::FETCH_COLUMN);
 
-                            for($i=1; $i<=7; $i++){
-                                $dt = date('Y-m-d', strtotime('monday this week +'.($i-1).' days'));
+                            for($i=0; $i<=6; $i++){
+                                $dt = date('Y-m-d', strtotime($start_week . " +$i days"));
                                 $done = in_array($dt, $dias_feitos) ? 'done' : '';
-                                $curr = ($i == $hoje_n) ? 'current' : '';
-                                echo '<div class="day-pill '.$done.' '.$curr.'">'.$dias[$i-1].'</div>';
+                                $curr = ($i == $hoje_w) ? 'current' : '';
+                                echo '<div class="day-pill '.$done.' '.$curr.'">'.$dias[$i].'</div>';
                             }
         echo '          </div>
                     </div>
@@ -249,9 +281,14 @@ switch ($pagina) {
             break;
         }
 
-        // 2. Lógica de Seleção Automática do Dia
+        // 2. Lógica de Seleção Automática do Dia (CORRIGIDA)
         if (!$divisao_req) {
-            $dia_semana_hoje = date('N'); 
+            $hoje_dia_num = date('w'); // 0 (Domingo) a 6 (Sábado)
+            
+            // Tratamento legado: Se for domingo (0), verifica também se foi salvo como 7 no banco antigo
+            $check_dias = [$hoje_dia_num];
+            if ($hoje_dia_num == 0) $check_dias[] = 7; 
+
             $dias_treino = json_decode($treino_ativo['dias_semana']); 
             if (!is_array($dias_treino)) $dias_treino = [];
 
@@ -260,45 +297,57 @@ switch ($pagina) {
             $divisoes = $stmt_div->fetchAll(PDO::FETCH_ASSOC);
             
             $divisao_sugerida = null;
-            $indice_hoje = array_search($dia_semana_hoje, $dias_treino);
             $qtd_divisoes = count($divisoes);
             
-            if ($indice_hoje !== false && $qtd_divisoes > 0) {
-                $indice_divisao = $indice_hoje % $qtd_divisoes;
-                $divisao_sugerida = $divisoes[$indice_divisao];
+            // Verifica se hoje é dia de treino (checando 0 ou 7)
+            if (count(array_intersect($check_dias, $dias_treino)) > 0 && $qtd_divisoes > 0) {
                 
-                echo '<section class="fade-in" style="padding-top:20px;">
-                        <h2 class="workout-title" style="text-align:center; font-size:1.2rem;">HOJE É DIA DE:</h2>
-                        <div style="text-align:center; margin: 30px 0;">
-                             <h1 style="font-size:5rem; color:var(--gold); margin:0;">'.$divisao_sugerida['letra'].'</h1>
-                             <p style="color:#888;">'.$divisao_sugerida['nome'].'</p>
-                        </div>
-                        <button class="btn-start-workout" onclick="carregarConteudo(\'realizar_treino&divisao_id='.$divisao_sugerida['id'].'\')">
-                            <i class="fa-solid fa-check"></i> CONFIRMAR
-                        </button>
-                        <p style="text-align:center; color:#666; margin-top:20px; font-size:0.9rem;">Ou escolha outro:</p>
-                        <div class="workout-selection-grid">';
-                            foreach($divisoes as $d) {
-                                if($d['id'] != $divisao_sugerida['id']) {
-                                    echo '<button class="select-workout-btn" onclick="carregarConteudo(\'realizar_treino&divisao_id='.$d['id'].'\')">'.$d['letra'].'</button>';
+                // Tenta achar o índice do dia atual no array de dias do treino
+                $indice_hoje = array_search($hoje_dia_num, $dias_treino);
+                
+                // Se não achou com 0 e hoje é domingo, tenta achar com 7
+                if ($indice_hoje === false && $hoje_dia_num == 0) {
+                    $indice_hoje = array_search(7, $dias_treino);
+                }
+
+                if ($indice_hoje !== false) {
+                    $indice_divisao = $indice_hoje % $qtd_divisoes;
+                    $divisao_sugerida = $divisoes[$indice_divisao];
+                    
+                    echo '<section class="fade-in" style="padding-top:20px;">
+                            <h2 class="workout-title" style="text-align:center; font-size:1.2rem;">HOJE É DIA DE:</h2>
+                            <div style="text-align:center; margin: 30px 0;">
+                                 <h1 style="font-size:5rem; color:var(--gold); margin:0;">'.$divisao_sugerida['letra'].'</h1>
+                                 <p style="color:#888;">'.$divisao_sugerida['nome'].'</p>
+                            </div>
+                            <button class="btn-start-workout" onclick="carregarConteudo(\'realizar_treino&divisao_id='.$divisao_sugerida['id'].'\')">
+                                <i class="fa-solid fa-check"></i> CONFIRMAR
+                            </button>
+                            <p style="text-align:center; color:#666; margin-top:20px; font-size:0.9rem;">Ou escolha outro:</p>
+                            <div class="workout-selection-grid">';
+                                foreach($divisoes as $d) {
+                                    if($d['id'] != $divisao_sugerida['id']) {
+                                        echo '<button class="select-workout-btn" onclick="carregarConteudo(\'realizar_treino&divisao_id='.$d['id'].'\')">'.$d['letra'].'</button>';
+                                    }
                                 }
-                            }
-                echo   '</div></section>';
-                break; 
-            } else {
-                echo '<section class="fade-in">
-                        <h2 class="workout-title">QUAL O TREINO DE HOJE?</h2>
-                        <div class="workout-selection-grid">';
-                        if ($qtd_divisoes > 0) {
-                            foreach($divisoes as $d) {
-                                echo '<button class="select-workout-btn" onclick="carregarConteudo(\'realizar_treino&divisao_id='.$d['id'].'\')">'.$d['letra'].'</button>';
-                            }
-                        } else {
-                            echo '<p style="color:#888;">Nenhuma divisão encontrada.</p>';
-                        }
-                echo   '</div></section>';
-                break;
+                    echo   '</div></section>';
+                    break; 
+                }
             }
+            
+            // Se chegou aqui, não é dia de treino ou houve erro
+            echo '<section class="fade-in">
+                    <h2 class="workout-title">QUAL O TREINO DE HOJE?</h2>
+                    <div class="workout-selection-grid">';
+                    if ($qtd_divisoes > 0) {
+                        foreach($divisoes as $d) {
+                            echo '<button class="select-workout-btn" onclick="carregarConteudo(\'realizar_treino&divisao_id='.$d['id'].'\')">'.$d['letra'].'</button>';
+                        }
+                    } else {
+                        echo '<p style="color:#888;">Nenhuma divisão encontrada.</p>';
+                    }
+            echo   '</div></section>';
+            break;
         }
 
         // 3. EXIBIÇÃO DO TREINO
@@ -1758,7 +1807,7 @@ switch ($pagina) {
             echo '<div class="empty-state-modern">
                     <div class="icon-pulse"><i class="fa-solid fa-carrot"></i></div>
                     <h2>Nenhuma Dieta Ativa</h2>
-                    <p>Seu treinador ainda não publicou seu plano alimentar.</p>
+                    <p>Cadastre um plano alimentar para acessar esse menu.</p>
                   </div>';
         } else {
             // Cabeçalho da Dieta
@@ -2225,13 +2274,13 @@ switch ($pagina) {
                             <div style="margin-bottom: 25px;">
                                 <label class="input-label">Dias de Treino</label>
                                 <div class="days-selector">
+                                    <label><input type="checkbox" name="dias_semana[]" value="0" class="day-checkbox"><span class="day-label">DOM</span></label>
                                     <label><input type="checkbox" name="dias_semana[]" value="1" class="day-checkbox"><span class="day-label">SEG</span></label>
                                     <label><input type="checkbox" name="dias_semana[]" value="2" class="day-checkbox"><span class="day-label">TER</span></label>
                                     <label><input type="checkbox" name="dias_semana[]" value="3" class="day-checkbox"><span class="day-label">QUA</span></label>
                                     <label><input type="checkbox" name="dias_semana[]" value="4" class="day-checkbox"><span class="day-label">QUI</span></label>
                                     <label><input type="checkbox" name="dias_semana[]" value="5" class="day-checkbox"><span class="day-label">SEX</span></label>
                                     <label><input type="checkbox" name="dias_semana[]" value="6" class="day-checkbox"><span class="day-label">SÁB</span></label>
-                                    <label><input type="checkbox" name="dias_semana[]" value="7" class="day-checkbox"><span class="day-label">DOM</span></label>
                                 </div>
                             </div>
 
@@ -2842,28 +2891,59 @@ switch ($pagina) {
                 <h3 class="section-label" style="margin-left: 10px;">PRINCIPAL</h3>
                 <div class="menu-grid">
                     <div class="menu-card" onclick="carregarConteudo(\'treinos\')">
-                        <div class="mc-icon" style="background: rgba(255, 186, 66, 0.1); color: var(--gold);"><i class="fa-solid fa-dumbbell"></i></div><span>Treinos</span>
+                        <div class="mc-icon" style="background: rgba(255, 186, 66, 0.1); color: var(--gold);">
+                            <i class="fa-solid fa-dumbbell"></i>
+                        </div>
+                        <span>Meus Treinos</span>
                     </div>
+
                     <div class="menu-card" onclick="carregarConteudo(\'avaliacoes\')">
-                        <div class="mc-icon" style="background: rgba(0, 200, 255, 0.1); color: #00c8ff;"><i class="fa-solid fa-ruler-combined"></i></div><span>Avaliação</span>
+                        <div class="mc-icon" style="background: rgba(0, 200, 255, 0.1); color: #00c8ff;">
+                            <i class="fa-solid fa-ruler-combined"></i>
+                        </div>
+                        <span>Avaliação</span>
                     </div>
+
                     <div class="menu-card" onclick="carregarConteudo(\'historico\')">
-                        <div class="mc-icon" style="background: rgba(100, 255, 100, 0.1); color: #64ff64;"><i class="fa-solid fa-clock-rotate-left"></i></div><span>Histórico</span>
+                        <div class="mc-icon" style="background: rgba(100, 255, 100, 0.1); color: #64ff64;">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </div>
+                        <span>Histórico</span>
                     </div>
+
                     <div class="menu-card" onclick="carregarConteudo(\'dieta\')">
-                        <div class="mc-icon" style="background: rgba(255, 100, 100, 0.1); color: #ff6464;"><i class="fa-solid fa-apple-whole"></i></div><span>Dieta</span>
+                        <div class="mc-icon" style="background: rgba(255, 100, 100, 0.1); color: #ff6464;">
+                            <i class="fa-solid fa-apple-whole"></i>
+                        </div>
+                        <span>Ver Dieta</span>
                     </div>
+
                     <div class="menu-card" onclick="carregarConteudo(\'financeiro\')">
-                        <div class="mc-icon" style="background: rgba(200, 100, 255, 0.1); color: #c864ff;"><i class="fa-solid fa-file-invoice-dollar"></i></div><span>Planos</span>
+                        <div class="mc-icon" style="background: rgba(200, 100, 255, 0.1); color: #c864ff;">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                        </div>
+                        <span>Assinatura</span>
                     </div>
+
                     <div class="menu-card" onclick="carregarConteudo(\'gerar_pdf\')">
-                        <div class="mc-icon" style="background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid #555;"><i class="fa-solid fa-print"></i></div><span>Relatórios</span>
+                        <div class="mc-icon" style="background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid #555;">
+                            <i class="fa-solid fa-print"></i>
+                        </div>
+                        <span>Relatórios</span>
                     </div>
+
                     <div class="menu-card" onclick="carregarConteudo(\'novo_treino\')">
-                        <div class="mc-icon" style="background: rgba(150, 50, 255, 0.1); color: #a855f7; border: 1px solid #a855f7;"><i class="fa-solid fa-pen-to-square"></i></div><span>Novo Treino</span>
+                        <div class="mc-icon" style="background: rgba(150, 50, 255, 0.1); color: #a855f7; border: 1px solid #a855f7;">
+                            <i class="fa-solid fa-calendar-plus"></i>
+                        </div>
+                        <span>Criar Treino</span>
                     </div>
+
                     <div class="menu-card" onclick="carregarConteudo(\'dieta_editor\')">
-                        <div class="mc-icon" style="background: rgba(150, 50, 255, 0.1); color: #a855f7; border: 1px solid #a855f7;"><i class="fa-solid fa-pen-to-square"></i></div><span>Nova Dieta</span>
+                        <div class="mc-icon" style="background: rgba(255, 145, 0, 0.1); color: #ff9100; border: 1px solid #ff9100;">
+                            <i class="fa-solid fa-utensils"></i>
+                        </div>
+                        <span>Montar Dieta</span>
                     </div>
                 </div>
 

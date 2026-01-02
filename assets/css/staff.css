@@ -179,6 +179,40 @@
     #th-acao { text-align: center; }
 }
 
+.custom-dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 0 0 8px 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    margin-top: 2px;
+}
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #222;
+    transition: 0.2s;
+}
+.dropdown-item span {
+    color: #fff;
+    font-size: 0.9rem;
+}
+.dropdown-item img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #444;
+}
 /* Componentes da Tabela */
 .user-cell {
     display: flex;

@@ -26,8 +26,13 @@ body.saas-body {
     font-family: var(--font-main);
     overflow-x: hidden;
     /* Fundo com vignette vermelho sutil nas bordas */
-    background-image: url(../img/background-gym.png);
+    background-image: url(../img/background-gym.webp);
     background-repeat: no-repeat;
+}
+@media (max-width: 768px){
+    body.saas-body{
+        background-image: radial-gradient(circle at 50% 50%, #0a0a0a 0%, #000000 100%);
+    }
 }
 
 .container {
@@ -538,7 +543,7 @@ body.saas-body {
     /* Fundo impactante */
     background: 
         linear-gradient(rgba(0,0,0,0.3), rgba(0, 0, 0, 0.8)),
-        url('../img/background/treinos_borrados.png'); /* Se tiver imagem de fundo */
+        url('../img/background/treinos_borrados.webp'); /* Se tiver imagem de fundo */
     background-size: cover;
     background-position: center;
     border-top: 1px solid #333;
@@ -593,7 +598,7 @@ body.saas-body {
 
 .lock-body {
     background-color: #050505;
-    background-image: url('../img/background-gym.png');
+    background-image: url('../img/background-gym.webp');
     background-repeat: no-repeat;
     background-position: center center;
     background-size: cover;

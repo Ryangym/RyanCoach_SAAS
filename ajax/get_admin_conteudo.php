@@ -8,6 +8,8 @@ $nome_admin = $_SESSION['user_nome'] ?? 'Admin';
 $partes_admin = explode(' ', trim($nome_admin));
 $primeiro_nome_admin = strtoupper($partes_admin[0]);
 
+session_write_close();
+
 switch ($pagina) {
     case 'dashboard':
         require_once '../config/db_connect.php';
@@ -193,22 +195,32 @@ switch ($pagina) {
     case 'alunos':
         require_once '../config/db_connect.php';
         
-        $sql = "SELECT * FROM usuarios WHERE tipo_conta != 'admin' ORDER BY nome ASC";
+        // OTIMIZAÇÃO: Limita a 100 usuários iniciais para não travar o carregamento
+        // Seleciona apenas colunas necessárias
+        $sql = "SELECT id, nome, email, telefone, foto, tipo_conta, plano_atual, coach_id, data_expiracao_plano 
+                FROM usuarios 
+                WHERE tipo_conta != 'admin' 
+                ORDER BY nome ASC 
+                LIMIT 100";
+        
         $alunos = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-        $total_alunos = count($alunos);
+        $total_alunos_exibidos = count($alunos);
+        
+        // Conta o total real no banco (leve, pois usa count)
+        $total_real = $pdo->query("SELECT COUNT(id) FROM usuarios WHERE tipo_conta != 'admin'")->fetchColumn();
 
         echo '
             <section id="gerenciar-alunos">
                 <header class="dash-header">
                     <h1>GERENCIAR <span class="highlight-text">USUÁRIOS</span></h1>
-                    <p class="text-desc">Painel de controle de todos os usuários do sistema.</p>
+                    <p class="text-desc">Exibindo '.$total_alunos_exibidos.' de '.$total_real.' usuários.</p>
                 </header>
                 
                 <div class="glass-card mt-large">
                     <div class="section-header-row">
                         <div style="flex: 1; position: relative; max-width: 400px;">
                             <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #666;"></i>
-                            <input type="text" id="searchAluno" onkeyup="filtrarAlunos()" placeholder="Buscar por nome..." class="admin-input" style="padding-left: 40px;">
+                            <input type="text" id="searchAluno" onkeyup="filtrarAlunos()" placeholder="Filtrar nesta lista..." class="admin-input" style="padding-left: 40px;">
                         </div>
                     </div>
 
@@ -224,7 +236,7 @@ switch ($pagina) {
                             </thead>
                             <tbody>';
                             
-                            if ($total_alunos > 0) {
+                            if ($total_alunos_exibidos > 0) {
                                 foreach ($alunos as $a) {
                                     $foto = !empty($a['foto']) ? $a['foto'] : 'assets/img/user-default.png';
                                     
@@ -240,6 +252,7 @@ switch ($pagina) {
                                     $zap_clean = preg_replace('/[^0-9]/', '', $a['telefone']);
                                     $link_zap = "https://wa.me/55".$zap_clean;
 
+                                    // Prepara JSON seguro
                                     $dados_json = htmlspecialchars(json_encode($a), ENT_QUOTES, 'UTF-8');
 
                                     echo '
@@ -275,8 +288,13 @@ switch ($pagina) {
 
         echo '              </tbody>
                         </table>
-                    </div>
-                </div>
+                    </div>';
+                    
+                    if ($total_real > 100) {
+                        echo '<p style="text-align:center; color:#666; font-size:0.8rem; margin-top:10px;">* Exibindo apenas os primeiros 100 usuários para otimizar a performance.</p>';
+                    }
+
+        echo '  </div>
             </section>
 
             <div id="modalGerenciarAluno" class="modal-overlay" style="display:none;">
@@ -348,7 +366,7 @@ switch ($pagina) {
                         <div style="margin-bottom: 15px;">
                             <label style="color:var(--gold); font-size: 0.8rem; font-weight:bold;">Tipo de Usuário (Permissão)</label>
                             <select name="tipo_conta" id="edit_tipo_conta" class="admin-input" style="border-color:var(--gold);">
-                                <option value="aluno">Atleta (Padrão)</option>
+                                <option value="atleta">Atleta (Padrão)</option>
                                 <option value="personal">Coach / Personal</option>
                                 <option value="admin">Administrador (Acesso Total)</option>
                             </select>
@@ -384,7 +402,7 @@ switch ($pagina) {
                                     
                                     <button type="button" onclick="adicionar30Dias()" 
                                             style="background: var(--gold); color: #000; border: none; border-radius: 5px; padding: 0 15px; cursor: pointer; font-weight: bold; font-size: 0.8rem; white-space: nowrap;">
-                                        <i class="fa-solid fa-calendar-plus"></i> +30 Dias
+                                            <i class="fa-solid fa-calendar-plus"></i> +30 Dias
                                     </button>
                                 </div>
                             </div>

@@ -4,14 +4,25 @@ require_once '../config/db_connect.php';
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 1. Sanitização
-    $nome = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
-    $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-    $telefone = filter_input(INPUT_POST, 'phone', FILTER_SANITIZE_STRING);
-    $mensagem = filter_input(INPUT_POST, 'message', FILTER_SANITIZE_STRING);
+    
+    // --- OTIMIZAÇÃO: SANITIZAÇÃO GLOBAL ---
+    // Limpa o POST inteiro de uma vez (muito prático)
+    $dados = limparInput($_POST);
 
+    $nome     = $dados['name'] ?? null;
+    $email    = $dados['email'] ?? null;
+    $telefone = $dados['phone'] ?? null;
+    $mensagem = $dados['message'] ?? null;
+
+    // Validação básica
     if(!$nome || !$email || !$mensagem) {
         echo json_encode(['status' => 'error', 'msg' => 'Preencha os campos obrigatórios.']);
+        exit;
+    }
+
+    // Validação extra de e-mail (pra garantir que tem @ e ponto)
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['status' => 'error', 'msg' => 'E-mail inválido.']);
         exit;
     }
 

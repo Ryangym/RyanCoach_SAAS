@@ -22,6 +22,8 @@ $micro_req   = $_GET['micro_id'] ?? null;   // Usado no Visualizar Treino
 $nome = explode(' ', trim($_SESSION['user_nome'] ?? 'Atleta'));
 $primeiro_nome = strtoupper($nome[0]);
 
+session_write_close();
+
 switch ($pagina) {
 
     case 'listar_treinos_json':

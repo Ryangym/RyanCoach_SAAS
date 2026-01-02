@@ -18,6 +18,8 @@ $pagina = $_GET['pagina'] ?? 'dashboard';
 $nome_user = $_SESSION['user_nome'] ?? 'Coach';
 $primeiro_nome = explode(' ', trim($nome_user))[0];
 
+session_write_close();
+
 switch ($pagina) {
     
     // --- DASHBOARD (Visão Geral do Coach) ---

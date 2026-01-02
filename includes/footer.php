@@ -32,14 +32,14 @@
                 <li><a href="index.php">Início</a></li>
                 <li><a href="planos.php">Nossos Planos</a></li>
                 <li><a href="usuario.php">Área do Aluno</a></li>
-                <li><a href="sobre.php">Sobre o Coach</a></li>
-                <li><a href="index.php#contato">Contato</a></li>
+                <li><a href="sobre.php">Sobre Ryan Borges</a></li>
+                <li><a href="ferramentas.php">Ferramentas</a></li>
             </ul>
         </div>
 
         <div class="footer-col" id="footer-form">
             <h4>Mande uma Mensagem</h4>
-            <form action="seu_script_de_email.php" method="POST">
+            <form id="form-contato-footer">
                 <div class="input-group-v2">
                     <input type="text" id="footer-name" name="name" placeholder="Nome Completo" required>
                 </div>
@@ -52,13 +52,45 @@
                 <div class="input-group-v2">
                     <textarea id="footer-message" name="message" rows="4" placeholder="Sua Mensagem..." required></textarea>
                 </div>
-                <button type="submit" class="footer-submit-btn-v2">Enviar</button>
+                <button type="submit" class="footer-submit-btn-v2" id="btn-enviar-msg">Enviar</button>
             </form>
         </div>
 
-    </div>
-
-    <div class="footer-bottom-v2">
-        <p>&copy; 2025 Ryan Coach. Todos os direitos reservados. Desenvolvido por Ryan Borges.</p>
+    </div> <div class="footer-bottom-v2">
+        <p>&copy; 2025 Ryan Coach. Todos os direitos reservados. Desenvolvido por Ryan Borges</p>
     </div>
 </footer>
+
+<script>
+document.getElementById('form-contato-footer').addEventListener('submit', async function(e) {
+    e.preventDefault(); // Não recarrega a página
+    
+    const btn = document.getElementById('btn-enviar-msg');
+    const originalText = btn.innerText;
+    btn.innerText = 'Enviando...';
+    btn.disabled = true;
+
+    const formData = new FormData(this);
+
+    try {
+        const response = await fetch('actions/mensagem_save.php', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+
+        if(data.status === 'success') {
+            alert('Recebemos sua mensagem! Entraremos em contato em breve.');
+            this.reset(); // Limpa o formulário
+        } else {
+            alert('Erro: ' + data.msg);
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Erro de conexão. Tente novamente.');
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+});
+</script>

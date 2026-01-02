@@ -228,85 +228,13 @@
     </style>
 </head>
 <body>
-    
-    <?php include 'includes/navbar.php'; ?>
 
     <div class="about-wrapper">
         
         <div class="hero-split">
             <div class="hero-text">
-                <h2>Head Coach</h2>
-                <h1>Ryan <span>Trainer</span></h1>
+                <h1>Página em desenvolvimento</h1>
                 
-                <p>Mais do que um treinador, sou um estrategista de performance. Minha jornada no fisiculturismo e na preparação física me ensinou que o corpo humano é uma máquina adaptável, desde que receba os estímulos corretos.</p>
-                
-                <p>Não acredito em "fórmulas mágicas" ou treinos de blogueira. Meu trabalho é baseado em <strong>Biomecânica</strong>, <strong>Fisiologia</strong> e <strong>Disciplina</strong>.</p>
-                
-                <p>Se você está cansado de treinar e não ver mudança no espelho, o problema não é sua genética. É a falta de um plano. E é exatamente isso que eu vou te entregar.</p>
-
-                <div style="margin-top: 30px;">
-                    <a href="https://www.instagram.com/ct.olympo" target="_blank" class="btn-outline" style="margin-right: 15px;">
-                        <i class="fa-brands fa-instagram"></i> Meu Instagram
-                    </a>
-                </div>
-            </div>
-
-            <div class="hero-image-container">
-                <img src="assets/img/ryan_coach_atualizado.png" alt="Foto do Ryan Coach" class="coach-photo">
-            </div>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <span class="stat-number">+500</span>
-                <span class="stat-label">Alunos Transformados</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-number">8</span>
-                <span class="stat-label">Anos de Experiência</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-number">100%</span>
-                <span class="stat-label">Foco em Resultado</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-number">24/7</span>
-                <span class="stat-label">Suporte Técnico</span>
-            </div>
-        </div>
-
-        <section class="philosophy-section">
-            <h2 class="section-title">Minha Filosofia de Trabalho</h2>
-            
-            <div class="cards-row">
-                <div class="info-box">
-                    <i class="fa-solid fa-brain"></i>
-                    <h3>Ciência Aplicada</h3>
-                    <p>Nada de "achismo". Cada série, repetição e intervalo do seu treino tem um motivo fisiológico para estar ali. Otimizamos seu tempo para gerar o máximo de hipertrofia e queima de gordura.</p>
-                </div>
-
-                <div class="info-box">
-                    <i class="fa-solid fa-bullseye"></i>
-                    <h3>Individualidade Biológica</h3>
-                    <p>O treino do campeão olímpico pode não funcionar para você. Respeito sua estrutura óssea, histórico de lesões e rotina diária para criar algo sustentável a longo prazo.</p>
-                </div>
-
-                <div class="info-box">
-                    <i class="fa-solid fa-hand-fist"></i>
-                    <h3>Mentalidade Blindada</h3>
-                    <p>O corpo só vai onde a mente permite. Além de passar exercícios, meu papel é te cobrar, motivar e te ensinar a ter a disciplina necessária para vencer.</p>
-                </div>
-            </div>
-        </section>
-
-        <div class="final-cta">
-            <div class="cta-content">
-                <h2 style="font-family: 'Orbitron'; color: #fff; font-size: 2rem; margin-bottom: 20px;">Pronto para treinar de verdade?</h2>
-                <p style="color: #ccc; max-width: 600px; margin: 0 auto 30px;">Não espere a "segunda-feira perfeita". O melhor momento para começar a construir o corpo que você quer é agora.</p>
-                
-                <a href="planos.php" class="CTA-rounded">
-                    <span>Quero fazer parte do Time</span>
-                </a>
             </div>
         </div>
 

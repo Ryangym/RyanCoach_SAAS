@@ -9,7 +9,6 @@
 
 </head>
 <body>
-    <?php include 'includes/navbar.php'; ?>
     
     <section class="planos" id="planos">
         <h1 class="section-title">Nossos Planos</h1>

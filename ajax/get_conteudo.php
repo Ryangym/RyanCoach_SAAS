@@ -749,7 +749,7 @@ switch ($pagina) {
 
         echo '  </div> 
 
-                <button type="submit" class="btn-finish">
+                <button type="submit" class="btn-finish" onclick="return confirm(\'Tem certeza que deseja finalizar este treino? Todos os dados serão salvos.\')">
                     <i class="fa-solid fa-check"></i> FINALIZAR TREINO
                 </button>
               </form>';

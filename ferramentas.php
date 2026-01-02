@@ -265,8 +265,6 @@
     </style>
 </head>
 <body>
-    
-    <?php include 'includes/navbar.php'; ?>
 
     <div class="tools-wrapper">
         

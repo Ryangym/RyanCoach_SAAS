@@ -26,7 +26,8 @@ body.saas-body {
     font-family: var(--font-main);
     overflow-x: hidden;
     /* Fundo com vignette vermelho sutil nas bordas */
-    background-image: radial-gradient(circle at 50% 50%, #0a0a0a 0%, #000000 100%);
+    background-image: url(../img/background-gym.png);
+    background-repeat: no-repeat;
 }
 
 .container {

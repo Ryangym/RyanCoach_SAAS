@@ -2100,6 +2100,77 @@ switch ($pagina) {
 
         break;
 
+    case 'mensagens':
+        require_once '../config/db_connect.php';
+
+        // Marca como lida se vier ID na URL
+        if(isset($_GET['marcar_lida'])) {
+            $pdo->prepare("UPDATE mensagens_contato SET lida = 1 WHERE id = ?")->execute([$_GET['marcar_lida']]);
+        }
+        
+        // Deleta se vier ID na URL
+        if(isset($_GET['excluir_msg'])) {
+            $pdo->prepare("DELETE FROM mensagens_contato WHERE id = ?")->execute([$_GET['excluir_msg']]);
+        }
+
+        // Busca Mensagens
+        $msgs = $pdo->query("SELECT * FROM mensagens_contato ORDER BY data_envio DESC")->fetchAll(PDO::FETCH_ASSOC);
+
+        echo '<section id="admin-mensagens">
+                <header class="dash-header">
+                    <h1>CAIXA DE <span class="highlight-text">MENSAGENS</span></h1>
+                    <p class="text-desc">Contatos recebidos pelo site.</p>
+                </header>
+
+                <div class="glass-card mt-large">
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>DATA</th>
+                                    <th>NOME</th>
+                                    <th>CONTATO</th>
+                                    <th>MENSAGEM</th>
+                                    <th style="text-align:right;">AÇÃO</th>
+                                </tr>
+                            </thead>
+                            <tbody>';
+                            
+                            if (empty($msgs)) {
+                                echo '<tr><td colspan="5" style="text-align:center; padding:30px; color:#666;">Nenhuma mensagem recebida.</td></tr>';
+                            } else {
+                                foreach ($msgs as $m) {
+                                    $data = date('d/m/y H:i', strtotime($m['data_envio']));
+                                    $statusClass = $m['lida'] ? 'opacity:0.5;' : 'font-weight:bold; color:#fff;';
+                                    $iconLida = $m['lida'] ? '<i class="fa-regular fa-envelope-open"></i>' : '<i class="fa-solid fa-envelope" style="color:var(--gold);"></i>';
+                                    
+                                    echo '<tr style="'.$statusClass.'">
+                                            <td style="font-size:0.8rem; color:#888;">'.$data.'</td>
+                                            <td>'.$m['nome'].'</td>
+                                            <td>
+                                                <div style="font-size:0.8rem;">
+                                                    <i class="fa-solid fa-envelope"></i> '.$m['email'].'<br>
+                                                    <i class="fa-brands fa-whatsapp"></i> '.$m['telefone'].'
+                                                </div>
+                                            </td>
+                                            <td style="max-width:300px; white-space:normal;">'.nl2br($m['mensagem']).'</td>
+                                            <td style="text-align:right;">
+                                                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                                                    <button onclick="carregarConteudo(\'mensagens&marcar_lida='.$m['id'].'\')" class="btn-action-icon" title="Marcar como lida">'.$iconLida.'</button>
+                                                    
+                                                    <button onclick="if(confirm(\'Excluir mensagem?\')) carregarConteudo(\'mensagens&excluir_msg='.$m['id'].'\')" class="btn-action-icon btn-delete"><i class="fa-solid fa-trash"></i></button>
+                                                </div>
+                                            </td>
+                                          </tr>';
+                                }
+                            }
+        echo '              </tbody>
+                        </table>
+                    </div>
+                </div>
+              </section>';
+        break;
+
     // --- NOVO MENU GERAL ADMIN ---
     case 'admin_menu':
         require_once '../config/db_connect.php';
@@ -2142,9 +2213,9 @@ switch ($pagina) {
                         <span style="color: #ccc; font-size: 0.9rem;">Fluxo de Caixa</span>
                     </div>
 
-                    <div class="menu-card" onclick="carregarConteudo(\'perfil\')" style="background: #161616; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #333;">
-                        <i class="fa-solid fa-gear" style="font-size: 1.5rem; color: #fff; margin-bottom: 10px; display: block;"></i>
-                        <span style="color: #ccc; font-size: 0.9rem;">Configurações</span>
+                    <div class="menu-card" onclick="carregarConteudo(\'mensagens\')" style="background: #161616; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #333;">
+                        <i class="fa-solid fa-envelope" style="font-size: 1.5rem; color: #fff; margin-bottom: 10px; display: block;"></i>
+                        <span style="color: #ccc; font-size: 0.9rem;">Mensagens Contato</span>
                     </div>
 
                 </div>

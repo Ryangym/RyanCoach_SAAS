@@ -271,8 +271,14 @@ switch ($pagina) {
         break;
 
     case 'realizar_treino':
-        // 1. Busca o Treino Ativo
+        require_once '../config/db_connect.php'; 
+        
+        if (!isset($_SESSION['user_id'])) { echo "Sessão expirada."; break; }
+        
+        $aluno_id = $_SESSION['user_id'];
         $hoje = date('Y-m-d');
+
+        // 1. Busca o Treino Ativo
         $sql = "SELECT * FROM treinos WHERE aluno_id = :uid ORDER BY criado_em DESC LIMIT 1";
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['uid' => $aluno_id]);
@@ -284,9 +290,10 @@ switch ($pagina) {
         }
 
         // 2. Lógica de Seleção Automática do Dia
+        $divisao_req = filter_input(INPUT_GET, 'divisao_id', FILTER_SANITIZE_NUMBER_INT);
+        
         if (!$divisao_req) {
-            $hoje_dia_num = date('w'); // 0 (Dom) a 6 (Sáb)
-            
+            $hoje_dia_num = date('w'); 
             $check_dias = [$hoje_dia_num];
             if ($hoje_dia_num == 0) $check_dias[] = 7; 
 
@@ -354,9 +361,7 @@ switch ($pagina) {
 
         if (!$div_atual) { echo '<p>Erro: Divisão não encontrada.</p>'; break; }
 
-        // --- CARREGAMENTO OTIMIZADO (AGORA COM AS COLUNAS CERTAS) ---
-        
-        // A. Busca Exercícios
+        // --- CARREGAMENTO EM LOTE (EXERCÍCIOS, SÉRIES E HISTÓRICO) ---
         $stmt_ex = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC");
         $stmt_ex->execute([$divisao_id]);
         $exercicios = $stmt_ex->fetchAll(PDO::FETCH_ASSOC);
@@ -368,7 +373,6 @@ switch ($pagina) {
             $exercicio_ids = array_column($exercicios, 'id');
             $ids_placeholder = implode(',', array_fill(0, count($exercicio_ids), '?'));
 
-            // B. Busca TODAS as Séries
             $stmt_all_series = $pdo->prepare("SELECT * FROM series WHERE exercicio_id IN ($ids_placeholder) ORDER BY id ASC");
             $stmt_all_series->execute($exercicio_ids);
             $todas_series = $stmt_all_series->fetchAll(PDO::FETCH_ASSOC);
@@ -377,7 +381,6 @@ switch ($pagina) {
                 $series_por_exercicio[$s['exercicio_id']][] = $s;
             }
 
-            // C. Busca Histórico (CORRIGIDO: Com JOIN para trazer a técnica e categoria)
             $data_limite_hist = date('Y-m-d', strtotime('-60 days'));
             $sql_hist = "SELECT th.exercicio_id, th.serie_id, th.numero_serie, th.serie_numero, th.carga_kg, th.reps_realizadas, th.dados_tecnicos, th.data_treino,
                                 s.tecnica, s.categoria
@@ -388,9 +391,8 @@ switch ($pagina) {
                          AND th.data_treino >= ?
                          ORDER BY th.data_treino DESC, th.id ASC";
             
-            $params_hist = array_merge([$aluno_id], $exercicio_ids, [$data_limite_hist]);
             $stmt_hist = $pdo->prepare($sql_hist);
-            $stmt_hist->execute($params_hist);
+            $stmt_hist->execute(array_merge([$aluno_id], $exercicio_ids, [$data_limite_hist]));
             $historico_raw = $stmt_hist->fetchAll(PDO::FETCH_ASSOC);
 
             $ultima_data_por_exercicio = [];
@@ -403,7 +405,6 @@ switch ($pagina) {
                     $ultima_data_por_exercicio[$eid] = $data;
                 }
 
-                // Apenas dados do último treino desse exercício
                 if ($ultima_data_por_exercicio[$eid] === $data) {
                     $s_key = $h['serie_id'] ? $h['serie_id'] : $h['serie_numero'];
                     $n_key = $h['numero_serie'] ? $h['numero_serie'] : 1;
@@ -416,20 +417,30 @@ switch ($pagina) {
             }
         }
 
-        // Periodização
+        // --- LÓGICA DE PERIODIZAÇÃO (CORRIGIDA E IDÊNTICA AO CASE TREINOS) ---
         $micro_atual = null;
         if ($treino_ativo['nivel_plano'] !== 'basico') {
              $stmt_per = $pdo->prepare("SELECT id FROM periodizacoes WHERE treino_id = ?");
              $stmt_per->execute([$treino_ativo['id']]);
              $pid = $stmt_per->fetchColumn();
+             
              if($pid) {
-                 $stmt_m = $pdo->prepare("SELECT * FROM microciclos WHERE periodizacao_id = ? AND data_inicio_semana <= ? AND data_fim_semana >= ? LIMIT 1");
-                 $stmt_m->execute([$pid, $hoje, $hoje]);
-                 $micro_atual = $stmt_m->fetch(PDO::FETCH_ASSOC);
-                 if(!$micro_atual) {
-                     $stmt_m = $pdo->prepare("SELECT * FROM microciclos WHERE periodizacao_id = ? ORDER BY semana_numero DESC LIMIT 1");
-                     $stmt_m->execute([$pid]);
-                     $micro_atual = $stmt_m->fetch(PDO::FETCH_ASSOC);
+                 // Busca TODOS os microciclos (igual ao case treinos)
+                 $stmt_m = $pdo->prepare("SELECT * FROM microciclos WHERE periodizacao_id = ? ORDER BY semana_numero ASC");
+                 $stmt_m->execute([$pid]);
+                 $micros = $stmt_m->fetchAll(PDO::FETCH_ASSOC);
+
+                 // Encontra o atual via PHP (mais seguro com datas)
+                 foreach ($micros as $m) {
+                     if ($hoje >= $m['data_inicio_semana'] && $hoje <= $m['data_fim_semana']) {
+                         $micro_atual = $m;
+                         break;
+                     }
+                 }
+                 
+                 // Fallback para o primeiro se não encontrar (ou último se preferir, mas vamos manter igual ao 'treinos' que usa o primeiro)
+                 if (!$micro_atual && !empty($micros)) {
+                     $micro_atual = $micros[0]; 
                  }
              }
         }
@@ -530,22 +541,50 @@ switch ($pagina) {
                             if ($is_rest) $js_type_arg = 'rest';
                             if ($is_cluster) $js_type_arg = 'cluster';
 
-                            // Metas
-                            $meta_reps = $s['reps_fixas'];
-                            $meta_desc = $s['descanso_fixo'];
+                            // --- LÓGICA DE PREENCHIMENTO (IGUAL AO CASE TREINOS) ---
+                            $reps = trim($s['reps_fixas']);
+                            $desc = trim($s['descanso_fixo']);
+                            
+                            if ($reps === '-' || $reps === 'Falha') $reps = '';
+                            if ($desc === '-' || $desc === '90s') $desc = ''; 
 
-                            if ($s['categoria'] === 'warmup') { $meta_desc = '30'; }
-                            elseif ($s['categoria'] === 'feeder') { $meta_desc = '60'; }
-                            elseif ($micro_atual) {
-                                if ($ex['tipo_mecanica'] == 'composto') {
-                                    if(!empty($micro_atual['reps_compostos'])) $meta_reps = $micro_atual['reps_compostos'];
-                                    if(!empty($micro_atual['descanso_compostos'])) $meta_desc = $micro_atual['descanso_compostos'].'s';
-                                } else {
-                                    if(!empty($micro_atual['reps_isoladores'])) $meta_reps = $micro_atual['reps_isoladores'];
-                                    if(!empty($micro_atual['descanso_isoladores'])) $meta_desc = $micro_atual['descanso_isoladores'].'s';
+                            $categoria = strtolower($s['categoria']);
+                            $tipo_mec  = strtolower($ex['tipo_mecanica']);
+
+                            // 1. Warmup / Feeder (Prioridade)
+                            if ($categoria === 'warmup') {
+                                if (empty($desc)) $desc = '30s';
+                                if (empty($reps)) $reps = '15';
+                            } 
+                            elseif ($categoria === 'feeder') {
+                                if (empty($desc)) $desc = '60s';
+                                if (empty($reps)) $reps = '6';
+                            } 
+                            else {
+                                // 2. Periodização (Se campo da série vazio)
+                                if ($micro_atual) {
+                                    if ($tipo_mec == 'composto' || $tipo_mec == 'multiarticular') {
+                                        if (empty($reps) && !empty($micro_atual['reps_compostos'])) {
+                                            $reps = $micro_atual['reps_compostos'];
+                                        }
+                                        if (empty($desc) && !empty($micro_atual['descanso_compostos'])) {
+                                            $desc = $micro_atual['descanso_compostos'].'s';
+                                        }
+                                    } 
+                                    elseif ($tipo_mec == 'isolador' || $tipo_mec == 'monoarticular') {
+                                        if (empty($reps) && !empty($micro_atual['reps_isoladores'])) {
+                                            $reps = $micro_atual['reps_isoladores'];
+                                        }
+                                        if (empty($desc) && !empty($micro_atual['descanso_isoladores'])) {
+                                            $desc = $micro_atual['descanso_isoladores'].'s';
+                                        }
+                                    }
                                 }
                             }
-                            if(empty($meta_reps) || $meta_reps == '-') $meta_reps = "Falha";
+
+                            // 3. Fallback Final (Padrão solicitado)
+                            if(empty($reps)) $reps = "Falha";
+                            if(empty($desc)) $desc = "90s";
 
                             $qtd_series = (int)$s['quantidade'];
                             if ($qtd_series < 1) $qtd_series = 1;
@@ -594,7 +633,6 @@ switch ($pagina) {
 
                                 echo '<div class="'.$row_class.'">';
 
-                                    // COLUNA 1: INFO
                                     $label_class = ""; 
                                     if ($is_drop)    $label_class = "text-drop";
                                     elseif ($is_rest)    $label_class = "text-rest";
@@ -606,18 +644,16 @@ switch ($pagina) {
                                         <span style="font-size:1.1rem; display:block;">'.$indicador_num.'</span>
                                         <span class="set-type-label '.$label_class.'" style="font-size:0.65rem;">'.$label_serie.'</span>
                                         <small style="color: #666; font-size:0.65rem;">
-                                            <i class="fa-solid fa-clock"></i> '.$meta_desc.'
+                                            <i class="fa-solid fa-clock"></i> '.$desc.'
                                         </small>
                                     </div>';
 
-                                    // COLUNA 2: META
                                     echo '
                                     <div style="text-align:center;">
-                                        <span style="color:#fff; font-size:0.9rem; font-weight:bold;">'.$meta_reps.'</span>
+                                        <span style="color:#fff; font-size:0.9rem; font-weight:bold;">'.$reps.'</span>
                                         <span style="display:block; font-size:0.6rem; color:#aaa;">ALVO</span>
                                     </div>';
 
-                                    // COLUNAS 3 e 4
                                     if ($has_technique) {
                                         $modal_id = "modal_".$s['id']."_".$i;
                                         $btn_text = "REGISTRAR";
@@ -658,8 +694,8 @@ switch ($pagina) {
                                                 </div>
                                                 
                                                 <div style="margin-bottom:20px; text-align:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:6px;">
-                                                    <span style="color:#aaa; font-size:0.8rem;">META: </span> <b style="color:#fff">'.$meta_reps.'</b>
-                                                    <span style="color:#aaa; font-size:0.8rem; margin-left:15px;">DESC: </span> <b style="color:#fff">'.$meta_desc.'</b>
+                                                    <span style="color:#aaa; font-size:0.8rem;">META: </span> <b style="color:#fff">'.$reps.'</b>
+                                                    <span style="color:#aaa; font-size:0.8rem; margin-left:15px;">DESC: </span> <b style="color:#fff">'.$desc.'</b>
                                                 </div>';
 
                                                 if ($is_drop) {
@@ -772,8 +808,14 @@ switch ($pagina) {
         
     case 'treinos':
         require_once '../config/db_connect.php'; 
+        
+        // Verifica Sessão
+        if (!isset($_SESSION['user_id'])) { echo "Sessão expirada."; break; }
+        
         $aluno_id = $_SESSION['user_id'];
         $hoje = date('Y-m-d');
+
+        session_write_close();
 
         // A. BUSCA TODOS OS TREINOS
         $sql = "SELECT id, nome, data_inicio, data_fim, nivel_plano FROM treinos WHERE aluno_id = :uid ORDER BY criado_em DESC";
@@ -791,6 +833,7 @@ switch ($pagina) {
 
         // B. DEFINE TREINO ATUAL
         $treino = $lista[0];
+        $treino_req = filter_input(INPUT_GET, 'treino_id', FILTER_SANITIZE_NUMBER_INT);
         if ($treino_req) {
             foreach($lista as $t) {
                 if ($t['id'] == $treino_req) { $treino = $t; break; }
@@ -814,6 +857,7 @@ switch ($pagina) {
                 $stmt->execute([$per['id']]);
                 $micros = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+                $micro_req = filter_input(INPUT_GET, 'micro_id', FILTER_SANITIZE_NUMBER_INT);
                 if ($micro_req) {
                     foreach ($micros as $m) {
                         if ($m['id'] == $micro_req) { $micro_atual = $m; break; }
@@ -838,16 +882,14 @@ switch ($pagina) {
         $stmt->execute([$treino['id']]);
         $divisoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // --- E. OTIMIZAÇÃO: BUSCA EXERCÍCIOS E SÉRIES EM LOTE ---
+        // --- E. OTIMIZAÇÃO: BUSCA EM LOTE ---
         $exercicios_por_divisao = [];
         $series_por_exercicio = [];
 
         if (!empty($divisoes)) {
-            // 1. Pega IDs das divisões
             $div_ids = array_column($divisoes, 'id');
             $placeholders_div = implode(',', array_fill(0, count($div_ids), '?'));
 
-            // 2. Busca TODOS exercícios dessas divisões
             $stmt_ex = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id IN ($placeholders_div) ORDER BY ordem ASC");
             $stmt_ex->execute($div_ids);
             $todos_exercicios = $stmt_ex->fetchAll(PDO::FETCH_ASSOC);
@@ -859,7 +901,6 @@ switch ($pagina) {
                     $ex_ids[] = $ex['id'];
                 }
 
-                // 3. Busca TODAS as séries desses exercícios
                 if (!empty($ex_ids)) {
                     $placeholders_ex = implode(',', array_fill(0, count($ex_ids), '?'));
                     $stmt_series = $pdo->prepare("SELECT * FROM series WHERE exercicio_id IN ($placeholders_ex) ORDER BY id ASC");
@@ -876,7 +917,6 @@ switch ($pagina) {
         // --- RENDERIZAÇÃO ---
         echo '<section id="meu-treino" class="fade-in">';
         
-        // 2. Header
         echo '<div class="workout-header-main">
                 <h2 class="workout-title">'.$treino['nome'].'</h2>
                 <div class="meta-tags">
@@ -885,7 +925,7 @@ switch ($pagina) {
                 </div>
               </div>';
 
-        // 3. Timeline
+        // Timeline Periodização
         if (!empty($micros)) {
             echo '<div class="timeline-container">';
             foreach ($micros as $m) {
@@ -899,12 +939,11 @@ switch ($pagina) {
             }
             echo '</div>';
 
-            // VISUALIZAÇÃO DE FOCO
             if ($micro_atual) {
                 $reps_comp = $micro_atual['reps_compostos'] ?: '-';
                 $desc_comp = $micro_atual['descanso_compostos'] ? $micro_atual['descanso_compostos'].'s' : '-';
-                $reps_iso = $micro_atual['reps_isoladores'] ?: '-';
-                $desc_iso = $micro_atual['descanso_isoladores'] ? $micro_atual['descanso_isoladores'].'s' : '-';
+                $reps_iso  = $micro_atual['reps_isoladores'] ?: '-';
+                $desc_iso  = $micro_atual['descanso_isoladores'] ? $micro_atual['descanso_isoladores'].'s' : '-';
 
                 echo '<div class="week-focus-box">
                         <div class="focus-header">
@@ -931,7 +970,7 @@ switch ($pagina) {
             }
         }
 
-        // 4. Abas
+        // Abas
         echo '<div class="division-tabs">';
         $first = true;
         foreach ($divisoes as $d) {
@@ -941,22 +980,19 @@ switch ($pagina) {
         }
         echo '</div>';
 
-        // 5. Conteúdo das Divisões
+        // Conteúdo
         $first = true;
         foreach ($divisoes as $d) {
             $display = $first ? 'block' : 'none';
-            
-            // Pega Exercícios da Memória (Otimização)
             $exercicios_raw = $exercicios_por_divisao[$d['id']] ?? [];
 
-            // AGRUPAMENTO (Bi-set / Tri-set)
+            // Agrupamento
             $lista_final = [];
             $grupos_temp = []; 
 
             if ($exercicios_raw) {
                 foreach ($exercicios_raw as $ex) {
                     $hash = $ex['agrupamento_hash'];
-
                     if ($hash) {
                         if (!isset($grupos_temp[$hash])) {
                             $idx = count($lista_final);
@@ -973,9 +1009,7 @@ switch ($pagina) {
             echo '<div id="div_'.$d['id'].'" class="treino-content" style="display:'.$display.'">';
             
             if (!empty($lista_final)) {
-                
                 foreach ($lista_final as $bloco) {
-
                     if ($bloco['tipo'] === 'grupo') {
                         $qtd = count($bloco['itens']);
                         $label = ($qtd === 2) ? 'BI-SET' : 'TRI-SET';
@@ -984,8 +1018,6 @@ switch ($pagina) {
                     }
 
                     foreach ($bloco['itens'] as $ex) {
-                        
-                        // Pega Séries da Memória (Otimização)
                         $series = $series_por_exercicio[$ex['id']] ?? [];
 
                         echo '<div class="exercise-card">
@@ -1001,30 +1033,53 @@ switch ($pagina) {
                                     <div class="sets-grid">';
                                     
                                     foreach ($series as $s) {
-                                        // Regras de Reps/Descanso
+                                        // 1. Pega valores da SÉRIE
                                         $reps = $s['reps_fixas'];
                                         $desc = $s['descanso_fixo'];
+                                        $categoria = strtolower($s['categoria']);
 
-                                        if ($s['categoria'] === 'warmup') {
-                                            $desc = '30s';
-                                        } elseif ($s['categoria'] === 'feeder') {
-                                            $desc = '60s';
-                                        } else {
+                                        // 2. Regras de Warmup/Feeder (Prioridade Total)
+                                        if ($categoria === 'warmup') {
+                                            // Se não tiver desc na série, usa 30s
+                                            if (empty($desc)) $desc = '30s';
+                                            // Se não tiver reps na série, usa 15
+                                            if (empty($reps) || $reps == '-') $reps = '15';
+                                        } 
+                                        elseif ($categoria === 'feeder') {
+                                            // Se não tiver desc na série, usa 60s
+                                            if (empty($desc)) $desc = '60s';
+                                            // Se não tiver reps na série, usa 6
+                                            if (empty($reps) || $reps == '-') $reps = '6';
+                                        } 
+                                        else {
+                                            // 3. Regra de Periodização (Só se o campo da série estiver VAZIO)
                                             if ($micro_atual) {
                                                 if ($ex['tipo_mecanica'] == 'composto') {
-                                                    if (!empty($micro_atual['reps_compostos'])) $reps = $micro_atual['reps_compostos'];
-                                                    if (!empty($micro_atual['descanso_compostos'])) $desc = $micro_atual['descanso_compostos'].'s';
-                                                } elseif ($ex['tipo_mecanica'] == 'isolador') {
-                                                    if (!empty($micro_atual['reps_isoladores'])) $reps = $micro_atual['reps_isoladores'];
-                                                    if (!empty($micro_atual['descanso_isoladores'])) $desc = $micro_atual['descanso_isoladores'].'s';
+                                                    // Só sobrescreve se $reps estiver vazio
+                                                    if (empty($reps) && !empty($micro_atual['reps_compostos'])) {
+                                                        $reps = $micro_atual['reps_compostos'];
+                                                    }
+                                                    // Só sobrescreve se $desc estiver vazio
+                                                    if (empty($desc) && !empty($micro_atual['descanso_compostos'])) {
+                                                        $desc = $micro_atual['descanso_compostos'].'s';
+                                                    }
+                                                } 
+                                                elseif ($ex['tipo_mecanica'] == 'isolador') {
+                                                    if (empty($reps) && !empty($micro_atual['reps_isoladores'])) {
+                                                        $reps = $micro_atual['reps_isoladores'];
+                                                    }
+                                                    if (empty($desc) && !empty($micro_atual['descanso_isoladores'])) {
+                                                        $desc = $micro_atual['descanso_isoladores'].'s';
+                                                    }
                                                 }
                                             }
                                         }
 
-                                        if(empty($reps)) $reps = "Falha";
+                                        // 4. Fallback Final (Se continuou vazio, vira Falha/-)
+                                        if(empty($reps) || $reps == '-') $reps = "Falha";
                                         if(empty($desc)) $desc = "-";
 
-                                        // LÓGICA DE TÉCNICAS (SEM CSS INLINE)
+                                        // Técnicas
                                         $tecnica = strtolower(trim($s['tecnica'] ?? 'normal'));
                                         $valor   = $s['tecnica_valor'] ?? '';
                                         
@@ -1036,13 +1091,11 @@ switch ($pagina) {
                                             $cssClass .= ' technique-drop';
                                             $labelSet = $s['quantidade'].'x DROP SET';
                                             $extraInfo = '<div class="tech-info">+ '.$valor.' Drops</div>';
-                                        }
-                                        elseif ($tecnica === 'restpause') {
+                                        } elseif ($tecnica === 'restpause') {
                                             $cssClass .= ' technique-rest';
                                             $labelSet = $s['quantidade'].'x REST PAUSE';
                                             $extraInfo = '<div class="tech-info">Pausa Intra: '.$valor.'s</div>';
-                                        }
-                                        elseif ($tecnica === 'clusterset') {
+                                        } elseif ($tecnica === 'clusterset') {
                                             $cssClass .= ' technique-cluster';
                                             $labelSet = $s['quantidade'].'x CLUSTER';
                                             $parts = explode('|', $valor);
@@ -1066,18 +1119,20 @@ switch ($pagina) {
                     }
 
                     if ($bloco['tipo'] === 'grupo') {
-                        echo '</div>'; // Fecha agrupamento-wrapper
+                        echo '</div>'; // Fecha agrupamento
                     }
                 }
 
             } else {
-                echo '<div class="empty-day">Descanso</div>';
+                echo '<div class="empty-day">Sem exercícios cadastrados</div>';
             }
             echo '</div>';
             $first = false;
         }
 
         echo '</section>';
+        
+        $pdo = null;
         break;
 
     

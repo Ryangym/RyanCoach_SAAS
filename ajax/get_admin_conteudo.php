@@ -1045,7 +1045,7 @@ switch ($pagina) {
                             <i class="fa-solid fa-dumbbell"></i> Criar Nova Estrutura
                         </h3>
                         
-                        <form action="actions/treino_create.php" method="POST">
+                        <form id="formNovoTreino" onsubmit="criarTreino(event)">
                             
                             <div class="form-row">
                                 <div class="form-col" style="position: relative;">

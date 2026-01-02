@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nivel = $_POST['nivel'] ?? 'basico';
         $divisao = strtoupper($_POST['divisao'] ?? 'A');
         $data_inicio = $_POST['data_inicio'];
-        $dias_selecionados = $_POST['dias_semana'] ?? []; 
+        $dias_selecionados = $_POST['dias_semana'] ?? []; // Array
         $observacoes = filter_input(INPUT_POST, 'observacoes', FILTER_SANITIZE_STRING);
 
         if (!$aluno_id || !$nome_treino || !$data_inicio) {
@@ -46,6 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Selecione pelo menos um dia de treino.");
         }
         
+        // Ordena os dias (Ex: [0, 1, 5] -> Dom, Seg, Sex)
+        // Como domingo é 0, o sort() já coloca ele no começo, o que é perfeito.
         sort($dias_selecionados); 
         $dias_json = json_encode($dias_selecionados);
 
@@ -57,13 +59,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Ajuste fino para terminar no último dia de treino real da semana
         $tempData = clone $objData;
         for ($d = 0; $d < 7; $d++) {
-            if (in_array($tempData->format('N'), $dias_selecionados)) {
+            // OBS: Mudamos de 'N' para 'w' para alinhar com Domingo = 0
+            if (in_array($tempData->format('w'), $dias_selecionados)) {
                 $data_fim_calculada = $tempData->format('Y-m-d');
             }
             $tempData->modify('+1 day');
         }
 
-        // 3. Inserir Treino (CORRIGIDO: Agora usa 'criador_id')
+        // 3. Inserir Treino
         $sql = "INSERT INTO treinos 
                 (aluno_id, criador_id, nome, nivel_plano, data_inicio, data_fim, dias_semana, divisao_nome, observacoes, ativo) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
@@ -71,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             $aluno_id, 
-            $criador_id, // Passando o ID do usuário logado
+            $criador_id, 
             $nome_treino, 
             $nivel, 
             $data_inicio, 
@@ -83,29 +86,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $treino_id = $pdo->lastInsertId();
 
-        // 4. Periodização (Se aplicável)
+        // 4. Periodização (Se não for básico)
         if ($nivel !== 'basico') {
             $stmt = $pdo->prepare("INSERT INTO periodizacoes (treino_id, data_inicio_macro, data_fim_macro, objetivo_macro) VALUES (?, ?, ?, ?)");
             $stmt->execute([$treino_id, $data_inicio, $data_fim_calculada, 'Hipertrofia']);
             $periodizacao_id = $pdo->lastInsertId();
 
-            $data_atual = new DateTime($data_inicio);
+            // --- CÁLCULO INTELIGENTE (Domingo é o início) ---
             
-            for ($i = 1; $i <= 12; $i++) {
-                $semana_start = clone $data_atual;
-                $semana_end = clone $data_atual;
-                $semana_end->modify('+6 days');
+            // A. Identifica o primeiro e o último dia da semana de treino
+            // Como usamos sort() lá em cima e 'w' (0-6), o min() e max() funcionam direto.
+            // Ex: Domingo(0) e Sexta(5) -> min=0, max=5.
+            $dias_numericos = [];
+            foreach($dias_selecionados as $d) {
+                $dias_numericos[] = (int)$d; 
+            }
 
-                $stmt = $pdo->prepare("INSERT INTO microciclos (periodizacao_id, semana_numero, nome_fase, data_inicio_semana, data_fim_semana) VALUES (?, ?, ?, ?, ?)");
+            if(empty($dias_numericos)) {
+                $primeiro_dia_semana = 1; // Seg
+                $ultimo_dia_semana   = 5; // Sex
+            } else {
+                $primeiro_dia_semana = min($dias_numericos);
+                $ultimo_dia_semana   = max($dias_numericos);
+            }
+
+            // B. Encontra o DOMINGO base da semana de início
+            // date('w') retorna 0(Dom) a 6(Sáb).
+            $dia_semana_atual_inicio = date('w', strtotime($data_inicio));
+            
+            // Se hoje é Quarta (3), volta 3 dias para chegar no Domingo (0)
+            $domingo_base = date('Y-m-d', strtotime($data_inicio . " - " . $dia_semana_atual_inicio . " days"));
+
+            $sql_micro = "INSERT INTO microciclos (periodizacao_id, semana_numero, nome_fase, data_inicio_semana, data_fim_semana) VALUES (?, ?, ?, ?, ?)";
+            $stmt_micro = $pdo->prepare($sql_micro);
+
+            for ($i = 0; $i < 12; $i++) {
+                $semana_num = $i + 1;
                 
-                $fase = ($i <= 4) ? 'Base' : (($i <= 8) ? 'Intensificação' : 'Polimento');
-                $stmt->execute([$periodizacao_id, $i, $fase, $semana_start->format('Y-m-d'), $semana_end->format('Y-m-d')]);
+                // CALCULA INÍCIO: Domingo Base + X Semanas + Deslocamento até o 1º dia de treino
+                // Ex: Se treina Seg(1), o inicio é Domingo + 1 dia
+                $offset_inicio = $primeiro_dia_semana; 
+                $dt_inicio = date('Y-m-d', strtotime($domingo_base . " + $i week + $offset_inicio days"));
 
-                $data_atual->modify('+1 week');
+                // CALCULA FIM: Domingo Base + X Semanas + Deslocamento até o último dia de treino
+                // Ex: Se treina Sex(5), o fim é Domingo + 5 dias
+                $offset_fim = $ultimo_dia_semana;
+                $dt_fim = date('Y-m-d', strtotime($domingo_base . " + $i week + $offset_fim days"));
+
+                // Define a Fase
+                if ($semana_num <= 4) {
+                    $nome_fase = 'Base';
+                } elseif ($semana_num <= 8) {
+                    $nome_fase = 'Intensificação';
+                } else {
+                    $nome_fase = 'Polimento';
+                }
+
+                $stmt_micro->execute([$periodizacao_id, $semana_num, $nome_fase, $dt_inicio, $dt_fim]);
             }
         }
 
-        // 5. Divisões
+        // 5. Divisões (A, B, C...)
         $letras = str_split(preg_replace('/[^A-Z]/', '', $divisao));
         if(empty($letras)) $letras = ['A'];
 
@@ -116,7 +157,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->commit();
         
-        // SUCESSO: Retorna o ID do treino criado para o JS redirecionar
         ob_clean();
         echo json_encode([
             'status' => 'success', 

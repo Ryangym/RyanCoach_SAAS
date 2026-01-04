@@ -362,7 +362,7 @@ switch ($pagina) {
                             </div>
                             <div class="form-col" style="flex: 0 0 120px;">
                                 <label class="input-label">Divisão</label>
-                                <input type="text" name="divisao" class="admin-input" placeholder="ABC" maxlength="5" style="text-transform:uppercase;" required>
+                                <input type="text" name="divisao" class="admin-input" placeholder="ABC" maxlength="7" style="text-transform:uppercase;" required>
                             </div>
                         </div>
 

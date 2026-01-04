@@ -2210,20 +2210,41 @@ switch ($pagina) {
         require_once '../config/db_connect.php';
         $user_id = $_SESSION['user_id'];
 
-        // 1. Busca o Plano Atual do Aluno (Para validar permissão)
+        // 1. Verifica se tem Coach (Bloqueio de Segurança)
+        $stmt_check = $pdo->prepare("SELECT coach_id FROM usuarios WHERE id = ?");
+        $stmt_check->execute([$user_id]);
+        $tem_coach = !empty($stmt_check->fetchColumn());
+
+        // --- BLOQUEIO TOTAL SE TIVER COACH ---
+        if ($tem_coach) {
+            echo '<section class="fade-in" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:60vh; text-align:center;">
+                    <div class="glass-card" style="padding:40px; max-width:400px; width:90%;">
+                        <i class="fa-solid fa-user-lock" style="font-size:3rem; color:var(--gold); margin-bottom:20px;"></i>
+                        <h2 style="color:#fff; margin-bottom:10px;">Gerenciamento Restrito</h2>
+                        <p style="color:#888; margin-bottom:25px;">Seus treinos são definidos exclusivamente pelo seu Treinador. Você não pode criar ou editar fichas manualmente.</p>
+                        <button class="btn-gold" onclick="carregarConteudo(\'treinos\')" style="width:100%;">
+                            <i class="fa-solid fa-arrow-left"></i> VOLTAR PARA MINHAS FICHAS
+                        </button>
+                    </div>
+                  </section>';
+            break; // PARA A EXECUÇÃO AQUI
+        }
+
+        // --- SE CHEGOU AQUI, É ALUNO SEM COACH (SEGUE O FLUXO NORMAL) ---
+
+        // 2. Busca o Plano Atual
         $stmt_p = $pdo->prepare("SELECT plano_atual FROM usuarios WHERE id = ?");
         $stmt_p->execute([$user_id]);
         $dados_user = $stmt_p->fetch(PDO::FETCH_ASSOC);
-        $plano_atual = $dados_user['plano_atual'] ?? 'start'; // start, pro, coach
+        $plano_atual = $dados_user['plano_atual'] ?? 'start';
 
-        // 2. Busca os treinos para listar na tela de fundo
+        // 3. Busca os treinos
         $sql = "SELECT * FROM treinos WHERE aluno_id = ? AND ativo = 1 ORDER BY id DESC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$user_id]);
         $meus_treinos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-
-        // --- TELA DE FUNDO (LISTA DE TREINOS) ---
+        // ... (RESTANTE DO CÓDIGO ORIGINAL DE EXIBIÇÃO DA LISTA E MODAL) ...
         echo '<section id="meus-treinos-painel" class="fade-in">
                 <div class="meus-treinos-header">
                     <div>
@@ -2274,17 +2295,14 @@ switch ($pagina) {
         echo '  </div>
               </section>';
 
-        // --- MODAL DE NOVO TREINO ATUALIZADO ---
+        // MODAL NOVO TREINO (Só renderiza aqui porque se tiver coach, já deu break lá em cima)
         echo '
         <div id="box-novo-treino" class="modal-overlay" style="display:none;">
             <div class="modal-content selection-modal" style="max-width: 650px; text-align: left; position: relative;">
-                
                 <button class="modal-close" onclick="toggleNovoTreino()">&times;</button>
-
                 <h3 class="section-title" style="color: var(--gold); margin-bottom: 25px; text-align: center;">
                     <i class="fa-solid fa-dumbbell"></i> Criar Nova Estrutura
                 </h3>
-                
                 <form id="formNovoTreino" onsubmit="criarTreino(event)">
                     <div class="form-row">
                         <div class="form-col">
@@ -2292,23 +2310,17 @@ switch ($pagina) {
                             <input type="text" name="nome" class="user-input" placeholder="Ex: Hipertrofia Fase 1" required>
                         </div>
                     </div>
-
                     <div class="form-row">
                         <div class="form-col">
                             <label class="input-label">Tipo de Plano</label>
                             <select name="nivel" class="user-input" id="selectNivel" onchange="togglePeriodizacao()" required>';
-                                
-                                // LÓGICA DE EXIBIÇÃO DAS OPÇÕES
                                 if ($plano_atual === 'start') {
-                                    // Se for START: Básico selecionado, Avançado bloqueado
                                     echo '<option value="basico" selected>Básico (Ficha Fixa)</option>';
                                     echo '<option value="avancado" disabled>Avançado (Bloqueado - Alunos PRO)</option>';
                                 } else {
-                                    // Se for PRO/COACH: Pode escolher ambos, Avançado padrão
                                     echo '<option value="basico">Básico (Ficha Fixa)</option>';
                                     echo '<option value="avancado" selected>Avançado (Periodizado)</option>';
                                 }
-
                         echo '</select>
                         </div>
                         <div class="form-col">
@@ -2317,33 +2329,31 @@ switch ($pagina) {
                         </div>
                         <div class="form-col" style="flex: 0 0 120px;">
                             <label class="input-label">Divisão</label>
-                            <input type="text" name="divisao" class="user-input" placeholder="ABC" maxlength="5" style="text-transform:uppercase;" required>
+                            <input type="text" name="divisao" class="user-input" placeholder="ABC" maxlength="7" style="text-transform:uppercase;" required>
                         </div>
                     </div>
-
-                            <div style="margin-bottom: 25px;">
-                                <label class="input-label">Dias de Treino</label>
-                                <div class="days-selector">
-                                    <label><input type="checkbox" name="dias_semana[]" value="0" class="day-checkbox"><span class="day-label">DOM</span></label>
-                                    <label><input type="checkbox" name="dias_semana[]" value="1" class="day-checkbox"><span class="day-label">SEG</span></label>
-                                    <label><input type="checkbox" name="dias_semana[]" value="2" class="day-checkbox"><span class="day-label">TER</span></label>
-                                    <label><input type="checkbox" name="dias_semana[]" value="3" class="day-checkbox"><span class="day-label">QUA</span></label>
-                                    <label><input type="checkbox" name="dias_semana[]" value="4" class="day-checkbox"><span class="day-label">QUI</span></label>
-                                    <label><input type="checkbox" name="dias_semana[]" value="5" class="day-checkbox"><span class="day-label">SEX</span></label>
-                                    <label><input type="checkbox" name="dias_semana[]" value="6" class="day-checkbox"><span class="day-label">SÁB</span></label>
-                                </div>
-                            </div>
-
-                            <div id="aviso-periodizacao" class="alert-box" '.($plano_atual === 'start' ? 'style="display:none;"' : '').'>
-                                <span class="alert-title">Modo Periodização Ativo</span>
-                                <p class="alert-text">Serão gerados 12 Microciclos automaticamente.</p>
-                            </div>
-
-                            <button type="submit" class="btn-gold" style="width:100%; margin-top: 15px; padding: 15px;">CRIAR ESTRUTURA</button>
-                        </form>
+                    <div style="margin-bottom: 25px;">
+                        <label class="input-label">Dias de Treino</label>
+                        <div class="days-selector">
+                            <label><input type="checkbox" name="dias_semana[]" value="0" class="day-checkbox"><span class="day-label">DOM</span></label>
+                            <label><input type="checkbox" name="dias_semana[]" value="1" class="day-checkbox"><span class="day-label">SEG</span></label>
+                            <label><input type="checkbox" name="dias_semana[]" value="2" class="day-checkbox"><span class="day-label">TER</span></label>
+                            <label><input type="checkbox" name="dias_semana[]" value="3" class="day-checkbox"><span class="day-label">QUA</span></label>
+                            <label><input type="checkbox" name="dias_semana[]" value="4" class="day-checkbox"><span class="day-label">QUI</span></label>
+                            <label><input type="checkbox" name="dias_semana[]" value="5" class="day-checkbox"><span class="day-label">SEX</span></label>
+                            <label><input type="checkbox" name="dias_semana[]" value="6" class="day-checkbox"><span class="day-label">SÁB</span></label>
+                        </div>
                     </div>
+                    <div id="aviso-periodizacao" class="alert-box" '.($plano_atual === 'start' ? 'style="display:none;"' : '').'>
+                        <span class="alert-title">Modo Periodização Ativo</span>
+                        <p class="alert-text">Serão gerados 12 Microciclos automaticamente.</p>
+                    </div>
+                    <button type="submit" class="btn-gold" style="width:100%; margin-top: 15px; padding: 15px;">CRIAR ESTRUTURA</button>
+                </form>
+            </div>
         </div>';
-    break;
+        
+        break;
     
 
     case 'treino_painel':
@@ -2728,9 +2738,32 @@ switch ($pagina) {
 
     case 'dieta_editor':
         require_once '../config/db_connect.php';
-        $aluno_id = $_SESSION['user_id']; // <--- MUDANÇA PRINCIPAL: Pega o ID de quem está logado
+        $aluno_id = $_SESSION['user_id']; 
 
-        // 1. Busca Dieta ATIVA
+        // 1. Verifica Coach
+        $stmt_c = $pdo->prepare("SELECT coach_id FROM usuarios WHERE id = ?");
+        $stmt_c->execute([$aluno_id]);
+        $tem_coach = !empty($stmt_c->fetchColumn());
+
+        // --- BLOQUEIO TOTAL SE TIVER COACH ---
+        if ($tem_coach) {
+            echo '<section class="fade-in" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:60vh; text-align:center;">
+                    <div class="glass-card" style="padding:40px; max-width:400px; width:90%;">
+                        <i class="fa-solid fa-utensils" style="font-size:3rem; color:var(--gold); margin-bottom:20px;"></i>
+                        <h2 style="color:#fff; margin-bottom:10px;">Edição Bloqueada</h2>
+                        <p style="color:#888; margin-bottom:25px;">Seu plano alimentar é prescrito pelo Nutricionista/Coach. Acesse a área de refeições para registrar o consumo.</p>
+                        
+                        <button class="btn-gold" onclick="carregarConteudo(\'dieta\')" style="width:100%;">
+                            <i class="fa-solid fa-eye"></i> VER MEU PLANO
+                        </button>
+                    </div>
+                  </section>';
+            break; // PARA A EXECUÇÃO AQUI
+        }
+
+        // --- DAQUI PRA BAIXO SÓ EXECUTA SE NÃO TIVER COACH ---
+
+        // 2. Busca Dieta ATIVA
         $stmt_d = $pdo->prepare("SELECT * FROM dietas WHERE aluno_id = ? LIMIT 1");
         $stmt_d->execute([$aluno_id]);
         $dieta = $stmt_d->fetch(PDO::FETCH_ASSOC);
@@ -2762,20 +2795,8 @@ switch ($pagina) {
                     </form>
                 </div>';
         } 
-        // --- ESTADO 2: COM DIETA (EDITOR) ---
+        // --- ESTADO 2: COM DIETA (EDITOR COMPLETO) ---
         else {
-            // Cálculo de Aderência (Mantive pois é legal o usuário ver)
-            $hoje = date('Y-m-d');
-            $stmt_total = $pdo->prepare("SELECT COUNT(*) FROM refeicoes WHERE dieta_id = ?");
-            $stmt_total->execute([$dieta['id']]);
-            $total_refs = $stmt_total->fetchColumn();
-
-            $stmt_feito = $pdo->prepare("SELECT COUNT(*) FROM dieta_registro WHERE aluno_id = ? AND data_registro = ?");
-            $stmt_feito->execute([$aluno_id, $hoje]);
-            $feitos = $stmt_feito->fetchColumn();
-
-            $porcentagem = ($total_refs > 0) ? round(($feitos / $total_refs) * 100) : 0;
-
             echo '<div class="glass-card mb-large">
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px; margin-bottom:20px;">
                         <div>
@@ -2797,7 +2818,6 @@ switch ($pagina) {
 
                     <div class="diet-editor-list">';
 
-                    // Busca Refeições
                     $stmt_ref = $pdo->prepare("SELECT * FROM refeicoes WHERE dieta_id = ? ORDER BY ordem ASC");
                     $stmt_ref->execute([$dieta['id']]);
                     $refeicoes = $stmt_ref->fetchAll(PDO::FETCH_ASSOC);
@@ -2822,7 +2842,6 @@ switch ($pagina) {
 
                                 <div class="meal-items" style="padding:15px;">';
                                 
-                                // Busca Itens
                                 $stmt_it = $pdo->prepare("SELECT * FROM itens_dieta WHERE refeicao_id = ? ORDER BY opcao_numero ASC");
                                 $stmt_it->execute([$ref['id']]);
                                 $itens = $stmt_it->fetchAll(PDO::FETCH_ASSOC);
@@ -2851,9 +2870,10 @@ switch ($pagina) {
             echo '  </div>
                 </div>';
         }
-        echo '</section>
+        echo '</section>';
 
-
+        // MODAIS DE EDIÇÃO (SÓ CARREGAM SE NÃO TIVER COACH)
+        echo '
         <div id="modalNovaRefeicao" class="modal-overlay" style="display:none;">
             <div class="modal-content selection-modal" style="text-align:left; max-width:400px;">
                 <button class="modal-close" onclick="fecharModalRefeicao()">&times;</button>
@@ -2861,16 +2881,14 @@ switch ($pagina) {
                 <form action="actions/dieta_save.php" method="POST">
                     <input type="hidden" name="acao" value="add_refeicao">
                     <input type="hidden" name="dieta_id" id="modal_dieta_id">
-                    <input type="hidden" name="aluno_id" value="<?php echo $aluno_id; ?>">
-                    <input type="hidden" name="origem" value="usuario"> <label class="input-label">Nome (Ex: Café da Manhã)</label>
+                    <input type="hidden" name="aluno_id" value="'.$aluno_id.'">
+                    <input type="hidden" name="origem" value="usuario"> 
+                    <label class="input-label">Nome (Ex: Café da Manhã)</label>
                     <input type="text" name="nome" class="user-input" required style="margin-bottom:15px;">
-                    
                     <label class="input-label">Horário Sugerido</label>
                     <input type="time" name="horario" class="user-input" required style="margin-bottom:15px;">
-                    
                     <label class="input-label">Ordem</label>
                     <input type="number" name="ordem" class="user-input" value="1" required style="margin-bottom:20px;">
-                    
                     <button type="submit" class="btn-gold" style="width:100%;">CRIAR REFEIÇÃO</button>
                 </form>
             </div>
@@ -2883,20 +2901,18 @@ switch ($pagina) {
                 <form action="actions/dieta_save.php" method="POST">
                     <input type="hidden" name="acao" value="add_item">
                     <input type="hidden" name="refeicao_id" id="modal_refeicao_id">
-                    <input type="hidden" name="aluno_id" value="<?php echo $aluno_id; ?>">
-                    <input type="hidden" name="origem" value="usuario"> <label class="input-label">Tipo</label>
+                    <input type="hidden" name="aluno_id" value="'.$aluno_id.'">
+                    <input type="hidden" name="origem" value="usuario"> 
+                    <label class="input-label">Tipo</label>
                     <select name="opcao_numero" class="user-input" style="margin-bottom:15px;">
                         <option value="1">Opção Principal</option>
                         <option value="2">Opção 2 (Substituição)</option>
                         <option value="3">Opção 3 (Substituição)</option>
                     </select>
-                    
                     <label class="input-label">Descrição</label>
                     <textarea name="descricao" class="user-input" rows="3" placeholder="Ex: 2 Ovos mexidos + 1 Banana" required style="margin-bottom:15px;"></textarea>
-                    
                     <label class="input-label">Observação (Opcional)</label>
                     <input type="text" name="observacao" class="user-input" placeholder="Ex: Sem açúcar" style="margin-bottom:20px;">
-                    
                     <button type="submit" class="btn-gold" style="width:100%;">ADICIONAR</button>
                 </form>
             </div>

@@ -160,6 +160,7 @@ CREATE TABLE treino_historico (
   reps_realizadas INT,
   carga_kg DECIMAL(5,2),
   data_treino DATETIME DEFAULT CURRENT_TIMESTAMP,
+  dados_tecnicos JSON DEFAULT NULL,
   FOREIGN KEY (aluno_id) REFERENCES usuarios(id) ON DELETE CASCADE,
   FOREIGN KEY (exercicio_id) REFERENCES exercicios(id) ON DELETE CASCADE,
   FOREIGN KEY (serie_id) REFERENCES series(id) ON DELETE SET NULL

@@ -273,9 +273,6 @@ switch ($pagina) {
     case 'realizar_treino':
         require_once '../config/db_connect.php'; 
         
-        // Desativa erros na tela para não assustar o usuário, já sabemos o problema
-        ini_set('display_errors', 0); 
-        
         if (!isset($_SESSION['user_id'])) { echo "Sessão expirada."; break; }
         
         $aluno_id = $_SESSION['user_id'];
@@ -364,7 +361,7 @@ switch ($pagina) {
 
         if (!$div_atual) { echo '<p>Erro: Divisão não encontrada.</p>'; break; }
 
-        // --- CARREGAMENTO DO TREINO ---
+        // --- CARREGAMENTO OTIMIZADO ---
         $stmt_ex = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC");
         $stmt_ex->execute([$divisao_id]);
         $exercicios = $stmt_ex->fetchAll(PDO::FETCH_ASSOC);
@@ -384,19 +381,21 @@ switch ($pagina) {
                 $series_por_exercicio[$s['exercicio_id']][] = $s;
             }
 
-            // --- CORREÇÃO DO ERRO ---
-            // Removemos 's.tecnica' e 's.categoria' do SQL para evitar crash se o banco estiver desatualizado
-            $data_limite_hist = date('Y-m-d', strtotime('-60 days'));
-            $sql_hist = "SELECT th.exercicio_id, th.serie_id, th.numero_serie, th.serie_numero, th.carga_kg, th.reps_realizadas, th.dados_tecnicos, th.data_treino
-                         FROM treino_historico th
-                         WHERE th.aluno_id = ? 
-                         AND th.exercicio_id IN ($ids_placeholder) 
-                         AND th.data_treino >= ?
-                         ORDER BY th.data_treino DESC, th.id ASC";
-            
-            $stmt_hist = $pdo->prepare($sql_hist);
-            // Agora executamos SEM erro
-            if ($stmt_hist) {
+            // Tenta buscar histórico (Se falhar por falta de coluna, captura erro silenciosamente ou apenas evita crash)
+            try {
+                $data_limite_hist = date('Y-m-d', strtotime('-60 days'));
+                // ATENÇÃO: Se as colunas tecnica/categoria não existirem no banco online, isso pode dar erro no execute.
+                // Verifique seu banco online.
+                $sql_hist = "SELECT th.exercicio_id, th.serie_id, th.numero_serie, th.serie_numero, th.carga_kg, th.reps_realizadas, th.dados_tecnicos, th.data_treino,
+                                    s.tecnica, s.categoria
+                             FROM treino_historico th
+                             LEFT JOIN series s ON th.serie_id = s.id
+                             WHERE th.aluno_id = ? 
+                             AND th.exercicio_id IN ($ids_placeholder) 
+                             AND th.data_treino >= ?
+                             ORDER BY th.data_treino DESC, th.id ASC";
+                
+                $stmt_hist = $pdo->prepare($sql_hist);
                 $stmt_hist->execute(array_merge([$aluno_id], $exercicio_ids, [$data_limite_hist]));
                 $historico_raw = $stmt_hist->fetchAll(PDO::FETCH_ASSOC);
 
@@ -420,6 +419,10 @@ switch ($pagina) {
                         $historico_por_exercicio[$eid][$s_key][$n_key][] = $h;
                     }
                 }
+            } catch (Exception $e) {
+                // Se der erro no histórico (ex: coluna faltando), segue o baile sem histórico
+                // para não travar a tela inteira.
+                $historico_por_exercicio = [];
             }
         }
 
@@ -441,7 +444,10 @@ switch ($pagina) {
                          break;
                      }
                  }
-                 if (!$micro_atual && !empty($micros)) $micro_atual = $micros[0]; 
+                 
+                 if (!$micro_atual && !empty($micros)) {
+                     $micro_atual = $micros[0]; 
+                 }
              }
         }
 
@@ -473,8 +479,8 @@ switch ($pagina) {
             $grupos_temp = []; 
 
             foreach ($exercicios as $ex) {
-                // VERIFICAÇÃO DE SEGURANÇA SE A COLUNA NÃO EXISTIR
-                $hash = isset($ex['agrupamento_hash']) ? $ex['agrupamento_hash'] : null;
+                // PROTEÇÃO: Verifica se a chave existe antes de usar
+                $hash = $ex['agrupamento_hash'] ?? null;
                 
                 if ($hash) {
                     if (!isset($grupos_temp[$hash])) {
@@ -530,8 +536,8 @@ switch ($pagina) {
 
                     if (count($series) > 0) {
                         foreach ($series as $s) {
-                            // PROTEÇÃO CONTRA CAMPOS FALTANTES NO BD ANTIGO
-                            $tecnica_raw = isset($s['tecnica']) ? strtolower(trim((string)$s['tecnica'])) : 'normal';
+                            // PROTEÇÃO CRUCIAL CONTRA NULL
+                            $tecnica_raw = strtolower(trim((string)($s['tecnica'] ?? 'normal')));
                             $valor_raw   = $s['tecnica_valor'] ?? '';
                             
                             $is_drop    = ($tecnica_raw === 'dropset');
@@ -544,13 +550,15 @@ switch ($pagina) {
                             if ($is_rest) $js_type_arg = 'rest';
                             if ($is_cluster) $js_type_arg = 'cluster';
 
+                            // --- LÓGICA DE PREENCHIMENTO ---
+                            // PROTEÇÃO: (string) garante que trim não receba null
                             $reps = trim((string)($s['reps_fixas'] ?? ''));
                             $desc = trim((string)($s['descanso_fixo'] ?? ''));
                             
                             if ($reps === '-' || $reps === 'Falha') $reps = '';
                             if ($desc === '-' || $desc === '90s') $desc = ''; 
 
-                            $categoria = strtolower($s['categoria'] ?? 'normal');
+                            $categoria = strtolower($s['categoria'] ?? '');
                             $tipo_mec  = strtolower($ex['tipo_mecanica'] ?? '');
 
                             // 1. Warmup / Feeder (Prioridade)
@@ -584,6 +592,7 @@ switch ($pagina) {
                                 }
                             }
 
+                            // 3. Fallback
                             if(empty($reps)) $reps = "Falha";
                             if(empty($desc)) $desc = "90s";
 
@@ -621,13 +630,13 @@ switch ($pagina) {
                                     elseif ($is_rest) $label_serie = "REST PAUSE";
                                     elseif ($is_cluster) $label_serie = "CLUSTER";
                                 } else {
-                                    $label_serie = strtoupper($categoria);
+                                    $label_serie = strtoupper($s['categoria'] ?? 'NORMAL');
                                 }
 
                                 $indicador_num = ($qtd_series > 1) ? '#'.$i : '1';
                                 if ($qtd_series > 1) $label_serie .= " <small style='font-size:0.6rem; opacity:0.7;'>(".$i."/".$qtd_series.")</small>";
 
-                                $row_class = "set-row-input " . $categoria;
+                                $row_class = "set-row-input " . ($s['categoria'] ?? '');
                                 if ($is_drop) $row_class .= " technique-drop";
                                 if ($is_rest) $row_class .= " technique-rest";
                                 if ($is_cluster) $row_class .= " technique-cluster";
@@ -638,7 +647,7 @@ switch ($pagina) {
                                     if ($is_drop)    $label_class = "text-drop";
                                     elseif ($is_rest)    $label_class = "text-rest";
                                     elseif ($is_cluster) $label_class = "text-cluster";
-                                    else $label_class = "text-" . $categoria; 
+                                    else $label_class = "text-" . ($s['categoria'] ?? ''); 
 
                                     echo '
                                     <div class="set-num">
@@ -655,6 +664,7 @@ switch ($pagina) {
                                         <span style="display:block; font-size:0.6rem; color:#aaa;">ALVO</span>
                                     </div>';
 
+                                    // COLUNAS 3 e 4
                                     if ($has_technique) {
                                         $modal_id = "modal_".$s['id']."_".$i;
                                         $btn_text = "REGISTRAR";
@@ -685,6 +695,7 @@ switch ($pagina) {
                                             </button>
                                         </div>';
 
+                                        // MODAL
                                         echo '
                                         <div id="'.$modal_id.'" class="tq-modal-overlay">
                                             <div class="tq-modal-content">

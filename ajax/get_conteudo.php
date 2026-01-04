@@ -2892,6 +2892,189 @@ switch ($pagina) {
         </div>';
 
         break;
+    
+    case 'tutoriais':
+        // --- CONFIGURAÇÃO DOS VÍDEOS (EDITE AQUI) ---
+        // Basta adicionar ou remover linhas neste array.
+        // O 'id' é o código que fica depois do v= no YouTube.
+        $lista_videos = [
+            [
+                'titulo' => 'Primeiros Passos: Visão Geral',
+                'desc'   => 'Entenda como navegar pelo seu novo app.',
+                'id'     => 'hMBLqRZcZZA', // Ex: dQw4w9WgXcQ
+                'thumb'  => 'assets/img/background-gym.webp' // Ou use a do youtube (veja abaixo)
+            ],
+            [
+                'titulo' => 'Como Registrar seu Treino',
+                'desc'   => 'Aprenda a anotar cargas, reps e usar o cronômetro.',
+                'id'     => 'hMBLqRZcZZA',
+                'thumb'  => '' // Se vazio, pega automático do YT
+            ],
+            [
+                'titulo' => 'Entendendo a Periodização',
+                'desc'   => 'O que são microciclos e como evoluir sua carga.',
+                'id'     => 'hMBLqRZcZZA',
+                'thumb'  => ''
+            ],
+            [
+                'titulo' => 'Histórico e Evolução',
+                'desc'   => 'Como acompanhar seu progresso graficamente.',
+                'id'     => 'hMBLqRZcZZA',
+                'thumb'  => ''
+            ]
+        ];
+
+        echo '<section class="fade-in">
+                <header class="dash-header">
+                    <h1>CENTRAL DE <span class="highlight-text">AJUDA</span></h1>
+                    <p>Aprenda a extrair o máximo do seu treinamento.</p>
+                </header>
+                
+                <div class="tutorials-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 30px;">';
+                
+                foreach($lista_videos as $v) {
+                    // Lógica da Thumbnail: Se não tiver personalizada, usa a do YouTube
+                    $img = $v['thumb'];
+                    if(empty($img)) {
+                        $img = "https://img.youtube.com/vi/{$v['id']}/mqdefault.jpg";
+                    }
+
+                    // Escapa aspas para não quebrar o HTML do onclick
+                    $titulo_safe = htmlspecialchars($v['titulo'], ENT_QUOTES);
+
+                    echo '
+                    <div class="video-card" onclick="abrirModalVideo(\''.$v['id'].'\', \''.$titulo_safe.'\')" 
+                         style="background: #111; border: 1px solid #333; border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform 0.2s, border-color 0.2s;">
+                        
+                        <div class="thumb-wrapper" style="position: relative; aspect-ratio: 16/9; overflow: hidden;">
+                            <img src="'.$img.'" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.8; transition: 0.3s;">
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: rgba(0,0,0,0.7); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--gold);">
+                                <i class="fa-solid fa-play" style="color: var(--gold); margin-left: 3px;"></i>
+                            </div>
+                        </div>
+                        
+                        <div style="padding: 15px;">
+                            <h3 style="color: #fff; font-size: 1rem; margin-bottom: 5px;">'.$v['titulo'].'</h3>
+                            <p style="color: #888; font-size: 0.8rem;">'.$v['desc'].'</p>
+                        </div>
+                    </div>';
+                }
+
+        echo '  </div>
+              </section>
+              
+              <style>
+                .video-card:hover { transform: translateY(-5px); border-color: var(--gold) !important; }
+                .video-card:hover img { opacity: 1 !important; transform: scale(1.05); }
+              </style>';
+        break;
+
+    case 'assinatura':
+        require_once '../config/db_connect.php';
+        
+        $aluno_id = $_SESSION['user_id'];
+        
+        // 1. ALTERAÇÃO: Adicionei 'data_cadastro' na busca
+        $stmt = $pdo->prepare("SELECT nome, email, plano_atual, data_expiracao_plano, data_cadastro FROM usuarios WHERE id = ?");
+        $stmt->execute([$aluno_id]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) { echo '<p>Erro ao carregar dados.</p>'; break; }
+
+        // 2. Lógica de Tempo e Cores
+        $hoje = new DateTime();
+        $vencimento = new DateTime($user['data_expiracao_plano']);
+        $intervalo = $hoje->diff($vencimento);
+        $dias_restantes = (int)$intervalo->format('%r%a');
+
+        // Lógica do Ano de Cadastro
+        $ano_membro = date('Y', strtotime($user['data_cadastro']));
+
+        // Configuração Padrão
+        $bar_color = "#00e676"; // Verde Neon
+        $status_msg = "Sua assinatura está ativa e longe do vencimento.";
+        $pct = 100;
+
+        if ($dias_restantes < 0) {
+            $dias_restantes = 0;
+            $pct = 0;
+            $bar_color = "#ff4242";
+            $status_msg = "Sua assinatura expirou.";
+        } elseif ($dias_restantes <= 7) {
+            $pct = ($dias_restantes / 30) * 100;
+            $bar_color = "#ff4242";
+            $status_msg = "Atenção! Seu plano vence em breve.";
+        } elseif ($dias_restantes <= 15) {
+            $pct = ($dias_restantes / 30) * 100;
+            $bar_color = "#ff9100";
+            $status_msg = "Fique atento ao vencimento.";
+        } else {
+            $pct = ($dias_restantes > 30) ? 100 : ($dias_restantes / 30) * 100;
+            $bar_color = "#00e676";
+        }
+
+        // Estilo do Cartão
+        $planos_style = [
+            'start' => ['nome' => 'START', 'bg' => 'linear-gradient(135deg, #2c3e50, #000000)', 'color' => '#fff'],
+            'pro'   => ['nome' => 'PRO',   'bg' => 'linear-gradient(135deg, #EDC967 0%, #D4AF37 50%, #967711 100%)', 'color' => '#000'],
+            'coach' => ['nome' => 'COACH', 'bg' => 'linear-gradient(135deg, #00c6ff, #0072ff)', 'color' => '#fff']
+        ];
+
+        $p_key = $user['plano_atual'] ?? 'start';
+        $p_info = $planos_style[$p_key] ?? $planos_style['start'];
+
+        echo '
+        <section class="fade-in">
+            <header class="dash-header">
+                <h1>MINHA <span class="highlight-text">ASSINATURA</span></h1>
+            </header>
+
+            <div class="subscription-wrapper">
+                
+                <div class="sub-card-hero" style="background: '.$p_info['bg'].'; color: '.$p_info['color'].';">
+                    <div class="card-shine"></div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; position:relative; z-index:2;">
+                        <img src="assets/img/icones/icon-nav.png" class="card-logo">
+                        <span class="card-plan-name">'.$p_info['nome'].'</span>
+                    </div>
+
+                    <div style="margin-top:auto; position:relative; z-index:2;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                            <div>
+                                <span style="font-size:0.7rem; opacity:0.8; display:block; letter-spacing:1px;">MEMBRO DESDE '.$ano_membro.'</span>
+                                <span style="font-size:1.1rem; font-weight:600; letter-spacing:1px; text-transform:uppercase;">'.$user['nome'].'</span>
+                            </div>
+                            <div style="text-align:right;">
+                                <span style="font-size:0.7rem; opacity:0.8; display:block;">VALIDADE</span>
+                                <span style="font-size:1rem; font-weight:600;">'.date('d/m/y', strtotime($user['data_expiracao_plano'])).'</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sub-status-panel">
+                    <div class="days-counter-wrapper">
+                        <span class="days-number">'.$dias_restantes.'</span>
+                        <span class="days-label">dias restantes</span>
+                    </div>
+
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: '.$pct.'%; background: '.$bar_color.'; box-shadow: 0 0 15px '.$bar_color.';"></div>
+                    </div>
+
+                    <p class="status-text" style="color: '.$bar_color.';">'.$status_msg.'</p>
+
+                    <button class="btn-renew" onclick="window.open(\'https://wa.me/5535999928473?text=Olá, quero renovar meu plano!\', \'_blank\')">
+                        <i class="fa-brands fa-whatsapp"></i> Renovar Assinatura
+                    </button>
+                </div>
+
+            </div>
+        </section>';
+        
+        $pdo = null;
+        break;
 
 
 
@@ -2981,7 +3164,7 @@ switch ($pagina) {
                         <span>Ver Dieta</span>
                     </div>
 
-                    <div class="menu-card" onclick="carregarConteudo(\'financeiro\')">
+                    <div class="menu-card" onclick="carregarConteudo(\'assinatura\')">
                         <div class="mc-icon" style="background: rgba(200, 100, 255, 0.1); color: #c864ff;">
                             <i class="fa-solid fa-file-invoice-dollar"></i>
                         </div>
@@ -3007,6 +3190,13 @@ switch ($pagina) {
                             <i class="fa-solid fa-utensils"></i>
                         </div>
                         <span>Montar Dieta</span>
+                    </div>
+
+                    <div class="menu-card" onclick="carregarConteudo(\'tutoriais\')">
+                        <div class="mc-icon" style="background: rgba(17, 32, 249, 0.1); color: #1c6bffff; border: 1px solid #1c6bffff;">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                        </div>
+                        <span>Tutoriais do sistema</span>
                     </div>
                 </div>
 

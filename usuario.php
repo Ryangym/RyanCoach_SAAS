@@ -548,6 +548,7 @@ if ($dados_usuario['data_expiracao_plano']) {
    3. MÓDULO: CRONÔMETRO FLUTUANTE E MODAL DE TÉCNICAS AVANÇADAS
    4. MÓDULO: GESTÃO DE COACH (Vincular)
    5. MÓDULO: HISTÓRICO (DELETE & EDIT & PREVIEW)
+   6. MÓDULO: TUTORIAIS VIDEOS
    ========================================================================== */
 
 /* ==========================================================================
@@ -1180,6 +1181,67 @@ function abrirHistoricoExercicio(historicoData, nomeExercicio) {
     tabelaHtml += `</tbody></table>`;
     lista.innerHTML = tabelaHtml;
     modal.style.display = 'flex';
+}
+
+/* ==========================================================================
+   6. MÓDULO: TUTORIAIS VIDEOS
+   ========================================================================== */
+
+   // Função para abrir vídeos (YouTube)
+function abrirModalVideo(videoId, titulo) {
+    // 1. Cria o HTML do Iframe (Responsivo)
+    const htmlVideo = `
+        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; background:#000;">
+            <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" 
+                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;" 
+                    allow="autoplay; encrypted-media" allowfullscreen>
+            </iframe>
+        </div>
+    `;
+
+    // 2. Tenta usar o modal que já existe no seu sistema (geralmente no footer.php)
+    // Se o ID do seu modal for diferente, ajuste aqui (ex: 'modalGerenciarAluno', etc)
+    // O ideal é ter um modal genérico no footer.
+    
+    // Verifique se existe um modal genérico, senão criamos um dinâmico
+    let modal = document.getElementById('modalVideoGlobal');
+    
+    if (!modal) {
+        // Cria o modal dinamicamente se não existir no HTML
+        modal = document.createElement('div');
+        modal.id = 'modalVideoGlobal';
+        modal.className = 'modal-overlay'; // Usa suas classes de CSS existentes
+        modal.style.display = 'none';
+        modal.onclick = function(e) { if(e.target === modal) fecharModalVideo(); };
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 800px; width: 95%; background: #1a1a1a; border: 1px solid var(--gold);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 id="modalVideoTitulo" style="color:var(--gold); margin:0;"></h3>
+                    <button onclick="fecharModalVideo()" style="background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
+                </div>
+                <div id="modalVideoBody"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    // 3. Preenche e Abre
+    document.getElementById('modalVideoTitulo').innerText = titulo;
+    document.getElementById('modalVideoBody').innerHTML = htmlVideo;
+    
+    modal.style.display = 'flex';
+    // Pequeno delay para animação se tiver CSS de fade
+    setTimeout(() => { modal.style.opacity = '1'; }, 10);
+}
+
+function fecharModalVideo() {
+    const modal = document.getElementById('modalVideoGlobal');
+    if (modal) {
+        // Limpa o iframe para parar o som
+        document.getElementById('modalVideoBody').innerHTML = '';
+        modal.style.display = 'none';
+    }
 }
 </script>
 

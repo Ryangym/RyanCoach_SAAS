@@ -40,6 +40,20 @@ body.saas-body {
     margin: 0 auto;
     padding: 0 20px;
 }
+@media (max-width: 350px){
+    .container{
+        padding: 0 5px;
+    }
+    .phone-mockup{
+        max-width: 100dvh;
+    }
+    .btn-cta-gold{
+        padding: 9px 20px !important;
+    }
+    .section-cta-final{
+        padding: 0 !important;
+    }
+}
 
 .text-gold { color: var(--gold); text-shadow: 0 0 10px rgba(212, 175, 55, 0.3); }
 .text-red { color: var(--red-premium); text-shadow: 0 0 10px rgba(206, 17, 17, 0.4); }
@@ -204,12 +218,13 @@ body.saas-body {
 }
 
 .phone-mockup {
-    width: 290px;
-    height: 520px;
-    background: #000;
-    border-radius: 45px;
-    border: 6px solid #1a1a1a;
-    /* Borda sutil vermelha no celular */
+    width: 320px;
+    height: 650px;
+    background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.9)), url('../img/background/userpagebg.webp');
+    background-size: cover;
+    background-position: center;
+    border-radius: 40px;
+    border: 6px solid #2a2a2a;
     box-shadow: 
         0 0 0 2px #333,
         0 30px 60px rgba(0,0,0,0.8), 
@@ -217,6 +232,8 @@ body.saas-body {
     position: relative;
     z-index: 2;
     overflow: hidden;
+    margin: 0 auto;
+    font-family: 'Montserrat', sans-serif; 
     transform: rotateX(5deg) rotateY(-5deg);
     animation: floatPhone 6s ease-in-out infinite;
 }
@@ -230,39 +247,117 @@ body.saas-body {
     gap: 18px;
 }
 
-/* UI Fictícia dentro do celular */
-.screen-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-.screen-avatar { width: 45px; height: 45px; background: #333; border-radius: 50%; border: 2px solid var(--gold); }
-.screen-badge { background: var(--red-premium); padding: 5px 10px; border-radius: 10px; font-size: 10px; font-weight: bold; }
+/* --- MOLDURA DO CELULAR --- */
 
-.screen-chart { 
-    height: 140px; 
-    background: rgba(255,255,255,0.05); 
-    border-radius: 16px; 
-    display: flex; align-items: flex-end; justify-content: space-around; 
-    padding: 15px 10px;
-    border: 1px solid #333;
-}
-.bar { width: 14px; background: #333; border-radius: 4px; transition: height 1s; }
-/* Barra Vermelha no Gráfico */
-.bar.active { 
-    background: linear-gradient(to top, var(--red-premium), #ff4d4d); 
-    box-shadow: 0 0 15px var(--red-glow); 
-}
+        /* Scrollbar invisível no mockup */
+        .mockup-scroll {
+            height: 100%;
+            overflow-y: hidden; /* Estático para a landing page */
+            position: relative;
+        }
 
-.screen-card { 
-    background: #1e1e1e; padding: 18px; border-radius: 16px; 
-    display: flex; align-items: center; gap: 15px; color: #aaa;
-    border-left: 4px solid #333;
-}
-/* Card Dourado de Destaque */
-.screen-card.gold { 
-    border: 1px solid var(--gold); 
-    border-left: 4px solid var(--gold);
-    color: #fff; 
-    background: linear-gradient(90deg, rgba(212,175,55,0.1) 0%, transparent 100%);
-}
-.screen-card i { font-size: 1.4rem; }
+        /* --- CSS DO SEU DASHBOARD (Adaptado para o Mockup) --- */
+        
+        /* 1. Header Clean */
+        .clean-header-bg {
+            position: relative;
+            background: linear-gradient(135deg, #1f1f1f 0%, #111 100%);
+            border-radius: 0 0 30px 30px;
+            padding: 25px 20px; /* Espaço para o notch */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .header-content-clean {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .greeting-sub { font-size: 0.75rem; color: #888; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; display: block; margin-bottom: 2px; }
+        .greeting-main { font-size: 1.8rem; color: #fff; margin: 0; line-height: 1; font-family: 'Orbitron', sans-serif; }
+
+        .header-avatar img {
+            width: 55px; height: 55px; object-fit: cover; border-radius: 50%;
+            border: 2px solid var(--gold); padding: 2px; background: #111;
+            /* Foto Ilustrativa */
+            content: url('../img/ryan_coach.webp');
+        }
+
+        /* 2. Barra Flutuante */
+        .status-bar-float {
+            position: absolute;
+            bottom: -35px; left: 20px; right: 20px;
+            background: #1a1a1a;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 12px 20px;
+            display: flex; justify-content: space-around; align-items: center;
+            z-index: 3;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+        .sb-item { display: flex; align-items: center; gap: 10px; }
+        .sb-icon { font-size: 1.2rem; color: #fff; }
+        .sb-icon.fire { color: #ff4d4d; }
+        .sb-info { display: flex; flex-direction: column; }
+        .sb-info strong { font-size: 1rem; color: #fff; line-height: 1; }
+        .sb-info span { font-size: 0.65rem; color: #888; margin-top: 2px; font-weight: 500; }
+        .sb-divider { width: 1px; height: 25px; background: rgba(255,255,255,0.1); }
+
+        /* 3. Corpo */
+        .dash-content-padded { padding: 40px 15px 15px 15px; }
+        .section-label { font-size: 0.75rem; color: #666; margin-bottom: 10px; margin-top: 20px; padding-left: 5px; font-weight: 700; letter-spacing: 0.5px; }
+
+        /* 4. Card Hoje */
+        .today-card {
+            background: linear-gradient(135deg, var(--gold) 0%, #d4952b 100%);
+            border-radius: 20px; padding: 18px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 8px 20px rgba(255, 186, 66, 0.15);
+            position: relative; overflow: hidden; margin-bottom: 25px;
+        }
+        .today-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1h2v2H1V1zm4 0h2v2H5V1zm4 0h2v2H9V1z' fill='%23000000' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+            opacity: 0.4;
+        }
+        .today-left { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+        .today-letter {
+            background: #000; color: var(--gold); width: 45px; height: 45px;
+            border-radius: 12px; display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem; font-family: 'Orbitron', sans-serif; font-weight: 700;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .badge-phase { font-size: 0.55rem; background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; color: #000; font-weight: 800; text-transform: uppercase; }
+        .today-info h2 { font-size: 1.2rem; margin: 2px 0 0 0; color: #000; font-weight: 800; }
+        .today-info p { font-size: 0.75rem; margin: 0; color: rgba(0,0,0,0.7); font-weight: 500; }
+        .today-action {
+            background: #000; width: 40px; height: 40px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; color: #fff;
+            font-size: 1rem; box-shadow: 0 5px 15px rgba(0,0,0,0.2); position: relative; z-index: 1;
+        }
+
+        /* 5. Acesso Rápido */
+        .quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 25px; }
+        .quick-card {
+            background: #1a1a1a; border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 14px; padding: 12px 5px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+        }
+        .qc-icon { font-size: 1.1rem; color: var(--gold); }
+        .quick-card span { font-size: 0.55rem; color: #ccc; text-align:center; }
+
+        /* 6. Frequência */
+        .frequency-strip { background: #1a1a1a; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 15px; }
+        .freq-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.8rem; color: #fff; }
+        .week-pills { display: flex; justify-content: space-between; }
+        .day-pill {
+            width: 30px; height: 30px; border-radius: 8px; background: #111; color: #444;
+            display: flex; justify-content: center; align-items: center; font-weight: 700; font-size: 0.7rem;
+        }
+        .day-pill.done { background: var(--gold); color: #000; box-shadow: 0 0 10px rgba(255, 186, 66, 0.4); }
+        .day-pill.current { border: 1px solid #666; color: #fff; }
 
 /* Efeito de Brilho Atrás do Celular (Mistura Red & Gold) */
 .glow-effect {
@@ -383,6 +478,30 @@ body.saas-body {
     margin-bottom: 10px;
     display: block;
 }
+
+/* --- ESTILOS DO VÍDEO NATIVO --- */
+        .video-native-container {
+            position: relative;
+            width: 100%; max-width: 900px; margin: 40px auto;
+            border-radius: 20px; overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            border: 1px solid #333; background: #000;
+        }
+        video { width: 100%; height: auto; display: block; }
+        .video-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.3); cursor: pointer; transition: 0.3s;
+        }
+        .video-native-container:hover .video-overlay { background: rgba(0,0,0,0.1); }
+        .play-btn-custom {
+            width: 80px; height: 80px; background: rgba(255, 186, 66, 0.9);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: #000; font-size: 2rem; box-shadow: 0 0 30px rgba(255, 186, 66, 0.4);
+            transition: transform 0.3s;
+        }
+        .video-native-container:hover .play-btn-custom { transform: scale(1.1); }
+        .video-playing .video-overlay { display: none; }
 
 /* =========================================
    FEATURES (CARDS MAIS AGRESSIVOS)
@@ -577,10 +696,10 @@ body.saas-body {
     .hero-title { font-size: 3.5rem; }
     .features-scroll { flex-direction: row; justify-content: center; }
     .container{
-        max-width: 90%;
+        max-width: 95%;
     }
 
-    .feature-card {  width: 360px;}
+    .feature-card {  width: 320px;}
     
     .auth-grid {
         flex-direction: row;

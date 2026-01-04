@@ -5,23 +5,6 @@ require_once 'includes/head_main.php';
 <head>
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/menu.css">
-
-    <script>
-        function toggleVideo() {
-                const video = document.getElementById('demoVideo');
-                const wrapper = document.getElementById('videoWrapper');
-                
-                if (video.paused) {
-                    video.play();
-                    wrapper.classList.add('video-playing');
-                    video.controls = true;
-                } else {
-                    video.pause();
-                    wrapper.classList.remove('video-playing');
-                    video.controls = false;
-                }
-            }
-    </script>
 </head>
 
 <body class="saas-body">
@@ -48,7 +31,7 @@ require_once 'includes/head_main.php';
                 </p>
                 <div class="hero-actions">
                     <a href="planos.php" class="btn-cta-gold pulse-animation">COMEÇAR AGORA</a>
-                    <a href="#demo-video" class="btn-link-sec">Ver Sistema em Ação</a>
+                    <a href="#features" class="btn-link-sec">Ver Funcionalides</a>
                 </div>
             </div>
 
@@ -177,27 +160,7 @@ require_once 'includes/head_main.php';
         </div>
     </section>
 
-    <section id="demo-video" style="padding: 80px 0; background: linear-gradient(to bottom, #000 0%, #111 100%); text-align: center;">
-        <div class="container">
-            <h2 class="section-title">Veja o <span class="text-gold">Sistema</span> por dentro</h2>
-            <p style="color: #888; max-width: 600px; margin: 0 auto;">Interface limpa, rápida e focada no seu treino.</p>
-            
-            <div class="video-native-container" id="videoWrapper">
-                <video id="demoVideo" poster="assets/img/video_poster.jpg" playsinline>
-                    <source src="assets/video/demo_sistema.mp4" type="video/mp4">
-                    Seu navegador não suporta vídeos HTML5.
-                </video>
-                
-                <div class="video-overlay" onclick="toggleVideo()">
-                    <div class="play-btn-custom">
-                        <i class="fa-solid fa-play" style="margin-left: 5px;"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="section-features">
+    <section class="section-features" id="features">
         <div class="container">
             <h2 class="section-title">O que o <span class="text-red">Sistema</span> faz por você?</h2>
             

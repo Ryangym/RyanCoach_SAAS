@@ -271,121 +271,90 @@ switch ($pagina) {
         break;
 
     case 'realizar_treino':
+        // --- MODO DEBUG ATIVADO ---
+        ini_set('display_errors', 1);
+        ini_set('display_startup_errors', 1);
+        error_reporting(E_ALL);
+
         require_once '../config/db_connect.php'; 
         
-        if (!isset($_SESSION['user_id'])) { echo "Sessão expirada."; break; }
-        
-        $aluno_id = $_SESSION['user_id'];
-        $hoje = date('Y-m-d');
-
-        // 1. Busca o Treino Ativo
-        $sql = "SELECT * FROM treinos WHERE aluno_id = :uid ORDER BY criado_em DESC LIMIT 1";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute(['uid' => $aluno_id]);
-        $treino_ativo = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$treino_ativo) {
-            echo '<section class="empty-state"><h2>Sem treino ativo</h2></section>';
-            break;
-        }
-
-        // 2. Lógica de Seleção Automática do Dia
-        $divisao_req = filter_input(INPUT_GET, 'divisao_id', FILTER_SANITIZE_NUMBER_INT);
-        
-        if (!$divisao_req) {
-            $hoje_dia_num = date('w'); 
-            $check_dias = [$hoje_dia_num];
-            if ($hoje_dia_num == 0) $check_dias[] = 7; 
-
-            $dias_treino = json_decode($treino_ativo['dias_semana'] ?? '[]'); 
-            if (!is_array($dias_treino)) $dias_treino = [];
-
-            $stmt_div = $pdo->prepare("SELECT * FROM treino_divisoes WHERE treino_id = ? ORDER BY letra ASC");
-            $stmt_div->execute([$treino_ativo['id']]);
-            $divisoes = $stmt_div->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            if (!isset($_SESSION['user_id'])) { echo "Sessão expirada."; break; }
             
-            $divisao_sugerida = null;
-            $qtd_divisoes = count($divisoes);
-            
-            if (count(array_intersect($check_dias, $dias_treino)) > 0 && $qtd_divisoes > 0) {
-                $indice_hoje = array_search($hoje_dia_num, $dias_treino);
-                if ($indice_hoje === false && $hoje_dia_num == 0) {
-                    $indice_hoje = array_search(7, $dias_treino);
-                }
+            $aluno_id = $_SESSION['user_id'];
+            $hoje = date('Y-m-d');
 
-                if ($indice_hoje !== false) {
-                    $indice_divisao = $indice_hoje % $qtd_divisoes;
-                    $divisao_sugerida = $divisoes[$indice_divisao];
-                    
-                    echo '<section class="fade-in" style="padding-top:20px;">
-                            <h2 class="workout-title" style="text-align:center; font-size:1.2rem;">HOJE É DIA DE:</h2>
-                            <div style="text-align:center; margin: 30px 0;">
-                                 <h1 style="font-size:5rem; color:var(--gold); margin:0;">'.$divisao_sugerida['letra'].'</h1>
-                                 <p style="color:#888;">'.$divisao_sugerida['nome'].'</p>
-                            </div>
-                            <button class="btn-start-workout" onclick="carregarConteudo(\'realizar_treino&divisao_id='.$divisao_sugerida['id'].'\')">
-                                <i class="fa-solid fa-check"></i> CONFIRMAR
-                            </button>
-                            <p style="text-align:center; color:#666; margin-top:20px; font-size:0.9rem;">Ou escolha outro:</p>
-                            <div class="workout-selection-grid">';
-                                foreach($divisoes as $d) {
-                                    if($d['id'] != $divisao_sugerida['id']) {
-                                        echo '<button class="select-workout-btn" onclick="carregarConteudo(\'realizar_treino&divisao_id='.$d['id'].'\')">'.$d['letra'].'</button>';
-                                    }
-                                }
-                    echo   '</div></section>';
-                    break; 
-                }
-            }
-            
-            echo '<section class="fade-in">
-                    <h2 class="workout-title">QUAL O TREINO DE HOJE?</h2>
-                    <div class="workout-selection-grid">';
-                    if ($qtd_divisoes > 0) {
-                        foreach($divisoes as $d) {
-                            echo '<button class="select-workout-btn" onclick="carregarConteudo(\'realizar_treino&divisao_id='.$d['id'].'\')">'.$d['letra'].'</button>';
-                        }
-                    } else {
-                        echo '<p style="color:#888;">Nenhuma divisão encontrada.</p>';
-                    }
-            echo   '</div></section>';
-            break;
-        }
+            // 1. Busca o Treino Ativo
+            $sql = "SELECT * FROM treinos WHERE aluno_id = :uid ORDER BY criado_em DESC LIMIT 1";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(['uid' => $aluno_id]);
+            $treino_ativo = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // 3. EXIBIÇÃO DO TREINO
-        $divisao_id = $divisao_req;
-        
-        $stmt_d = $pdo->prepare("SELECT * FROM treino_divisoes WHERE id = ?");
-        $stmt_d->execute([$divisao_id]);
-        $div_atual = $stmt_d->fetch(PDO::FETCH_ASSOC);
-
-        if (!$div_atual) { echo '<p>Erro: Divisão não encontrada.</p>'; break; }
-
-        // --- CARREGAMENTO OTIMIZADO ---
-        $stmt_ex = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC");
-        $stmt_ex->execute([$divisao_id]);
-        $exercicios = $stmt_ex->fetchAll(PDO::FETCH_ASSOC);
-        
-        $series_por_exercicio = [];
-        $historico_por_exercicio = [];
-
-        if (count($exercicios) > 0) {
-            $exercicio_ids = array_column($exercicios, 'id');
-            $ids_placeholder = implode(',', array_fill(0, count($exercicio_ids), '?'));
-
-            $stmt_all_series = $pdo->prepare("SELECT * FROM series WHERE exercicio_id IN ($ids_placeholder) ORDER BY id ASC");
-            $stmt_all_series->execute($exercicio_ids);
-            $todas_series = $stmt_all_series->fetchAll(PDO::FETCH_ASSOC);
-
-            foreach ($todas_series as $s) {
-                $series_por_exercicio[$s['exercicio_id']][] = $s;
+            if (!$treino_ativo) {
+                echo '<section class="empty-state"><h2>Sem treino ativo</h2></section>';
+                break;
             }
 
-            // Tenta buscar histórico (Se falhar por falta de coluna, captura erro silenciosamente ou apenas evita crash)
-            try {
+            // 2. Seleção do Dia
+            $divisao_req = filter_input(INPUT_GET, 'divisao_id', FILTER_SANITIZE_NUMBER_INT);
+            
+            if (!$divisao_req) {
+                // ... (Lógica de seleção de dia mantida simplificada para o debug focar no erro principal) ...
+                $hoje_dia_num = date('w'); 
+                $check_dias = [$hoje_dia_num];
+                if ($hoje_dia_num == 0) $check_dias[] = 7; 
+
+                $dias_treino = json_decode($treino_ativo['dias_semana'] ?? '[]'); 
+                if (!is_array($dias_treino)) $dias_treino = [];
+
+                $stmt_div = $pdo->prepare("SELECT * FROM treino_divisoes WHERE treino_id = ? ORDER BY letra ASC");
+                $stmt_div->execute([$treino_ativo['id']]);
+                $divisoes = $stmt_div->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Se não escolheu dia, mostra lista
+                echo '<section class="fade-in"><h2 class="workout-title">ESCOLHA O TREINO</h2><div class="workout-selection-grid">';
+                foreach($divisoes as $d) {
+                    echo '<button class="select-workout-btn" onclick="carregarConteudo(\'realizar_treino&divisao_id='.$d['id'].'\')">'.$d['letra'].'</button>';
+                }
+                echo '</div></section>';
+                break;
+            }
+
+            // 3. EXIBIÇÃO DO TREINO (ONDE O ERRO PROVAVELMENTE ESTÁ)
+            $divisao_id = $divisao_req;
+            
+            $stmt_d = $pdo->prepare("SELECT * FROM treino_divisoes WHERE id = ?");
+            $stmt_d->execute([$divisao_id]);
+            $div_atual = $stmt_d->fetch(PDO::FETCH_ASSOC);
+
+            if (!$div_atual) { echo '<p>Erro: Divisão não encontrada.</p>'; break; }
+
+            // Busca Exercícios
+            // ATENÇÃO: Se a coluna agrupamento_hash não existir, vai quebrar aqui se usarmos SELECT * e tentar acessar depois, ou se o driver for estrito.
+            $stmt_ex = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC");
+            $stmt_ex->execute([$divisao_id]);
+            $exercicios = $stmt_ex->fetchAll(PDO::FETCH_ASSOC);
+            
+            $series_por_exercicio = [];
+            $historico_por_exercicio = [];
+
+            if (count($exercicios) > 0) {
+                $exercicio_ids = array_column($exercicios, 'id');
+                $ids_placeholder = implode(',', array_fill(0, count($exercicio_ids), '?'));
+
+                // Busca Séries
+                $stmt_all_series = $pdo->prepare("SELECT * FROM series WHERE exercicio_id IN ($ids_placeholder) ORDER BY id ASC");
+                $stmt_all_series->execute($exercicio_ids);
+                $todas_series = $stmt_all_series->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($todas_series as $s) {
+                    $series_por_exercicio[$s['exercicio_id']][] = $s;
+                }
+
+                // Busca Histórico (O PONTO CRÍTICO)
+                // Se 's.tecnica' ou 's.categoria' não existirem no banco, AQUI VAI DAR ERRO FATAL
                 $data_limite_hist = date('Y-m-d', strtotime('-60 days'));
-                // ATENÇÃO: Se as colunas tecnica/categoria não existirem no banco online, isso pode dar erro no execute.
-                // Verifique seu banco online.
+                
                 $sql_hist = "SELECT th.exercicio_id, th.serie_id, th.numero_serie, th.serie_numero, th.carga_kg, th.reps_realizadas, th.dados_tecnicos, th.data_treino,
                                     s.tecnica, s.categoria
                              FROM treino_historico th
@@ -419,399 +388,50 @@ switch ($pagina) {
                         $historico_por_exercicio[$eid][$s_key][$n_key][] = $h;
                     }
                 }
-            } catch (Exception $e) {
-                // Se der erro no histórico (ex: coluna faltando), segue o baile sem histórico
-                // para não travar a tela inteira.
-                $historico_por_exercicio = [];
             }
-        }
 
-        // --- LÓGICA DE PERIODIZAÇÃO ---
-        $micro_atual = null;
-        if ($treino_ativo['nivel_plano'] !== 'basico') {
-             $stmt_per = $pdo->prepare("SELECT id FROM periodizacoes WHERE treino_id = ?");
-             $stmt_per->execute([$treino_ativo['id']]);
-             $pid = $stmt_per->fetchColumn();
-             
-             if($pid) {
-                 $stmt_m = $pdo->prepare("SELECT * FROM microciclos WHERE periodizacao_id = ? ORDER BY semana_numero ASC");
-                 $stmt_m->execute([$pid]);
-                 $micros = $stmt_m->fetchAll(PDO::FETCH_ASSOC);
-
-                 foreach ($micros as $m) {
-                     if ($hoje >= $m['data_inicio_semana'] && $hoje <= $m['data_fim_semana']) {
-                         $micro_atual = $m;
-                         break;
-                     }
-                 }
-                 
-                 if (!$micro_atual && !empty($micros)) {
-                     $micro_atual = $micros[0]; 
-                 }
-             }
-        }
-
-        $nome_fase = $micro_atual ? 'Fase: '.$micro_atual['nome_fase'] : 'Treino Livre';
-
-        echo '<form action="actions/treino_registrar.php" method="POST" id="form-execucao">
-                <input type="hidden" name="treino_id" value="'.$treino_ativo['id'].'">
-                <input type="hidden" name="divisao_id" value="'.$divisao_id.'">
-
-                <div class="execution-header">
-                    <div style="display:flex; align-items:center; justify-content:space-between; padding:0 15px;">
-                        <h2 style="color:#fff; margin:0; font-size:1.2rem;">TREINO '.$div_atual['letra'].'</h2>
-                        <button type="button" onclick="carregarConteudo(\'realizar_treino\')" style="background:none; border:none; color:#888;">Trocar</button>
-                    </div>
-                    <p style="padding:0 15px; color:#666; font-size:0.8rem; margin-top:5px;">'.$nome_fase.'</p>
-                </div>
-
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <button type="button" class="btn-gold" style="background: transparent; border: 1px solid var(--gold); color: var(--gold); padding: 8px 20px; font-size: 0.8rem; border-radius: 50px;" onclick="mostrarTimer()">
-                        <i class="fa-solid fa-stopwatch"></i> ABRIR CRONÔMETRO
-                    </button>
-                </div>
-
-                <div style="padding-bottom: 160px;">'; 
-
-        if (count($exercicios) > 0) {
+            // Periodização e Renderização (Simplificado para testar o SQL acima primeiro)
+            echo '<div style="padding:20px; color:lime;">SUCESSO: O SQL RODOU! Se você está vendo isso, o erro era de sintaxe SQL e foi resolvido ou está na renderização HTML abaixo.</div>';
             
-            $lista_final = [];
-            $grupos_temp = []; 
-
-            foreach ($exercicios as $ex) {
-                // PROTEÇÃO: Verifica se a chave existe antes de usar
-                $hash = $ex['agrupamento_hash'] ?? null;
-                
-                if ($hash) {
-                    if (!isset($grupos_temp[$hash])) {
-                        $idx = count($lista_final);
-                        $lista_final[$idx] = ['tipo' => 'grupo', 'itens' => []];
-                        $grupos_temp[$hash] = $idx;
-                    }
-                    $lista_final[$grupos_temp[$hash]]['itens'][] = $ex;
-                } else {
-                    $lista_final[] = ['tipo' => 'single', 'itens' => [$ex]];
-                }
-            }
-
-            foreach ($lista_final as $bloco) {
-
-                if ($bloco['tipo'] === 'grupo') {
-                    $qtd_grupo = count($bloco['itens']);
-                    $label_grupo = ($qtd_grupo === 2) ? 'BI-SET' : 'TRI-SET';
-                    echo '<div class="exec-agrupamento">';
-                    echo '<span class="exec-agrupamento-badge">'.$label_grupo.'</span>';
-                }
-
-                foreach ($bloco['itens'] as $ex) {
+            // ... (Restante do código de renderização igual ao anterior) ...
+            // Para testar, vamos renderizar apenas o início
+            echo '<form action="actions/treino_registrar.php" method="POST" id="form-execucao">';
+            echo '<div class="execution-header"><h2>TREINO CARREGADO</h2></div>';
+            
+            // Renderização dos exercícios (Cópia segura)
+            if (count($exercicios) > 0) {
+                foreach ($exercicios as $ex) {
+                    echo '<div class="exec-card" style="background:#222; padding:10px; margin-bottom:10px; border-radius:10px;">';
+                    echo '<h3 style="color:#fff">'.$ex['nome_exercicio'].'</h3>';
                     
                     $series = $series_por_exercicio[$ex['id']] ?? [];
-                    $historico_map = $historico_por_exercicio[$ex['id']] ?? [];
-
-                    $historico_json = htmlspecialchars(json_encode($historico_map), ENT_QUOTES, 'UTF-8');
-                    $nome_ex_safe   = htmlspecialchars($ex['nome_exercicio'], ENT_QUOTES, 'UTF-8');
-                    $video_html     = (!empty($ex['video_url'])) ? '<a href="'.$ex['video_url'].'" target="_blank" class="exec-video"><i class="fa-solid fa-circle-play"></i></a>' : '';
-
-                    echo '
-                    <div class="exec-card">
-                        <div class="exec-header" style="display:flex; justify-content:space-between; align-items:center;">
-                            <div style="flex:1;">
-                                <span class="exec-title">'.$ex['nome_exercicio'].'</span>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                '.$video_html.'
-                                <button type="button" onclick=\'abrirHistoricoExercicio('.$historico_json.', "'.$nome_ex_safe.'")\' 
-                                        style="background:rgba(255,186,66,0.15); border:1px solid var(--gold); color:var(--gold); width:32px; height:32px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-                                    <i class="fa-solid fa-clock-rotate-left" style="font-size:0.9rem;"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="set-row-header">
-                            <span>SÉRIE</span>
-                            <span>META</span>
-                            <span>CARGA (KG)</span>
-                            <span>REPS</span>
-                        </div>';
-
-                    if (count($series) > 0) {
-                        foreach ($series as $s) {
-                            // PROTEÇÃO CRUCIAL CONTRA NULL
-                            $tecnica_raw = strtolower(trim((string)($s['tecnica'] ?? 'normal')));
-                            $valor_raw   = $s['tecnica_valor'] ?? '';
-                            
-                            $is_drop    = ($tecnica_raw === 'dropset');
-                            $is_rest    = ($tecnica_raw === 'restpause');
-                            $is_cluster = ($tecnica_raw === 'clusterset');
-                            $has_technique = ($is_drop || $is_rest || $is_cluster);
-
-                            $js_type_arg = 'normal';
-                            if ($is_drop) $js_type_arg = 'drop';
-                            if ($is_rest) $js_type_arg = 'rest';
-                            if ($is_cluster) $js_type_arg = 'cluster';
-
-                            // --- LÓGICA DE PREENCHIMENTO ---
-                            // PROTEÇÃO: (string) garante que trim não receba null
-                            $reps = trim((string)($s['reps_fixas'] ?? ''));
-                            $desc = trim((string)($s['descanso_fixo'] ?? ''));
-                            
-                            if ($reps === '-' || $reps === 'Falha') $reps = '';
-                            if ($desc === '-' || $desc === '90s') $desc = ''; 
-
-                            $categoria = strtolower($s['categoria'] ?? '');
-                            $tipo_mec  = strtolower($ex['tipo_mecanica'] ?? '');
-
-                            // 1. Warmup / Feeder (Prioridade)
-                            if ($categoria === 'warmup') {
-                                if (empty($desc)) $desc = '30s';
-                                if (empty($reps)) $reps = '15';
-                            } 
-                            elseif ($categoria === 'feeder') {
-                                if (empty($desc)) $desc = '60s';
-                                if (empty($reps)) $reps = '6';
-                            } 
-                            else {
-                                // 2. Periodização
-                                if ($micro_atual) {
-                                    if ($tipo_mec == 'composto' || $tipo_mec == 'multiarticular') {
-                                        if (empty($reps) && !empty($micro_atual['reps_compostos'])) {
-                                            $reps = $micro_atual['reps_compostos'];
-                                        }
-                                        if (empty($desc) && !empty($micro_atual['descanso_compostos'])) {
-                                            $desc = $micro_atual['descanso_compostos'].'s';
-                                        }
-                                    } 
-                                    elseif ($tipo_mec == 'isolador' || $tipo_mec == 'monoarticular') {
-                                        if (empty($reps) && !empty($micro_atual['reps_isoladores'])) {
-                                            $reps = $micro_atual['reps_isoladores'];
-                                        }
-                                        if (empty($desc) && !empty($micro_atual['descanso_isoladores'])) {
-                                            $desc = $micro_atual['descanso_isoladores'].'s';
-                                        }
-                                    }
-                                }
-                            }
-
-                            // 3. Fallback
-                            if(empty($reps)) $reps = "Falha";
-                            if(empty($desc)) $desc = "90s";
-
-                            $qtd_series = (int)($s['quantidade'] ?? 1);
-                            if ($qtd_series < 1) $qtd_series = 1;
-
-                            for ($i = 1; $i <= $qtd_series; $i++) {
-                                
-                                $ph_carga = '-';
-                                $ph_reps = '-';
-                                
-                                if (isset($historico_map[$s['id']][$i])) {
-                                    $lista_regs = $historico_map[$s['id']][$i];
-                                    if (!empty($lista_regs) && isset($lista_regs[0])) {
-                                        $d = $lista_regs[0];
-                                        $ph_carga = ($d['carga_kg'] * 1);
-                                        $ph_reps  = $d['reps_realizadas'];
-                                        if (!empty($d['dados_tecnicos'])) {
-                                            $dt_json = json_decode($d['dados_tecnicos'], true);
-                                            if (isset($dt_json['reps_string'])) $ph_reps = $dt_json['reps_string'];
-                                        }
-                                    }
-                                } 
-                                elseif (isset($historico_map[$s['id']][1])) {
-                                    $lista_regs = $historico_map[$s['id']][1];
-                                    if (!empty($lista_regs) && isset($lista_regs[0])) {
-                                        $d = $lista_regs[0];
-                                        $ph_carga = ($d['carga_kg'] * 1);
-                                        $ph_reps  = $d['reps_realizadas'];
-                                    }
-                                }
-
-                                if ($has_technique) {
-                                    if ($is_drop) $label_serie = "DROP SET";
-                                    elseif ($is_rest) $label_serie = "REST PAUSE";
-                                    elseif ($is_cluster) $label_serie = "CLUSTER";
-                                } else {
-                                    $label_serie = strtoupper($s['categoria'] ?? 'NORMAL');
-                                }
-
-                                $indicador_num = ($qtd_series > 1) ? '#'.$i : '1';
-                                if ($qtd_series > 1) $label_serie .= " <small style='font-size:0.6rem; opacity:0.7;'>(".$i."/".$qtd_series.")</small>";
-
-                                $row_class = "set-row-input " . ($s['categoria'] ?? '');
-                                if ($is_drop) $row_class .= " technique-drop";
-                                if ($is_rest) $row_class .= " technique-rest";
-                                if ($is_cluster) $row_class .= " technique-cluster";
-
-                                echo '<div class="'.$row_class.'">';
-
-                                    $label_class = ""; 
-                                    if ($is_drop)    $label_class = "text-drop";
-                                    elseif ($is_rest)    $label_class = "text-rest";
-                                    elseif ($is_cluster) $label_class = "text-cluster";
-                                    else $label_class = "text-" . ($s['categoria'] ?? ''); 
-
-                                    echo '
-                                    <div class="set-num">
-                                        <span style="font-size:1.1rem; display:block;">'.$indicador_num.'</span>
-                                        <span class="set-type-label '.$label_class.'" style="font-size:0.65rem;">'.$label_serie.'</span>
-                                        <small style="color: #666; font-size:0.65rem;">
-                                            <i class="fa-solid fa-clock"></i> '.$desc.'
-                                        </small>
-                                    </div>';
-
-                                    echo '
-                                    <div style="text-align:center;">
-                                        <span style="color:#fff; font-size:0.9rem; font-weight:bold;">'.$reps.'</span>
-                                        <span style="display:block; font-size:0.6rem; color:#aaa;">ALVO</span>
-                                    </div>';
-
-                                    // COLUNAS 3 e 4
-                                    if ($has_technique) {
-                                        $modal_id = "modal_".$s['id']."_".$i;
-                                        $btn_text = "REGISTRAR";
-                                        $icon = "fa-bolt";
-                                        $btn_style = "width:100%; height:38px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:space-between; padding: 0 12px; transition:0.2s;";
-                                        
-                                        if ($is_drop) { 
-                                            $btn_text = "ABRIR DROP SET"; 
-                                            $btn_style .= "background: rgba(255, 64, 129, 0.15); border: 1px solid #ff4081; color: #ff4081; box-shadow: 0 0 10px rgba(255, 64, 129, 0.1);";
-                                            $icon = "fa-layer-group";
-                                        }
-                                        elseif ($is_rest) { 
-                                            $btn_text = "ABRIR REST PAUSE"; 
-                                            $btn_style .= "background: rgba(0, 230, 118, 0.15); border: 1px solid #00e676; color: #00e676; box-shadow: 0 0 10px rgba(0, 230, 118, 0.1);";
-                                            $icon = "fa-stopwatch";
-                                        }
-                                        elseif ($is_cluster) { 
-                                            $btn_text = "ABRIR CLUSTER"; 
-                                            $btn_style .= "background: rgba(255, 145, 0, 0.15); border: 1px solid #ff9100; color: #ff9100; box-shadow: 0 0 10px rgba(255, 145, 0, 0.1);";
-                                            $icon = "fa-cubes";
-                                        }
-
-                                        echo '
-                                        <div style="grid-column: span 2;">
-                                            <button type="button" id="btn_'.$s['id'].'_'.$i.'" class="btn-open-technique" style="'.$btn_style.'" onclick="openTechniqueModal(\''.$modal_id.'\')">
-                                                <span><i class="fa-solid '.$icon.'"></i> &nbsp; '.$btn_text.'</span>
-                                                <i class="fa-solid fa-chevron-right"></i>
-                                            </button>
-                                        </div>';
-
-                                        // MODAL
-                                        echo '
-                                        <div id="'.$modal_id.'" class="tq-modal-overlay">
-                                            <div class="tq-modal-content">
-                                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px;">
-                                                    <h3 style="margin:0; font-size:1rem; color:#fff;">'.$label_serie.' '.$indicador_num.'</h3>
-                                                    <span onclick="closeTechniqueModal(\''.$modal_id.'\')" style="cursor:pointer; font-size:1.2rem; padding:0 10px;">&times;</span>
-                                                </div>
-                                                
-                                                <div style="margin-bottom:20px; text-align:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:6px;">
-                                                    <span style="color:#aaa; font-size:0.8rem;">META: </span> <b style="color:#fff">'.$reps.'</b>
-                                                    <span style="color:#aaa; font-size:0.8rem; margin-left:15px;">DESC: </span> <b style="color:#fff">'.$desc.'</b>
-                                                </div>';
-
-                                                if ($is_drop) {
-                                                    echo '<label style="font-size:0.7rem; color:#888;">Série Principal</label>
-                                                        <div style="display:flex; gap:10px; margin-bottom:15px;">
-                                                            <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.']" class="input-exec" placeholder="Kg: '.$ph_carga.'">
-                                                            <input type="number" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Reps: '.$ph_reps.'">
-                                                        </div>';
-                                                    $qtd_drops = (int)$valor_raw;
-                                                    for ($d = 1; $d <= $qtd_drops; $d++) {
-                                                        echo '<label style="font-size:0.7rem; color:#ff4081;">DROP #'.$d.' (-20%)</label>
-                                                            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                                                                <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.'_drop_'.$d.']" class="input-exec" placeholder="Carga">
-                                                                <input type="number" name="reps['.$s['id'].']['.$i.'_drop_'.$d.']" class="input-exec" placeholder="Falha">
-                                                            </div>';
-                                                    }
-                                                }
-
-                                                if ($is_rest) {
-                                                    echo '<label style="font-size:0.7rem; color:#00e676;">Carga & Reps Totais</label>
-                                                        <div style="display:flex; gap:10px; margin-bottom:10px;">
-                                                            <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.']" class="input-exec" placeholder="Kg: '.$ph_carga.'">
-                                                            <input type="text" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Ex: 10+5+3">
-                                                        </div>
-                                                        <div style="margin-bottom:15px;">
-                                                            <button type="button" onclick="iniciarTimerRest('.(int)$valor_raw.')" style="width:100%; padding:10px; background:rgba(0, 230, 118, 0.15); border:1px solid #00e676; color:#00e676; border-radius:6px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-                                                                <i class="fa-solid fa-stopwatch"></i> INICIAR DESCANSO ('.(int)$valor_raw.'s)
-                                                            </button>
-                                                        </div>
-                                                        <p style="font-size:0.7rem; color:#666;">Falha > Iniciar Descanso > Repete > Anota Soma.</p>';
-                                                }
-
-                                                if ($is_cluster) {
-                                                    $parts = explode('|', $valor_raw); 
-                                                    $tempo_descanso_cluster = isset($parts[2]) ? (int)$parts[2] : 0;
-                                                    
-                                                    echo '<label style="font-size:0.7rem; color:#ff9100;">Carga Fixa</label>
-                                                        <div style="margin-bottom:15px;">
-                                                            <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.']" class="input-exec" placeholder="Kg: '.$ph_carga.'">
-                                                        </div>
-                                                        
-                                                        <label style="font-size:0.7rem; color:#ff9100;">Blocos ('.$parts[1].' reps cada)</label>
-                                                        <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;">';
-                                                            for($b=1; $b<=$parts[0]; $b++) {
-                                                                echo '<div style="flex:1; background:#222; padding:10px; border-radius:4px; text-align:center; border:1px solid #444;">
-                                                                            <span style="font-size:0.7rem; color:#888;">B'.$b.'</span><br>
-                                                                            <strong style="color:#fff;">'.$parts[1].'</strong>
-                                                                        </div>';
-                                                            }
-                                                    echo '</div>
-
-                                                        <div style="margin-bottom:15px;">
-                                                            <button type="button" onclick="iniciarTimerRest('.$tempo_descanso_cluster.')" style="width:100%; padding:10px; background:rgba(255, 145, 0, 0.15); border:1px solid #ff9100; color:#ff9100; border-radius:6px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-                                                                <i class="fa-solid fa-stopwatch"></i> DESCANSO ENTRE BLOCOS ('.$tempo_descanso_cluster.'s)
-                                                            </button>
-                                                        </div>
-
-                                                        <label style="font-size:0.7rem; color:#888;">Reps Realizadas (Soma)</label>
-                                                        <input type="text" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Ex: 4+4+4+3">';
-                                                }
-
-                                            echo '  <div style="margin-top:20px;">
-                                                    <button type="button" class="btn-gold" style="width:100%; border-radius:50px;" onclick="confirmTechniqueData(\''.$modal_id.'\', \''.$js_type_arg.'\')">SALVAR DADOS</button>
-                                                </div>
-                                            </div>
-                                        </div>';
-
-                                    } else {
-                                        // NORMAL
-                                        $input_name_carga = "carga[".$s['id']."][".$i."]"; 
-                                        $input_name_reps  = "reps[".$s['id']."][".$i."]";
-                                        echo '
-                                        <div>
-                                            <input type="number" step="0.5" name="'.$input_name_carga.'" class="input-exec" placeholder="Ant: '.$ph_carga.'" inputmode="decimal">
-                                        </div>
-                                        <div style="display:flex; align-items:center; gap:5px;">
-                                            <input type="number" name="'.$input_name_reps.'" class="input-exec" placeholder="Ant: '.$ph_reps.'" inputmode="numeric">
-                                        </div>';
-                                    }
-
-                                echo '</div>'; // Fecha set-row-input
-                            }
-                        }
-                    } else {
-                        echo '<p style="color:#666; padding:10px;">Sem séries cadastradas.</p>';
+                    foreach($series as $s) {
+                        // Teste de acesso às colunas novas
+                        $tec = $s['tecnica'] ?? 'N/A';
+                        $cat = $s['categoria'] ?? 'N/A';
+                        echo '<p style="color:#888">Série: '.$tec.' - '.$cat.'</p>';
                     }
-
-                    echo '</div>'; // Fim exec-card
+                    echo '</div>';
                 }
+            }
+            echo '</form>';
 
-                if ($bloco['tipo'] === 'grupo') {
-                    echo '</div>'; // Fecha exec-agrupamento
-                }
-            } 
-
-        } else {
-            echo '<p style="text-align:center; margin-top:20px; color:#888;">Nenhum exercício encontrado nesta divisão.</p>';
+        } catch (PDOException $e) {
+            // ERRO DE BANCO DE DADOS
+            echo '<div style="background: #ffcccc; color: #cc0000; padding: 20px; border: 1px solid red; margin: 20px; border-radius: 10px;">';
+            echo '<h3>ERRO DE BANCO DE DADOS (SQL)</h3>';
+            echo '<p>Provavelmente faltam colunas no banco online.</p>';
+            echo '<strong>Erro Técnico:</strong> ' . $e->getMessage();
+            echo '</div>';
+        } catch (Throwable $e) {
+            // OUTROS ERROS (PHP)
+            echo '<div style="background: #ffffcc; color: #333; padding: 20px; border: 1px solid orange; margin: 20px; border-radius: 10px;">';
+            echo '<h3>ERRO NO CÓDIGO PHP</h3>';
+            echo '<strong>Mensagem:</strong> ' . $e->getMessage() . '<br>';
+            echo '<strong>Arquivo:</strong> ' . $e->getFile() . '<br>';
+            echo '<strong>Linha:</strong> ' . $e->getLine();
+            echo '</div>';
         }
-
-        echo '  </div> 
-
-                <button type="submit" class="btn-finish" onclick="return confirm(\'Tem certeza que deseja finalizar este treino? Todos os dados serão salvos.\')">
-                    <i class="fa-solid fa-check"></i> FINALIZAR TREINO
-                </button>
-              </form>';
         break;
 
 

@@ -479,29 +479,77 @@ body.saas-body {
     display: block;
 }
 
-/* --- ESTILOS DO VÍDEO NATIVO --- */
-        .video-native-container {
-            position: relative;
-            width: 100%; max-width: 900px; margin: 40px auto;
-            border-radius: 20px; overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            border: 1px solid #333; background: #000;
-        }
-        video { width: 100%; height: auto; display: block; }
-        .video-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; align-items: center; justify-content: center;
-            background: rgba(0,0,0,0.3); cursor: pointer; transition: 0.3s;
-        }
-        .video-native-container:hover .video-overlay { background: rgba(0,0,0,0.1); }
-        .play-btn-custom {
-            width: 80px; height: 80px; background: rgba(255, 186, 66, 0.9);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            color: #000; font-size: 2rem; box-shadow: 0 0 30px rgba(255, 186, 66, 0.4);
-            transition: transform 0.3s;
-        }
-        .video-native-container:hover .play-btn-custom { transform: scale(1.1); }
-        .video-playing .video-overlay { display: none; }
+/* --- SEÇÃO DE VÍDEO YOUTUBE --- */
+.video-section {
+    padding: 80px 0;
+    background: linear-gradient(to bottom, #000 0%, #111 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.section-header-center {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.section-subtitle {
+    color: #888;
+    font-size: 1rem;
+    max-width: 600px;
+    margin: 10px auto 0;
+}
+
+/* Container que segura o vídeo e define a largura máxima */
+.video-wrapper {
+    position: relative;
+    width: 90%;
+    max-width: 900px; /* Largura máxima no Desktop */
+    margin: 0 auto;
+    border-radius: 20px;
+    z-index: 1;
+}
+
+/* Mantém a proporção 16:9 (Responsivo) */
+.video-container {
+    position: relative;
+    padding-bottom: 56.25%; /* Proporção 16:9 */
+    height: 0;
+    overflow: hidden;
+    border-radius: 20px;
+    border: 1px solid #333; /* Borda sutil */
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5); /* Sombra preta funda */
+    background: #000;
+}
+
+.video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+/* Efeito de Brilho Dourado atrás do vídeo */
+.video-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(218, 165, 32, 0.15) 0%, rgba(0,0,0,0) 70%);
+    z-index: -1; /* Fica atrás do vídeo */
+    pointer-events: none; /* Não atrapalha o clique */
+    filter: blur(40px);
+}
+
+/* Responsividade Mobile */
+@media (max-width: 768px) {
+    .video-wrapper {
+        width: 95%;
+    }
+}
 
 /* =========================================
    FEATURES (CARDS MAIS AGRESSIVOS)

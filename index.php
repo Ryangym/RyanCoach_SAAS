@@ -160,6 +160,30 @@ require_once 'includes/head_main.php';
         </div>
     </section>
 
+    <section id="demo-video" class="video-section">
+        <div class="container">
+            
+            <div class="section-header-center">
+                <h2 class="section-title">Veja o <span class="text-gold">Sistema</span> em Ação</h2>
+                <p class="section-subtitle">Interface limpa, rápida e focada no seu resultado.</p>
+            </div>
+
+            <div class="video-wrapper">
+                <div class="video-container">
+                    <iframe 
+                        src="https://www.youtube.com/embed/xiLG2PEPyL8?rel=0&modestbranding=1&controls=1&showinfo=0" 
+                        title="Demonstração do Sistema Ryan Coach" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen>
+                    </iframe>
+                </div>
+                <div class="video-glow"></div>
+            </div>
+
+        </div>
+    </section>
+
     <section class="section-features" id="features">
         <div class="container">
             <h2 class="section-title">O que o <span class="text-red">Sistema</span> faz por você?</h2>

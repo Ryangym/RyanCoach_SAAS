@@ -2926,10 +2926,10 @@ switch ($pagina) {
         // O 'id' é o código que fica depois do v= no YouTube.
         $lista_videos = [
             [
-                'titulo' => 'Primeiros Passos: Visão Geral',
-                'desc'   => 'Entenda como navegar pelo seu novo app.',
-                'id'     => 'hMBLqRZcZZA', // Ex: dQw4w9WgXcQ
-                'thumb'  => 'assets/img/background-gym.webp' // Ou use a do youtube (veja abaixo)
+                'titulo' => 'Como instalar o App no celular',
+                'desc'   => 'Entenda como utilizar o site do sistema como app para uma melhor experiência.',
+                'id'     => 'lsrY3ESQHv0', // Ex: dQw4w9WgXcQ
+                'thumb'  => 'assets/img/thumbs/userpage.png' // Ou use a do youtube (veja abaixo)
             ],
             [
                 'titulo' => 'Como Registrar seu Treino',

@@ -813,89 +813,105 @@ if (dragItem) {
     }
 }
 
-// --- MOTOR GRÁFICO (PIP AUTOMÁTICO) ---
+// =================================================================
+// 1. MOTOR DO CRONÔMETRO FLUTUANTE (PIP)
+// =================================================================
 const PipEngine = {
     videoElement: null,
     canvas: null,
     ctx: null,
 
     init: function() {
-        if (this.canvas) return; // Já iniciou
+        if (this.canvas) return; // Já existe
 
-        // Cria elementos na memória
+        // Cria o Canvas (Onde desenhamos)
         this.canvas = document.createElement('canvas');
         this.canvas.width = 300;
         this.canvas.height = 150;
         this.ctx = this.canvas.getContext('2d');
         
+        // Cria o Vídeo Falso
         this.videoElement = document.createElement('video');
-        this.videoElement.muted = true;
-        this.videoElement.playsInline = true; // Essencial para iOS
+        this.videoElement.muted = true; // Obrigatório para tocar sozinho
+        this.videoElement.playsInline = true; // Obrigatório para iOS
         
-        // --- O SEGREDO DO AUTOMÁTICO ESTÁ AQUI ---
-        // Diz ao navegador: "Se sair da tela, abre o PiP sozinho"
+        // Deixamos o atributo nativo também (Segurança dupla)
         this.videoElement.setAttribute('autopictureinpicture', ''); 
         
-        // Desenha estado inicial
+        // Desenha o 00:00 inicial
         this.draw("00:00");
     },
 
-    // Função chamada quando aperta o Play
+    // Chamado APENAS quando aperta o Play
     startVideo: async function() {
         if (!this.canvas) this.init();
 
-        // Conecta Canvas ao Vídeo e dá Play (sem abrir a janela ainda)
+        // Conecta o Canvas ao Vídeo (Stream)
         if (!this.videoElement.srcObject) {
             this.videoElement.srcObject = this.canvas.captureStream();
         }
         
-        // O vídeo precisa estar "rodando" para o automático funcionar
-        await this.videoElement.play();
-    },
-
-    // Função para forçar abrir (Manual - caso o auto falhe ou usuário queira)
-    requestPip: async function() {
-        await this.startVideo(); // Garante que tá rodando
-
+        // Dá o Play no vídeo "invisível"
         try {
-            if (document.pictureInPictureElement) return;
-            await this.videoElement.requestPictureInPicture();
-        } catch (error) {
-            console.log("PiP manual bloqueado:", error);
+            await this.videoElement.play();
+        } catch (e) {
+            console.log("Erro ao iniciar vídeo background:", e);
         }
     },
 
     closePip: function() {
         if (document.pictureInPictureElement) {
-            document.exitPictureInPicture().catch(console.error);
+            document.exitPictureInPicture().catch(() => {});
         }
     },
 
     draw: function(texto) {
         if (!this.ctx) return;
 
-        // Fundo Dark
+        // Fundo
         this.ctx.fillStyle = "#111"; 
         this.ctx.fillRect(0, 0, 300, 150);
 
-        // Borda Dourada
+        // Borda
         this.ctx.lineWidth = 8;
         this.ctx.strokeStyle = "#DAA520"; 
         this.ctx.strokeRect(0, 0, 300, 150);
 
-        // Texto do Tempo
+        // Tempo
         this.ctx.font = "bold 80px Arial";
         this.ctx.fillStyle = "#FFF";
         this.ctx.textAlign = "center";
         this.ctx.textBaseline = "middle";
         this.ctx.fillText(texto, 150, 75);
         
-        // Texto Pequeno
+        // Marca
         this.ctx.font = "20px Arial";
         this.ctx.fillStyle = "#DAA520";
         this.ctx.fillText("RYAN COACH", 150, 125);
     }
 };
+
+// =================================================================
+// 2. GATILHO AUTOMÁTICO (O CÓDIGO QUE FEZ FUNCIONAR)
+// =================================================================
+// Esse evento dispara sempre que o usuário minimiza o navegador ou troca de aba
+document.addEventListener("visibilitychange", async () => {
+    // Só tenta abrir se:
+    // 1. A página ficou oculta (saiu do app)
+    // 2. O cronômetro está rodando (variável global isRunning)
+    // 3. O vídeo já foi iniciado
+    if (document.visibilityState === "hidden" && typeof isRunning !== 'undefined' && isRunning) {
+        
+        if (PipEngine.videoElement && !document.pictureInPictureElement) {
+            try {
+                // Força a entrada no modo PiP
+                await PipEngine.videoElement.requestPictureInPicture();
+            } catch(e) {
+                // Ignora erros silenciosamente (alguns browsers bloqueiam)
+            }
+        }
+    }
+});
 
 let techTimerInterval;
 let techTimeLeft = 0;

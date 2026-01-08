@@ -55,43 +55,7 @@ if ($dados_usuario['data_expiracao_plano']) {
     <?php include 'includes/head_main.php'; ?>
 
     <link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
-    <script>function adotarModelo(tipoModelo) {
-    // 1. Confirmação
-    if(!confirm("Tem certeza que deseja adotar este treino? Ele será adicionado à sua lista.")) return;
-
-    // 2. Feedback Visual (Loading)
-    // Como estamos na página, podemos colocar um overlay ou mudar o texto do botão
-    // Mas para simplificar, vamos usar o loader global se tiver, ou apenas o cursor
-    document.body.style.cursor = 'wait';
-
-    const formData = new FormData();
-    formData.append('modelo', tipoModelo);
-
-    fetch('actions/treino_modelo.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        document.body.style.cursor = 'default';
-        
-        if(data.success) {
-            // SUCESSO!
-            // Redireciona para a lista de treinos ("Minhas Fichas")
-            carregarConteudo('treinos'); 
-            
-            // Opcional: Toast ou Alerta bonito
-            // alert('Treino criado com sucesso!'); 
-        } else {
-            alert('Erro: ' + data.message);
-        }
-    })
-    .catch(error => {
-        document.body.style.cursor = 'default';
-        console.error('Erro:', error);
-        alert('Erro de conexão.');
-    });
-}</script>
+    <script></script>
 </head>
 <body>
     
@@ -103,85 +67,111 @@ if ($dados_usuario['data_expiracao_plano']) {
         </main>
 
     <script>
-//----------------- Função Global de Navegação --------------------------
+    //----------------- Função Global de Navegação --------------------------
     window.carregarConteudo = async function(pagina) {
-    const area = document.getElementById('conteudo');
-    const botoes = document.querySelectorAll('#main-aside button');
-
-    // Feedback Visual
-    area.innerHTML = '<div class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
-    area.classList.add('loading');
-
-    try {
-        // Requisição Limpa
-        const req = await fetch(`ajax/get_conteudo.php?pagina=${pagina}`);
-        if (!req.ok) throw new Error('Erro na rede');
-            
-        const html = await req.text();
-            
-        area.innerHTML = html;
-        area.classList.remove('loading');
-
-        // --- 1. LÓGICA DE RESTAURAÇÃO DE ABA (NOVO) ---
-        // Verifica se tem aba salva na memória do navegador
-        const lastTab = localStorage.getItem('lastActiveTab');
+        const area = document.getElementById('conteudo');
+        // Busca a navbar pelo ID que você confirmou
+        const navbar = document.querySelector('#main-aside'); 
+        const container = document.getElementById('app-content');
         
-        // Se existe aba salva E o elemento existe na nova tela carregada
-        if (lastTab && document.getElementById(lastTab)) {
-            // Chama a função openTab (verifique se ela está acessível neste escopo)
-            if (typeof openTab === 'function') {
-                openTab(null, lastTab);
+        // --- CORREÇÃO 1: PEGAR SOMENTE O NOME DA PÁGINA (ANTES DO &) ---
+        // Se pagina for "realizar_treino&id=10", paginaBase vira "realizar_treino"
+        const paginaBase = pagina.split('&')[0]; 
+
+        // Lista de páginas onde a navbar deve SUMIR (Modo Foco)
+        const paginasModoFoco = ['realizar_treino'];
+
+        if (navbar) {
+            // --- CORREÇÃO 2: USAR A PAGINA BASE NA COMPARAÇÃO ---
+            if (paginasModoFoco.includes(paginaBase)) {
+                // MODO FOCO: Esconde a barra
+                navbar.style.display = 'none';
+                
+                // Remove padding para aproveitar tela toda
+                if(container) container.style.paddingBottom = '0'; 
+            } else {
+                // MODO NORMAL: Mostra a barra
+                // --- CORREÇÃO 3: LIMPAR O STYLE INLINE ---
+                // Usar '' (vazio) faz o elemento voltar a usar o CSS original do arquivo .css
+                navbar.style.display = ''; 
+                
+                // Devolve o espaço do footer
+                if(container) container.style.paddingBottom = '80px'; 
             }
         }
 
-        const scripts = area.querySelectorAll("script");
-        scripts.forEach(s => {
-            const newScript = document.createElement("script");
-            if (s.src) newScript.src = s.src;
-            else newScript.textContent = s.textContent;
-            document.body.appendChild(newScript);
-        });
+        // Feedback Visual
+        area.innerHTML = '<div class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
+        area.classList.add('loading');
 
-        // Atualiza Menu Lateral
-        const base = pagina.split('&')[0];
-        botoes.forEach(btn => {
-            // Verifica se o dataset existe antes de comparar
-            if (btn.dataset.pagina === base) btn.classList.add('active');
-            else btn.classList.remove('active');
-        });
+        try {
+            // Requisição
+            const req = await fetch(`ajax/get_conteudo.php?pagina=${pagina}`);
+            if (!req.ok) throw new Error('Erro na rede');
+                
+            const html = await req.text();
+                
+            area.innerHTML = html;
+            area.classList.remove('loading');
 
-    } 
-    catch (err) {
-        console.error(err);
-        area.innerHTML = '<p class="error">Erro ao carregar.</p>';
-    }
-};
-    
-    // TELA INICIAL AO ABRIR A PAGINA (DASHBOARD)
+            // --- LÓGICA DE RESTAURAÇÃO DE ABA ---
+            const lastTab = localStorage.getItem('lastActiveTab');
+            if (lastTab && document.getElementById(lastTab)) {
+                if (typeof openTab === 'function') {
+                    openTab(null, lastTab);
+                }
+            }
+
+            // Executa scripts que vieram no HTML (Gráficos, etc)
+            const scripts = area.querySelectorAll("script");
+            scripts.forEach(s => {
+                const newScript = document.createElement("script");
+                if (s.src) newScript.src = s.src;
+                else newScript.textContent = s.textContent;
+                document.body.appendChild(newScript);
+            });
+
+            // Atualiza Menu Lateral (Botão Ativo)
+            // Aqui também usamos a paginaBase para marcar o botão correto
+            const botoes = document.querySelectorAll('#main-aside button');
+            botoes.forEach(btn => {
+                if (btn.dataset.pagina === paginaBase) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+
+        } 
+        catch (err) {
+            console.error(err);
+            area.innerHTML = '<p class="error">Erro ao carregar.</p>';
+        }
+    };
+
+    // TELA INICIAL AO ABRIR A PAGINA
     document.addEventListener('DOMContentLoaded', () => {
-    // 1. Tenta pegar a página da URL (ex: usuario.php?page=dieta)
-    const urlParams = new URLSearchParams(window.location.search);
-    const paginaUrl = urlParams.get('page');
+        const urlParams = new URLSearchParams(window.location.search);
+        const paginaUrl = urlParams.get('page');
 
-    // 2. Se tiver parâmetro, carrega ele. Se não, carrega dashboard.
-    if (paginaUrl) {
-        carregarConteudo(paginaUrl);
-        window.history.replaceState({}, document.title, window.location.pathname);
-    } else {
-        carregarConteudo('dashboard');
-    }
+        if (paginaUrl) {
+            carregarConteudo(paginaUrl);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+            carregarConteudo('dashboard');
+        }
 
         // Listener do Menu Lateral
-        document.getElementById('main-aside').addEventListener('click', (e) => {
-            const btn = e.target.closest('button');
-            if (btn && btn.dataset.pagina) {
-                if (btn.dataset.pagina === 'logout') window.location.href = 'actions/logout.php';
-                else carregarConteudo(btn.dataset.pagina);
-            }
-        });
+        const mainAside = document.getElementById('main-aside');
+        if(mainAside){
+            mainAside.addEventListener('click', (e) => {
+                const btn = e.target.closest('button');
+                if (btn && btn.dataset.pagina) {
+                    if (btn.dataset.pagina === 'logout') window.location.href = 'actions/logout.php';
+                    else carregarConteudo(btn.dataset.pagina);
+                }
+            });
+        }
     });
 
-    // LÓGICA DE Preview de Imagem (Perfil)
+    // Preview de Imagem
     window.previewImage = function(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
@@ -586,6 +576,7 @@ if ($dados_usuario['data_expiracao_plano']) {
    4. MÓDULO: GESTÃO DE COACH (Vincular)
    5. MÓDULO: HISTÓRICO (DELETE & EDIT & PREVIEW)
    6. MÓDULO: TUTORIAIS VIDEOS
+   7. MÓDULO: TREINOS PRONTOS (Biblioteca)
    ========================================================================== */
 
 /* ==========================================================================
@@ -671,32 +662,37 @@ function mostrarTimer() {
     document.getElementById('float-timer').style.display = 'flex';
 }
 
-function fecharTimer() {
-    document.getElementById('float-timer').style.display = 'none';
-    resetTimer();
-}
-
-function toggleTimer() {
+async function toggleTimer() { 
     const btn = document.getElementById('btn-timer-toggle');
     const icon = btn.querySelector('i');
     const widget = document.getElementById('float-timer');
 
     if (isRunning) {
-        // Pausar
+        // --- PAUSAR ---
         clearInterval(timerInterval);
         isRunning = false;
         icon.classList.remove('fa-pause');
         icon.classList.add('fa-play');
         widget.classList.remove('running');
+        
+        // Opcional: Se quiser que a janelinha feche ao pausar
+        // PipEngine.closePip(); 
+
     } else {
-        // Iniciar
+        // --- INICIAR ---
+        
+        // MUDANÇA AQUI: Apenas inicia o vídeo silencioso.
+        // O navegador abrirá o PiP sozinho quando o usuário sair da tela (no Android/Chrome)
+        await PipEngine.startVideo();
+
         isRunning = true;
         icon.classList.remove('fa-play');
         icon.classList.add('fa-pause');
         widget.classList.add('running');
+        
         timerInterval = setInterval(() => {
             seconds++;
-            updateTimerDisplay();
+            updateTimerDisplay(); 
         }, 1000);
     }
 }
@@ -705,8 +701,13 @@ function resetTimer() {
     clearInterval(timerInterval);
     seconds = 0;
     isRunning = false;
-    updateTimerDisplay();
     
+    // Atualiza Displays (Visual e PiP) para 00:00
+    const textoZero = "00:00";
+    const display = document.getElementById('timer-val');
+    if(display) display.innerText = textoZero;
+    PipEngine.draw(textoZero); 
+
     const btn = document.getElementById('btn-timer-toggle');
     const icon = btn ? btn.querySelector('i') : null;
     const widget = document.getElementById('float-timer');
@@ -718,13 +719,27 @@ function resetTimer() {
     if(widget) widget.classList.remove('running');
 }
 
+function fecharTimer() {
+    document.getElementById('float-timer').style.display = 'none';
+    resetTimer();
+    PipEngine.closePip(); // Fecha a janelinha flutuante
+}
+
 function updateTimerDisplay() {
     const display = document.getElementById('timer-val');
-    if (!display) return;
     
+    // Formata o tempo
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    display.innerText = (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
+    const textoFormatado = (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
+
+    // 1. Atualiza seu widget visual (HTML)
+    if (display) {
+        display.innerText = textoFormatado;
+    }
+
+    // 2. Atualiza o PiP (Canvas)
+    PipEngine.draw(textoFormatado);
 }
 
 // --- Lógica de Arrastar (Drag & Drop) ---
@@ -797,6 +812,90 @@ if (dragItem) {
         el.style.transform = "translate3d(" + xPos + "px, " + yPos + "px, 0)";
     }
 }
+
+// --- MOTOR GRÁFICO (PIP AUTOMÁTICO) ---
+const PipEngine = {
+    videoElement: null,
+    canvas: null,
+    ctx: null,
+
+    init: function() {
+        if (this.canvas) return; // Já iniciou
+
+        // Cria elementos na memória
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = 300;
+        this.canvas.height = 150;
+        this.ctx = this.canvas.getContext('2d');
+        
+        this.videoElement = document.createElement('video');
+        this.videoElement.muted = true;
+        this.videoElement.playsInline = true; // Essencial para iOS
+        
+        // --- O SEGREDO DO AUTOMÁTICO ESTÁ AQUI ---
+        // Diz ao navegador: "Se sair da tela, abre o PiP sozinho"
+        this.videoElement.setAttribute('autopictureinpicture', ''); 
+        
+        // Desenha estado inicial
+        this.draw("00:00");
+    },
+
+    // Função chamada quando aperta o Play
+    startVideo: async function() {
+        if (!this.canvas) this.init();
+
+        // Conecta Canvas ao Vídeo e dá Play (sem abrir a janela ainda)
+        if (!this.videoElement.srcObject) {
+            this.videoElement.srcObject = this.canvas.captureStream();
+        }
+        
+        // O vídeo precisa estar "rodando" para o automático funcionar
+        await this.videoElement.play();
+    },
+
+    // Função para forçar abrir (Manual - caso o auto falhe ou usuário queira)
+    requestPip: async function() {
+        await this.startVideo(); // Garante que tá rodando
+
+        try {
+            if (document.pictureInPictureElement) return;
+            await this.videoElement.requestPictureInPicture();
+        } catch (error) {
+            console.log("PiP manual bloqueado:", error);
+        }
+    },
+
+    closePip: function() {
+        if (document.pictureInPictureElement) {
+            document.exitPictureInPicture().catch(console.error);
+        }
+    },
+
+    draw: function(texto) {
+        if (!this.ctx) return;
+
+        // Fundo Dark
+        this.ctx.fillStyle = "#111"; 
+        this.ctx.fillRect(0, 0, 300, 150);
+
+        // Borda Dourada
+        this.ctx.lineWidth = 8;
+        this.ctx.strokeStyle = "#DAA520"; 
+        this.ctx.strokeRect(0, 0, 300, 150);
+
+        // Texto do Tempo
+        this.ctx.font = "bold 80px Arial";
+        this.ctx.fillStyle = "#FFF";
+        this.ctx.textAlign = "center";
+        this.ctx.textBaseline = "middle";
+        this.ctx.fillText(texto, 150, 75);
+        
+        // Texto Pequeno
+        this.ctx.font = "20px Arial";
+        this.ctx.fillStyle = "#DAA520";
+        this.ctx.fillText("RYAN COACH", 150, 125);
+    }
+};
 
 let techTimerInterval;
 let techTimeLeft = 0;
@@ -1279,6 +1378,48 @@ function fecharModalVideo() {
         document.getElementById('modalVideoBody').innerHTML = '';
         modal.style.display = 'none';
     }
+}
+
+/* ==========================================================================
+   7. MÓDULO: TREINOS PRONTOS (Biblioteca)
+   ========================================================================== */
+
+   function adotarModelo(tipoModelo) {
+    // 1. Confirmação
+    if(!confirm("Tem certeza que deseja adotar este treino? Ele será adicionado à sua lista.")) return;
+
+    // 2. Feedback Visual (Loading)
+    // Como estamos na página, podemos colocar um overlay ou mudar o texto do botão
+    // Mas para simplificar, vamos usar o loader global se tiver, ou apenas o cursor
+    document.body.style.cursor = 'wait';
+
+    const formData = new FormData();
+    formData.append('modelo', tipoModelo);
+
+    fetch('actions/treino_modelo.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.body.style.cursor = 'default';
+        
+        if(data.success) {
+            // SUCESSO!
+            // Redireciona para a lista de treinos ("Minhas Fichas")
+            carregarConteudo('treinos'); 
+            
+            // Opcional: Toast ou Alerta bonito
+            // alert('Treino criado com sucesso!'); 
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    })
+    .catch(error => {
+        document.body.style.cursor = 'default';
+        console.error('Erro:', error);
+        alert('Erro de conexão.');
+    });
 }
 </script>
 

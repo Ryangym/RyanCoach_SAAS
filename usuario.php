@@ -55,6 +55,43 @@ if ($dados_usuario['data_expiracao_plano']) {
     <?php include 'includes/head_main.php'; ?>
 
     <link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
+    <script>function adotarModelo(tipoModelo) {
+    // 1. Confirmação
+    if(!confirm("Tem certeza que deseja adotar este treino? Ele será adicionado à sua lista.")) return;
+
+    // 2. Feedback Visual (Loading)
+    // Como estamos na página, podemos colocar um overlay ou mudar o texto do botão
+    // Mas para simplificar, vamos usar o loader global se tiver, ou apenas o cursor
+    document.body.style.cursor = 'wait';
+
+    const formData = new FormData();
+    formData.append('modelo', tipoModelo);
+
+    fetch('actions/treino_modelo.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.body.style.cursor = 'default';
+        
+        if(data.success) {
+            // SUCESSO!
+            // Redireciona para a lista de treinos ("Minhas Fichas")
+            carregarConteudo('treinos'); 
+            
+            // Opcional: Toast ou Alerta bonito
+            // alert('Treino criado com sucesso!'); 
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    })
+    .catch(error => {
+        document.body.style.cursor = 'default';
+        console.error('Erro:', error);
+        alert('Erro de conexão.');
+    });
+}</script>
 </head>
 <body>
     

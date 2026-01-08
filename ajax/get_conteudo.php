@@ -2303,6 +2303,19 @@ switch ($pagina) {
                 <h3 class="section-title" style="color: var(--gold); margin-bottom: 25px; text-align: center;">
                     <i class="fa-solid fa-dumbbell"></i> Criar Nova Estrutura
                 </h3>
+
+                <div style="margin-bottom: 25px;">
+                    <button onclick="carregarConteudo(\'biblioteca_treinos\')" 
+                            style="width:100%; padding:12px; background:rgba(255,255,255,0.03); border:1px solid #333; border-radius:8px; color:#999; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:all 0.3s;"
+                            onmouseover="this.style.borderColor=\'var(--gold)\'; this.style.background=\'rgba(218, 165, 32, 0.05)\'; this.querySelector(\'span\').style.color=\'#fff\'"
+                            onmouseout="this.style.borderColor=\'#333\'; this.style.background=\'rgba(255,255,255,0.03)\'; this.querySelector(\'span\').style.color=\'#999\'">
+                        
+                        <i class="fa-solid fa-book-open" style="color:var(--gold); font-size:0.9rem;"></i>
+                        <span style="font-family:Roboto, sans-serif;">Prefere agilidade? <strong style="color:#eee; font-weight:500;">Explorar Biblioteca de Treinos</strong></span>
+                        <i class="fa-solid fa-chevron-right" style="font-size:0.7rem; margin-left:auto; opacity:0.5;"></i>
+                    </button>
+                </div>
+
                 <form id="formNovoTreino" onsubmit="criarTreino(event)">
                     <div class="form-row">
                         <div class="form-col">
@@ -2734,7 +2747,137 @@ switch ($pagina) {
                 </div>
             </div>
         ';
-        break;            
+        break;           
+    
+    case 'biblioteca_treinos':
+        echo '<section class="fade-in">
+                <div style="display:flex; align-items:center; gap:15px; margin-bottom:30px;">
+                    <button onclick="carregarConteudo(\'treinos\')" style="background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <div>
+                        <h2 style="font-family:Orbitron; color:var(--gold); margin:0;">Biblioteca de Treinos</h2>
+                        <p style="color:#888; font-size:0.9rem;">Escolha um protocolo validado e comece hoje.</p>
+                    </div>
+                </div>
+
+                <div class="library-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px;">
+                    
+                    <div class="glass-card" style="padding:0; overflow:hidden; display:flex; flex-direction:column; border:1px solid #333; transition:transform 0.2s;">
+                        <div style="height:150px; background: linear-gradient(to bottom, rgba(0,0,0,0.1), #1a1a1a), url(\'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=800&auto=format&fit=crop\'); background-size:cover; background-position:center; display:flex; align-items:flex-end; padding:15px;">
+                            <span style="background:var(--gold); color:#000; font-weight:bold; font-size:0.7rem; padding:4px 8px; border-radius:4px;">MAIS USADO</span>
+                        </div>
+                        <div style="padding:20px; flex:1; display:flex; flex-direction:column;">
+                            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
+                                <h3 style="color:#fff; margin:0; font-size:1.2rem;">Push / Pull / Legs</h3>
+                                <i class="fa-solid fa-dumbbell" style="color:#666; font-size:1.2rem;"></i>
+                            </div>
+                            <p style="color:#888; font-size:0.85rem; margin-bottom:20px; flex:1;">
+                                O padrão ouro da estética. Divide o corpo por movimentos (Empurrar, Puxar, Pernas). Foco total em hipertrofia.
+                            </p>
+                            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                                <div style="background:#222; padding:5px 10px; border-radius:6px; text-align:center;">
+                                    <span style="display:block; color:#fff; font-weight:bold; font-size:0.9rem;">ABC</span>
+                                    <span style="color:#666; font-size:0.6rem;">DIVISÃO</span>
+                                </div>
+                                <div style="background:#222; padding:5px 10px; border-radius:6px; text-align:center;">
+                                    <span style="display:block; color:#fff; font-weight:bold; font-size:0.9rem;">6x</span>
+                                    <span style="color:#666; font-size:0.6rem;">DIAS/SEM</span>
+                                </div>
+                            </div>
+                            <button onclick="adotarModelo(\'hipertrofia_abc\')" class="btn-gold" style="width:100%; justify-content:center;">
+                                ADOTAR ESTE TREINO
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card" style="padding:0; overflow:hidden; display:flex; flex-direction:column; border:1px solid #333; transition:transform 0.2s;">
+                        <div style="height:150px; background: linear-gradient(to bottom, rgba(0,0,0,0.1), #1a1a1a), url(\'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D\'); background-size:cover; background-position:center; display:flex; align-items:flex-end; padding:15px;">
+                            <span style="background:#fff; color:#000; font-weight:bold; font-size:0.7rem; padding:4px 8px; border-radius:4px;">PERFORMANCE</span>
+                        </div>
+                        <div style="padding:20px; flex:1; display:flex; flex-direction:column;">
+                            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
+                                <h3 style="color:#fff; margin:0; font-size:1.2rem;">Híbrido 5x</h3>
+                                <i class="fa-solid fa-flask" style="color:#666; font-size:1.2rem;"></i>
+                            </div>
+                            <p style="color:#888; font-size:0.85rem; margin-bottom:20px; flex:1;">
+                                A melhor divisão para 5 dias. Mescla dias de Força (Upper/Lower) com dias de Hipertrofia (Push/Pull/Legs).
+                            </p>
+                            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                                <div style="background:#222; padding:5px 10px; border-radius:6px; text-align:center;">
+                                    <span style="display:block; color:#fff; font-weight:bold; font-size:0.9rem;">PHAT</span>
+                                    <span style="color:#666; font-size:0.6rem;">DIVISÃO</span>
+                                </div>
+                                <div style="background:#222; padding:5px 10px; border-radius:6px; text-align:center;">
+                                    <span style="display:block; color:#fff; font-weight:bold; font-size:0.9rem;">5x</span>
+                                    <span style="color:#666; font-size:0.6rem;">SEG-SEX</span>
+                                </div>
+                            </div>
+                            <button onclick="adotarModelo(\'hibrido_5x\')" class="btn-gold" style="width:100%; justify-content:center;">
+                                ADOTAR ESTE TREINO
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card" style="padding:0; overflow:hidden; display:flex; flex-direction:column; border:1px solid #333; transition:transform 0.2s;">
+                        <div style="height:150px; background: linear-gradient(to bottom, rgba(0,0,0,0.1), #1a1a1a), url(\'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=1169&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D\'); background-size:cover; background-position:center; display:flex; align-items:flex-end; padding:15px;">
+                            <span style="background:#4CAF50; color:#fff; font-weight:bold; font-size:0.7rem; padding:4px 8px; border-radius:4px;">BASE SÓLIDA</span>
+                        </div>
+                        <div style="padding:20px; flex:1; display:flex; flex-direction:column;">
+                            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
+                                <h3 style="color:#fff; margin:0; font-size:1.2rem;">Full Body 3x</h3>
+                                <i class="fa-solid fa-child-reaching" style="color:#666; font-size:1.2rem;"></i>
+                            </div>
+                            <p style="color:#888; font-size:0.85rem; margin-bottom:20px; flex:1;">
+                                Treina o corpo todo em uma sessão. Perfeito para iniciantes ou quem tem poucos dias para treinar.
+                            </p>
+                            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                                <div style="background:#222; padding:5px 10px; border-radius:6px; text-align:center;">
+                                    <span style="display:block; color:#fff; font-weight:bold; font-size:0.9rem;">FB</span>
+                                    <span style="color:#666; font-size:0.6rem;">DIVISÃO</span>
+                                </div>
+                                <div style="background:#222; padding:5px 10px; border-radius:6px; text-align:center;">
+                                    <span style="display:block; color:#fff; font-weight:bold; font-size:0.9rem;">3x</span>
+                                    <span style="color:#666; font-size:0.6rem;">DIAS/SEM</span>
+                                </div>
+                            </div>
+                            <button onclick="adotarModelo(\'fullbody_3x\')" class="btn-gold" style="width:100%; justify-content:center;">
+                                ADOTAR ESTE TREINO
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card" style="padding:0; overflow:hidden; display:flex; flex-direction:column; border:1px solid #333; transition:transform 0.2s;">
+                        <div style="height:150px; background: linear-gradient(to bottom, rgba(0,0,0,0.1), #1a1a1a), url(\'https://images.unsplash.com/photo-1532384748853-8f54a8f476e2?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D\'); background-size:cover; background-position:center; display:flex; align-items:flex-end; padding:15px;">
+                            <span style="background:#333; color:#fff; font-weight:bold; font-size:0.7rem; padding:4px 8px; border-radius:4px; border:1px solid #555;">INTENSO</span>
+                        </div>
+                        <div style="padding:20px; flex:1; display:flex; flex-direction:column;">
+                            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
+                                <h3 style="color:#fff; margin:0; font-size:1.2rem;">Upper / Lower</h3>
+                                <i class="fa-solid fa-bolt" style="color:#666; font-size:1.2rem;"></i>
+                            </div>
+                            <p style="color:#888; font-size:0.85rem; margin-bottom:20px; flex:1;">
+                                Alta frequência. Treina superiores e inferiores 2x na semana. Ótimo para força e condicionamento.
+                            </p>
+                            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                                <div style="background:#222; padding:5px 10px; border-radius:6px; text-align:center;">
+                                    <span style="display:block; color:#fff; font-weight:bold; font-size:0.9rem;">AB</span>
+                                    <span style="color:#666; font-size:0.6rem;">DIVISÃO</span>
+                                </div>
+                                <div style="background:#222; padding:5px 10px; border-radius:6px; text-align:center;">
+                                    <span style="display:block; color:#fff; font-weight:bold; font-size:0.9rem;">4x</span>
+                                    <span style="color:#666; font-size:0.6rem;">DIAS/SEM</span>
+                                </div>
+                            </div>
+                            <button onclick="adotarModelo(\'upper_lower_ab\')" class="btn-gold" style="width:100%; justify-content:center;">
+                                ADOTAR ESTE TREINO
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+              </section>';
+        break;
 
     case 'dieta_editor':
         require_once '../config/db_connect.php';

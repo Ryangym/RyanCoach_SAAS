@@ -816,46 +816,39 @@ if (dragItem) {
 // =================================================================
 // 1. MOTOR DO CRONÔMETRO FLUTUANTE (PIP)
 // =================================================================
+// =================================================================
+// 1. MOTOR DO CRONÔMETRO FLUTUANTE (PIP - VERSÃO MINIMALISTA)
+// =================================================================
 const PipEngine = {
     videoElement: null,
     canvas: null,
     ctx: null,
 
     init: function() {
-        if (this.canvas) return; // Já existe
+        if (this.canvas) return; 
 
-        // Cria o Canvas (Onde desenhamos)
         this.canvas = document.createElement('canvas');
-        this.canvas.width = 300;
-        this.canvas.height = 150;
+        this.canvas.width = 200;  
+        this.canvas.height = 100; 
         this.ctx = this.canvas.getContext('2d');
         
-        // Cria o Vídeo Falso
         this.videoElement = document.createElement('video');
-        this.videoElement.muted = true; // Obrigatório para tocar sozinho
-        this.videoElement.playsInline = true; // Obrigatório para iOS
-        
-        // Deixamos o atributo nativo também (Segurança dupla)
+        this.videoElement.muted = true; 
+        this.videoElement.playsInline = true; 
         this.videoElement.setAttribute('autopictureinpicture', ''); 
         
-        // Desenha o 00:00 inicial
         this.draw("00:00");
     },
 
-    // Chamado APENAS quando aperta o Play
     startVideo: async function() {
         if (!this.canvas) this.init();
-
-        // Conecta o Canvas ao Vídeo (Stream)
         if (!this.videoElement.srcObject) {
             this.videoElement.srcObject = this.canvas.captureStream();
         }
-        
-        // Dá o Play no vídeo "invisível"
         try {
             await this.videoElement.play();
         } catch (e) {
-            console.log("Erro ao iniciar vídeo background:", e);
+            console.log("Erro ao iniciar vídeo:", e);
         }
     },
 
@@ -870,24 +863,21 @@ const PipEngine = {
 
         // Fundo
         this.ctx.fillStyle = "#111"; 
-        this.ctx.fillRect(0, 0, 300, 150);
+        this.ctx.fillRect(0, 0, 200, 100); 
 
-        // Borda
-        this.ctx.lineWidth = 8;
+        // Borda Dourada
+        this.ctx.lineWidth = 4; 
         this.ctx.strokeStyle = "#DAA520"; 
-        this.ctx.strokeRect(0, 0, 300, 150);
+        this.ctx.strokeRect(0, 0, 200, 100);
 
-        // Tempo
-        this.ctx.font = "bold 80px Arial";
+        // Tempo (Centralizado Vertical e Horizontalmente)
+        this.ctx.font = "bold 60px Arial"; // Aumentei um pouco pois agora tem mais espaço
         this.ctx.fillStyle = "#FFF";
         this.ctx.textAlign = "center";
-        this.ctx.textBaseline = "middle";
-        this.ctx.fillText(texto, 150, 75);
+        this.ctx.textBaseline = "middle"; // Isso garante o centro vertical exato
         
-        // Marca
-        this.ctx.font = "20px Arial";
-        this.ctx.fillStyle = "#DAA520";
-        this.ctx.fillText("RYAN COACH", 150, 125);
+        // Desenhando no centro exato do canvas (100, 50)
+        this.ctx.fillText(texto, 100, 50); 
     }
 };
 

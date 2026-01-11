@@ -65,55 +65,45 @@ switch ($pagina) {
         // 3. Streak (Ofensiva) - INTELIGENTE (Considera dias de descanso)
         $streak = 0;
         
-        // Busca TODOS os dias treinados nos últimos 60 dias (para garantir)
-        $data_limite = date('Y-m-d', strtotime('-60 days'));
+        // MUDANÇA AQUI: Aumentamos para 365 dias (1 Ano)
+        $data_limite = date('Y-m-d', strtotime('-365 days')); 
+        
         $stmt_chk = $pdo->prepare("SELECT DISTINCT DATE(data_treino) as dia FROM treino_historico WHERE aluno_id = ? AND data_treino >= ? ORDER BY data_treino DESC");
         $stmt_chk->execute([$aluno_id, $data_limite]);
         $dias_treinados = $stmt_chk->fetchAll(PDO::FETCH_COLUMN);
 
-        // Busca a configuração de dias da semana do treino ATIVO
+        // Busca configuração de dias
         $stmt_dias = $pdo->prepare("SELECT dias_semana FROM treinos WHERE aluno_id = ? AND ativo = 1 ORDER BY criado_em DESC LIMIT 1");
         $stmt_dias->execute([$aluno_id]);
         $dias_config_json = $stmt_dias->fetchColumn();
         
-        // Se não tiver treino configurado, assume todos os dias (padrão antigo) ou array vazio
         $dias_obrigatorios = $dias_config_json ? json_decode($dias_config_json) : [0,1,2,3,4,5,6];
         if (!is_array($dias_obrigatorios)) $dias_obrigatorios = [0,1,2,3,4,5,6];
 
-        // Loop retroativo (Hoje, Ontem, Anteontem...)
-        for ($i = 0; $i < 60; $i++) {
-            $check_date = date('Y-m-d', strtotime("-$i days"));
-            $check_dia_semana = date('w', strtotime($check_date)); // 0 (Dom) a 6 (Sab)
 
-            // TRATAMENTO PARA DOMINGO: 
-            // No PHP 'w' retorna 0 para Domingo. No seu JSON pode estar salvo como 7.
-            // Vamos normalizar: Se no JSON tiver 7, consideramos igual a 0.
+        for ($i = 0; $i < 365; $i++) {
+            $check_date = date('Y-m-d', strtotime("-$i days"));
+            $check_dia_semana = date('w', strtotime($check_date)); 
+
+            // Tratamento Domingo (0 ou 7)
             $dia_buscado = $check_dia_semana;
             if ($check_dia_semana == 0 && in_array(7, $dias_obrigatorios)) {
                 $dia_buscado = 7;
             }
 
-            // Verifica se esse dia da semana é OBRIGATÓRIO treinar
             $eh_dia_de_treino = in_array($dia_buscado, $dias_obrigatorios);
-
-            // Verifica se o aluno treinou nessa data
             $treinou = in_array($check_date, $dias_treinados);
 
             if ($treinou) {
-                // Se treinou, conta ponto (independente se era obrigado ou não - "Extra credit")
                 $streak++;
             } 
             else {
-                // Se NÃO treinou...
-                
-                // Se era dia de treino OBRIGATÓRIO e ele faltou -> Perdeu a sequência.
-                // Exceção: Se for HOJE ($i==0), não quebra ainda, pois ele pode treinar mais tarde.
+                // Se faltou num dia obrigatório (e não é hoje), quebra.
                 if ($eh_dia_de_treino) {
                      if ($i > 0) {
-                         break; // Quebrou a sequência
+                         break; 
                      }
                 }
-                // Se NÃO era dia de treino (Descanso), apenas ignora e continua o loop para ontem.
             }
         }
 

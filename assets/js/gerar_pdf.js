@@ -709,42 +709,40 @@ function processarDownload(template, filename, orientation) {
         margin: 0,
         filename: filename,
         image: { 
-            type: 'png',  // MUDANÇA 1: PNG é "Lossless" (sem perda de qualidade)
-            quality: 1    // Qualidade máxima
+            type: 'jpeg', // JPEG é mais leve e rápido para renderizar em PDFs grandes
+            quality: 0.98 // Qualidade quase máxima (imperceptível a diferença pro PNG)
         },
         html2canvas: { 
-            scale: 4,     // Escala 4x (equivalente a tela Retina/4K)
+            scale: 3, // Escala 3x é suficiente para impressão nítida e evita bugs de memória
             useCORS: true, 
             scrollY: 0,
-            letterRendering: true,
-            // Dica: Tenta melhorar a renderização de fontes
-            onclone: (clonedDoc) => {
-                clonedDoc.body.style.fontSmooth = 'always';
-                clonedDoc.body.style.webkitFontSmoothing = 'antialiased';
-            }
+            letterRendering: true
         },
         jsPDF: { 
             unit: 'mm', 
             format: 'a4', 
             orientation: orientation,
-            compress: false // MUDANÇA 2: Desliga a compressão para não borrar nada
+            compress: true 
         }
     };
 
-    // --- AJUSTES DE TAMANHO (MANTIDOS) ---
+    // --- AJUSTES DE TAMANHO PARA EVITAR PÁGINA BRANCA ---
+    template.style.display = 'block'; // Mostra antes de calcular tamanho
+
     if (orientation === 'landscape') {
-        template.style.width = '297.5mm'; 
-        template.style.height = '209.8mm'; 
-        template.style.overflow = 'hidden'; 
-        template.style.margin = '0';
-        template.style.padding = '0';
+        template.style.width = '297mm'; // Largura exata A4 Paisagem
+        template.style.minHeight = '210mm'; 
     } else {
-        template.style.width = '210mm';
-        template.style.minHeight = '297mm';
-        template.style.height = 'auto';
+        // MODO RETRATO (Portrait)
+        template.style.width = '210mm'; // Largura exata A4
+        template.style.minHeight = '296mm'; // 1mm a menos que 297mm pra garantir
+        template.style.height = 'auto'; // Deixa o conteúdo ditar a altura
     }
 
-    template.style.display = 'block';
+    // Remove margens e paddings extras que podem causar overflow
+    template.style.margin = '0';
+    template.style.padding = '0';
+    template.style.boxSizing = 'border-box';
 
     html2pdf().set(opt).from(template).save().then(() => {
         template.style.display = 'none';

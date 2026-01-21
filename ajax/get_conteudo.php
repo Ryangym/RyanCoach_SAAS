@@ -1333,7 +1333,7 @@ switch ($pagina) {
                                             
                                             <td>';
                                     
-                                    // Só exibe o badge se tiver label (assim os drops ficam vazios)
+                                    // Só exibe o badge se tiver label (assim os drops ficam vazios).
                                     if ($label_visual !== '') {
                                         echo '<span class="badge-set-type '.$cat_visual.'">'.$label_visual.'</span>';
                                     }

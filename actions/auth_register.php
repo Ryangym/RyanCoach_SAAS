@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // --- CONFIGURAÇÃO DE TESTE GRÁTIS ---
     // Define quantos dias o usuário ganha ao se cadastrar
-    $dias_gratis = 30; 
+    $dias_gratis = 7; 
     
     // Calcula a data de expiração (Hoje + X dias)
     $data_expiracao = date('Y-m-d', strtotime("+$dias_gratis days"));
@@ -75,14 +75,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             ':email' => $email, 
             ':tel' => $telefone, 
             ':senha' => $senhaHash,
-            ':data_exp' => $data_expiracao, // Salva a data calculada (30 dias)
+            ':data_exp' => $data_expiracao, // Salva a data calculada (7 dias)
             ':codigo_proprio' => $codigo_gerado,
             ':coach' => $coach_id_novo,
             ':indicacao' => $indicado_por_novo
         ]);
 
         if ($sucesso) {
-            echo "<script>alert('Cadastro realizado com sucesso! Você ganhou 30 dias grátis.'); window.location.href='../login.php';</script>";
+            echo "<script>alert('Cadastro realizado com sucesso! Você ganhou 7 dias grátis.'); window.location.href='../login.php';</script>";
         } else {
             echo "<script>alert('Erro ao cadastrar. Tente novamente.'); window.history.back();</script>";
         }

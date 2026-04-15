@@ -744,6 +744,92 @@ window.toggleAccordion = function(id) {
         if(arrow) arrow.style.transform = "rotate(0deg)"; // Volta a setinha
     }
 };
+// ==========================================
+// EDIÇÃO INLINE DE AVALIAÇÕES FÍSICAS
+// ==========================================
+let editandoAvaliacaoState = {};
+
+function alternarEdicaoAvaliacao(avId, btn) {
+    const card = document.getElementById('eval_card_' + avId);
+    const viewEls = card.querySelectorAll('.view-val');
+    const inputEls = card.querySelectorAll('.edit-input');
+
+    if (!editandoAvaliacaoState[avId]) {
+        // ATIVAR MODO EDIÇÃO
+        editandoAvaliacaoState[avId] = true;
+        viewEls.forEach(el => el.style.display = 'none');
+        inputEls.forEach(el => el.style.display = 'inline-block');
+        
+        // Muda botão para Salvar
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Salvar';
+        btn.style.background = 'rgba(0, 230, 118, 0.2)'; // Verde
+        btn.style.color = '#00e676';
+        btn.style.borderColor = '#00e676';
+    } else {
+        // SALVAR ALTERAÇÕES
+        salvarEdicaoAvaliacao(avId, inputEls, btn, viewEls, card);
+    }
+}
+
+function salvarEdicaoAvaliacao(avId, inputs, btn, viewEls, card) {
+    // Feedback visual de carregamento
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+    
+    const updates = {};
+    
+    // Coleta os valores de todos os inputs
+    inputs.forEach(input => {
+        const cell = input.closest('.editable-cell');
+        const field = cell.dataset.field;
+        updates[field] = input.value;
+    });
+
+    fetch('actions/avaliacao_inline_update.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: avId, updates: updates })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Atualiza textos na tela com os novos valores digitados
+            inputs.forEach(input => {
+                const cell = input.closest('.editable-cell');
+                const span = cell.querySelector('.view-val');
+                span.innerText = input.value !== "" ? input.value : "-";
+            });
+
+            // Atualiza os cálculos (IMC, BF, Massas) retornados do backend
+            if(card.querySelector('.imc-display')) card.querySelector('.imc-display').innerText = data.calculos.imc;
+            if(card.querySelector('.magra-display')) card.querySelector('.magra-display').innerText = data.calculos.massa_magra !== "-" ? data.calculos.massa_magra + "kg" : "-";
+            if(card.querySelector('.gorda-display')) card.querySelector('.gorda-display').innerText = data.calculos.massa_gorda !== "-" ? data.calculos.massa_gorda + "kg" : "-";
+            if(card.querySelector('.bf-tag-display') && data.calculos.bf !== "-") card.querySelector('.bf-tag-display').innerText = "BF " + data.calculos.bf + "%";
+
+            // Volta o estado visual ao normal (modo visualização)
+            inputs.forEach(el => el.style.display = 'none');
+            viewEls.forEach(el => {
+                if(el.tagName === 'SMALL') el.style.display = 'inline'; // para o separador (/)
+                else el.style.display = 'inline-block';
+            });
+            
+            // Reseta o estado do botão
+            editandoAvaliacaoState[avId] = false;
+            btn.innerHTML = '<i class="fa-solid fa-pen"></i> Editar Medidas';
+            btn.style.background = ''; 
+            btn.style.color = '';
+            btn.style.borderColor = '';
+            
+        } else {
+            alert("Erro ao salvar: " + data.message);
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Salvar';
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Erro de conexão com o servidor.");
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Salvar';
+    });
+}
 
 /* ==========================================================================
    4. MODAIS DE DIETA (REFEIÇÕES E ALIMENTOS)

@@ -2223,6 +2223,320 @@ switch ($pagina) {
               </section>';
         break;
 
+    case 'gerar_pdf':
+        require_once '../config/db_connect.php';
+        
+        // Verifica se um aluno já foi selecionado
+        $aluno_id = isset($_GET['aluno_id']) ? intval($_GET['aluno_id']) : 0;
+
+        // =========================================================================
+        // PASSO 1: TELA DE SELEÇÃO DE ALUNO (Caso o admin ainda não tenha escolhido)
+        // =========================================================================
+        if ($aluno_id === 0) {
+            $stmt = $pdo->query("SELECT id, nome, email, foto, plano_atual FROM usuarios WHERE tipo_conta = 'atleta' ORDER BY nome ASC");
+            $atletas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo '<section id="selecionar-aluno-pdf" class="fade-in">
+                    <header class="dash-header-clean">
+                        <div>
+                            <h1 class="greeting-clean">Selecionar <span class="text-gold">Aluno</span></h1>
+                            <p class="date-clean">Escolha de qual aluno deseja gerar os relatórios em PDF</p>
+                        </div>
+                    </header>
+                    
+                    <div class="alunos-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 20px;">';
+            
+            if(empty($atletas)) {
+                echo '<p style="color:#888;">Nenhum aluno encontrado.</p>';
+            } else {
+                foreach($atletas as $at) {
+                    $foto = $at['foto'] ? $at['foto'] : 'assets/img/user-default.png';
+                    // CORREÇÃO AQUI: Alterado de $at['plano'] para $at['plano_atual']
+                    echo '<div class="aluno-card" onclick="abrirGeradorPdfAluno('.$at['id'].')" style="background: #161616; border: 1px solid #333; border-radius: 12px; padding: 15px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s;">
+                            <img src="'.$foto.'" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                            <div>
+                                <h4 style="margin: 0; color: #fff; font-size: 1rem;">'.$at['nome'].'</h4>
+                                <span style="color: var(--gold); font-size: 0.8rem; text-transform: uppercase;">PLANO '.$at['plano_atual'].'</span>
+                            </div>
+                          </div>';
+                }
+            }
+            
+            echo '  </div>
+                    <script>
+                        // Função injetada para buscar o PDF do aluno específico via AJAX
+                        function abrirGeradorPdfAluno(id) {
+                            fetch(`ajax/get_admin_conteudo.php?pagina=gerar_pdf&aluno_id=${id}`)
+                                .then(res => res.text())
+                                .then(html => {
+                                    // Pega o elemento atual e substitui pelo novo conteúdo
+                                    document.getElementById("selecionar-aluno-pdf").parentElement.innerHTML = html;
+                                })
+                                .catch(err => console.error("Erro ao carregar:", err));
+                        }
+                    </script>
+                  </section>';
+            break; // Para a execução aqui se for só a tela de seleção
+        }
+
+
+        // =========================================================================
+        // PASSO 2: TELA DO GERADOR DE PDF (Exatamente o seu código adaptado)
+        // =========================================================================
+
+        // Busca dados do Aluno Selecionado
+        $stmt_user = $pdo->prepare("SELECT nome, plano_atual FROM usuarios WHERE id = ?");
+        $stmt_user->execute([$aluno_id]);
+        $aluno_selecionado = $stmt_user->fetch(PDO::FETCH_ASSOC);
+
+        if (!$aluno_selecionado) {
+            echo '<section class="empty-state"><h2>Aluno não encontrado</h2></section>';
+            break;
+        }
+
+        $nome_aluno = $aluno_selecionado['nome'];
+
+        // 1. Busca o Plano Ativo (Treino)
+        $stmt = $pdo->prepare("SELECT * FROM treinos WHERE aluno_id = ? ORDER BY criado_em DESC LIMIT 1");
+        $stmt->execute([$aluno_id]);
+        $plano = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$plano) {
+            echo '<section class="empty-state">
+                    <h2>Sem plano ativo</h2>
+                    <p style="color:#888;">Este aluno ainda não possui treinos cadastrados.</p>
+                    <button class="btn-gold-outline" onclick="carregarConteudo(\'gerar_pdf\')" style="margin-top:20px;">Voltar</button>
+                  </section>';
+            break;
+        }
+
+        // -------------------------------------------------------------
+        // BLOCO DE PERIODIZAÇÃO
+        // -------------------------------------------------------------
+        $micros_para_pdf = [];
+        $stmt_per = $pdo->prepare("SELECT id FROM periodizacoes WHERE treino_id = ?");
+        $stmt_per->execute([$plano['id']]);
+        $per = $stmt_per->fetch(PDO::FETCH_ASSOC);
+
+        if ($per) {
+            $stmt_micro = $pdo->prepare("SELECT * FROM microciclos WHERE periodizacao_id = ? ORDER BY semana_numero ASC");
+            $stmt_micro->execute([$per['id']]);
+            $micros_para_pdf = $stmt_micro->fetchAll(PDO::FETCH_ASSOC);
+        }
+        $json_micros = htmlspecialchars(json_encode($micros_para_pdf), ENT_QUOTES, 'UTF-8');
+
+        // -------------------------------------------------------------
+        // BLOCO DE AVALIAÇÕES FÍSICAS
+        // -------------------------------------------------------------
+        $stmt_av = $pdo->prepare("SELECT * FROM avaliacoes WHERE aluno_id = ? ORDER BY data_avaliacao DESC LIMIT 5");
+        $stmt_av->execute([$aluno_id]);
+        $avaliacoes_lista = $stmt_av->fetchAll(PDO::FETCH_ASSOC);
+        $json_avaliacoes = htmlspecialchars(json_encode($avaliacoes_lista), ENT_QUOTES, 'UTF-8');
+        // -------------------------------------------------------------
+
+        // 2. Busca Divisões e Exercícios
+        $stmt_div = $pdo->prepare("SELECT * FROM treino_divisoes WHERE treino_id = ? ORDER BY letra ASC");
+        $stmt_div->execute([$plano['id']]);
+        $divisoes = $stmt_div->fetchAll(PDO::FETCH_ASSOC);
+
+        $mapa_dias = [
+            1 => 'Segunda-Feira', 2 => 'Terça-Feira', 3 => 'Quarta-Feira',
+            4 => 'Quinta-Feira', 5 => 'Sexta-Feira', 6 => 'Sábado',
+            7 => 'Domingo', 0 => 'Domingo'
+        ];
+
+        $dias_treino = [];
+        if (!empty($plano['dias_semana'])) {
+            $decoded = json_decode($plano['dias_semana'], true);
+            if (is_array($decoded)) { $dias_treino = $decoded; }
+        }
+
+        $dados_treinos = [];
+        $total_divisoes = count($divisoes);
+
+        foreach ($divisoes as $index_div => $div) {
+            $dias_desta_divisao = [];
+            if ($total_divisoes > 0 && !empty($dias_treino)) {
+                foreach ($dias_treino as $k => $dia_num) {
+                    if (($k % $total_divisoes) == $index_div) {
+                        if (isset($mapa_dias[$dia_num])) {
+                            $dias_desta_divisao[] = $mapa_dias[$dia_num];
+                        }
+                    }
+                }
+            }
+            $dia_exibicao = !empty($dias_desta_divisao) ? implode(' / ', $dias_desta_divisao) : 'TREINO ' . $div['letra'];
+
+            $stmt_ex = $pdo->prepare("SELECT * FROM exercicios WHERE divisao_id = ? ORDER BY ordem ASC");
+            $stmt_ex->execute([$div['id']]);
+            $exercicios = $stmt_ex->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($exercicios as &$ex) {
+                $stmt_s = $pdo->prepare("SELECT * FROM series WHERE exercicio_id = ? ORDER BY id ASC");
+                $stmt_s->execute([$ex['id']]);
+                $ex['lista_series'] = $stmt_s->fetchAll(PDO::FETCH_ASSOC); 
+            }
+            
+            $dados_treinos[$div['letra']] = [
+                'nome' => $div['nome'],
+                'letra' => $div['letra'],
+                'dia_real' => $dia_exibicao,
+                'exercicios' => $exercicios
+            ];
+        }
+        
+        $json_treinos = htmlspecialchars(json_encode($dados_treinos), ENT_QUOTES, 'UTF-8');
+
+        // RENDERIZAÇÃO DO PAINEL DE PDF
+        echo '<section id="area-relatorios" class="fade-in">
+                
+                <header class="dash-header-clean" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h1 class="greeting-clean">Gerador de <span class="text-gold">Fichas</span></h1>
+                        <p class="date-clean">Aluno: <strong style="color:#fff;">'.$nome_aluno.'</strong> | Plano: <strong>'.$plano['nome'].'</strong></p>
+                    </div>
+                    <button class="btn-outline" onclick="carregarConteudo(\'gerar_pdf\')" style="padding: 8px 15px; border-radius: 8px; font-size: 0.8rem;">
+                        <i class="fa-solid fa-arrow-left"></i> Trocar Aluno
+                    </button>
+                </header>
+
+                <input type="hidden" id="json-dados-treinos" value="'.$json_treinos.'">
+                <input type="hidden" id="json-dados-micros" value="'.$json_micros.'">
+                <input type="hidden" id="json-dados-avaliacoes" value="'.$json_avaliacoes.'">
+                <input type="hidden" id="plano-nome-atual" value="'.$plano['nome'].'">
+
+                <div class="pdf-action-card" onclick="abrirModalPDF()">
+                    <div class="pac-icon"><i class="fa-solid fa-file-pdf"></i></div>
+                    <div class="pac-info">
+                        <h3>Gerar Arquivos PDF</h3>
+                        <p>Ficha de Treino, Periodização e Avaliação Física.</p>
+                    </div>
+                    <div class="pac-arrow"><i class="fa-solid fa-chevron-right"></i></div>
+                </div>
+
+                <div id="modalPDFConfig" class="modal-overlay" style="display:none;">
+                    <div class="modal-content-premium" style="max-width: 450px;">
+                        
+                        <h3 class="modal-title">
+                            <i class="fa-solid fa-sliders"></i> PERSONALIZAR FICHA
+                        </h3>
+                        
+                        <div style="text-align:left; margin-bottom:15px;">
+                            <label class="input-label">Nome no Relatório</label>
+                            <input type="text" id="pdf_aluno_nome" class="modal-input" value="'.$nome_aluno.'">
+                        </div>
+
+                        <div style="text-align:left; margin-bottom:15px;">
+                            <label class="input-label">Tipo de Arquivo</label>
+                            <select id="pdf_tipo_arquivo" class="modal-input" style="cursor:pointer;">
+                                <option value="treino">Ficha de Treino (Retrato)</option>
+                                <option value="periodizacao">Periodização (Paisagem)</option>
+                                <option value="avaliacao">Avaliação Física (Retrato)</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
+                            <div>
+                                <label class="input-label">Tema</label>
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <input type="color" id="pdf_theme_color" value="#000000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                    <span style="font-size:0.8rem; color:#888;">Cabeçalhos</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="input-label">Fundo</label>
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <input type="color" id="pdf_bg_color" value="#ffffff" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                    <span style="font-size:0.8rem; color:#888;">Folha</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="input-label">Bordas</label>
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <input type="color" id="pdf_border_color" value="#000000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                    <span style="font-size:0.8rem; color:#888;">Linhas</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button class="btn-gold" onclick="gerarPDFSelecionado()" style="flex: 2; display:flex; align-items:center; justify-content:center; gap:8px;">
+                                <i class="fa-solid fa-file-pdf"></i> BAIXAR PDF
+                            </button>
+                            <button type="button" class="btn-outline" onclick="debugPreviewPDF()" style="flex: 1; border: 1px solid var(--gold); color: var(--gold); background: transparent; border-radius:10px;">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+
+                        <button class="btn-cancel" onclick="document.getElementById(\'modalPDFConfig\').style.display=\'none\'" style="margin-top:15px;">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+
+                <div id="template-impressao-full" style="display:none;">
+                    <div class="pdf-sheet">
+                        <div class="sheet-header" id="pdf-header-main">
+                            <div class="sh-meta">
+                                <span id="render-plano-nome">'.$plano['nome'].'</span>
+                                <span>DATA: <strong>'.date('d/m/Y').'</strong></span>
+                            </div>
+                            <h1><strong id="render-aluno-nome">NOME DO ALUNO</strong></h1>
+                            <div class="sh-logo">
+                                <img src="assets/img/icones/icon-nav.png" alt="Ryan Coach">
+                            </div>
+                        </div>
+                        <div id="pdf-container-treinos"></div>
+                        <div class="sheet-footer">
+                            <p>Metodologia <strong>RYAN COACH</strong></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="template-periodizacao-full" style="display: none; width: 330mm; min-height: 190mm; background: black; color: #fff;">
+                    <div class="pdf-sheet landscape" style="padding: 10px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
+                        
+                        <div id="pdf-header-perio" style="display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 10px; margin-bottom: 15px; border-bottom: 4px solid #fff;">
+                            <div class="sh-logo">
+                                <img src="assets/img/icones/icon-nav.png" style="height: 50px; object-fit: contain;">
+                            </div>
+                            <div style="text-align: center; flex: 1;">
+                                <h1 id="render-aluno-nome-perio" style="font-family: \'Lobster\', cursive; font-size: 35px; margin: 0; text-decoration: none; font-weight: 500;">Nome do Aluno</h1>
+                                <span id="render-plano-nome-perio" style="font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #fff; font-weight: bold;">MACROCICLO</span>
+                            </div>
+                            <div class="sh-meta" style="text-align: right;">
+                                <span style="color: #fff; font-size: 10px; font-weight: bold;">PERIODIZAÇÃO</span>
+                            </div>
+                        </div>
+
+                        <div id="pdf-container-micros"></div>
+
+                        <div class="sheet-footer">
+                            Gerado por Ryan Coach App
+                        </div>
+                    </div>
+                </div>
+
+                <div id="template-avaliacao-full" style="display:none;">
+                    <div class="pdf-sheet">
+                        <div class="sheet-header" id="pdf-header-aval">
+                            <div class="sh-meta">
+                                <span>RELATÓRIO TÉCNICO</span>
+                                <span>DATA: <strong id="aval-data-ref"></strong></span>
+                            </div>
+                            <h1><strong id="render-aluno-nome-aval" style="font-family: \'Lobster\', cursive; font-size: 35px; margin: 0; text-decoration: none; font-weight: 500;">NOME</strong></h1>
+                            <div class="sh-logo"><img src="assets/img/icones/icon-nav.png"></div>
+                        </div>
+                        <div id="pdf-container-avaliacao" style="padding: 20px;"></div>
+                        <div class="sheet-footer">
+                            <p>Metodologia <strong>RYAN COACH</strong></p>
+                        </div>
+                    </div>
+                </div>
+
+              </section>';
+        break;
+
     // --- NOVO MENU GERAL ADMIN ---
     case 'admin_menu':
         require_once '../config/db_connect.php';
@@ -2260,9 +2574,9 @@ switch ($pagina) {
                         <span style="color: #ccc; font-size: 0.9rem;">Editor de Treinos</span>
                     </div>
 
-                    <div class="menu-card" onclick="carregarConteudo(\'financeiro\')" style="background: #161616; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #333;">
-                        <i class="fa-solid fa-sack-dollar" style="font-size: 1.5rem; color: #fff; margin-bottom: 10px; display: block;"></i>
-                        <span style="color: #ccc; font-size: 0.9rem;">Fluxo de Caixa</span>
+                    <div class="menu-card" onclick="carregarConteudo(\'gerar_pdf\')" style="background: #161616; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #333;">
+                        <i class="fa-solid fa-file-pdf" style="font-size: 1.5rem; color: #fff; margin-bottom: 10px; display: block;"></i>
+                        <span style="color: #ccc; font-size: 0.9rem;">Gerar PDF</span>
                     </div>
 
                     <div class="menu-card" onclick="carregarConteudo(\'mensagens\')" style="background: #161616; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #333;">

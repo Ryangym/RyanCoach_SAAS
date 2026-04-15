@@ -1490,34 +1490,42 @@ switch ($pagina) {
         require_once '../config/db_connect.php';
         $aluno_id = $_SESSION['user_id'];
 
-        // --- DEFINIÇÃO DAS FUNÇÕES AUXILIARES (Closures) ---
-        // Definimos como variáveis para garantir que funcionem dentro do switch
-        $renderMeasure = function($label, $val) {
-            if(!$val) return '';
-            return '<div class="m-box"><span>'.$label.'</span><strong>'.$val.'</strong></div>';
+        // --- DEFINIÇÃO DAS FUNÇÕES AUXILIARES COM ESTRUTURA INLINE EDIT ---
+        $renderMeasure = function($label, $field, $val) {
+            $display = $val ? $val : '-';
+            return '<div class="m-box editable-cell" data-field="'.$field.'">
+                        <span>'.$label.'</span>
+                        <strong class="view-val">'.$display.'</strong>
+                        <input type="number" step="0.01" class="edit-input admin-input" value="'.$val.'" style="display:none; width: 65px; padding: 2px 5px; text-align:center; margin-top:5px; background: rgba(0,0,0,0.2); border: 1px solid #444; color:#fff; border-radius:4px;">
+                    </div>';
         };
 
-        $renderMeasureDouble = function($label, $val1, $val2) {
-            if(!$val1 && !$val2) return '';
+        $renderMeasureDouble = function($label, $field1, $val1, $field2, $val2) {
+            $d1 = $val1 ? $val1 : '-';
+            $d2 = $val2 ? $val2 : '-';
             return '<div class="m-box-double">
                         <span>'.$label.'</span>
                         <div class="vals">
-                            <strong>'.($val1?:'-').'</strong>
-                            <small>/</small>
-                            <strong>'.($val2?:'-').'</strong>
+                            <div class="editable-cell" data-field="'.$field1.'" style="display:inline-block;">
+                                <strong class="view-val">'.$d1.'</strong>
+                                <input type="number" step="0.01" class="edit-input admin-input" value="'.$val1.'" style="display:none; width: 50px; padding: 2px; text-align:center; background: rgba(0,0,0,0.2); border: 1px solid #444; color:#fff; border-radius:4px;">
+                            </div>
+                            <small class="view-val">/</small>
+                            <div class="editable-cell" data-field="'.$field2.'" style="display:inline-block;">
+                                <strong class="view-val">'.$d2.'</strong>
+                                <input type="number" step="0.01" class="edit-input admin-input" value="'.$val2.'" style="display:none; width: 50px; padding: 2px; text-align:center; background: rgba(0,0,0,0.2); border: 1px solid #444; color:#fff; border-radius:4px;">
+                            </div>
                         </div>
                     </div>';
         };
         // -------------------------------------------------------
 
-        // 1. BUSCA DADOS
         $sql = "SELECT * FROM avaliacoes WHERE aluno_id = ? ORDER BY data_avaliacao DESC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$aluno_id]);
         $avaliacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo '<section id="avaliacoes-section" class="fade-in">
-                
                 <header class="dash-header-clean">
                     <div>
                         <h1 class="greeting-clean">Avaliação <span class="text-gold">Física</span></h1>
@@ -1530,23 +1538,14 @@ switch ($pagina) {
 
         if (empty($avaliacoes)) {
             echo '<div class="empty-state">
-                    <div class="empty-icon-circle">
-                        <i class="fa-solid fa-weight-scale"></i>
-                    </div>
-                    <h2 style="color: #fff; font-family: Orbitron, sans-serif; font-size: 1.5rem; margin: 0 0 10px 0; letter-spacing: 1px;">
-                        Comece sua Jornada
-                    </h2>
-                    <p style="color: #888; font-size: 0.95rem; margin: 0; max-width: 350px; line-height: 1.5;">
-                        Registre sua primeira avaliação para acompanhar sua evolução.
-                    </p>
+                    <div class="empty-icon-circle"><i class="fa-solid fa-weight-scale"></i></div>
+                    <h2 style="color: #fff; font-family: Orbitron, sans-serif; font-size: 1.5rem; margin: 0 0 10px 0;">Comece sua Jornada</h2>
+                    <p style="color: #888; font-size: 0.95rem; margin: 0;">Registre sua primeira avaliação.</p>
                 </div>';
         } else {
-
-            // --- LISTA ACCORDION ---
             echo '<div class="eval-timeline-wrapper">';
 
             foreach ($avaliacoes as $av) {
-                // Busca Arquivos (Fotos/Vídeos)
                 $stmt_arq = $pdo->prepare("SELECT * FROM avaliacoes_arquivos WHERE avaliacao_id = ?");
                 $stmt_arq->execute([$av['id']]);
                 $arquivos = $stmt_arq->fetchAll(PDO::FETCH_ASSOC);
@@ -1558,18 +1557,13 @@ switch ($pagina) {
                 echo '<div class="accordion-card" id="'.$card_id.'">
                         
                         <div class="accordion-header" onclick="toggleAccordion(\''.$card_id.'\')">
-                            <div class="date-badge">
-                                <span class="d-day">'.$dia.'</span>
-                                <span class="d-month">'.$mes.'</span>
-                            </div>
+                            <div class="date-badge"><span class="d-day">'.$dia.'</span><span class="d-month">'.$mes.'</span></div>
                             <div class="header-info">
                                 <div class="info-main">
                                     <span class="weight-display">'.($av['peso_kg'] * 1).' <small>kg</small></span>
-                                    '.($av['percentual_gordura'] ? '<span class="bf-tag">BF '.($av['percentual_gordura']*1).'%</span>' : '').'
+                                    '.($av['percentual_gordura'] ? '<span class="bf-tag bf-tag-display">BF '.($av['percentual_gordura']*1).'%</span>' : '').'
                                 </div>
-                                <span class="info-sub">'.count($arquivos).' mídias anexadas</span>
                             </div>
-
                             <div class="accordion-arrow"><i class="fa-solid fa-chevron-right"></i></div>
                         </div>
 
@@ -1577,75 +1571,50 @@ switch ($pagina) {
                             <div class="body-padding">
                                 
                                 <div class="stats-tiles">
-                                    <div class="tile">
-                                        <small>IMC</small>
-                                        <strong>'.($av['imc'] ?: '-').'</strong>
+                                    <div class="tile"><small>IMC</small><strong class="imc-display">'.($av['imc'] ?: '-').'</strong></div>
+                                    <div class="tile"><small>M. MAGRA</small><strong class="magra-display">'.($av['massa_magra_kg'] ? $av['massa_magra_kg'].'kg' : '-').'</strong></div>
+                                    <div class="tile"><small>M. GORDA</small><strong class="gorda-display">'.($av['massa_gorda_kg'] ? $av['massa_gorda_kg'].'kg' : '-').'</strong></div>
+                                </div>
+
+                                <div class="measures-container">
+                                    <div class="m-group">
+                                        <span class="mg-label">TRONCO E MEDIDAS GERAIS</span>
+                                        <div class="mg-grid">
+                                            '.$renderMeasure('Peso (kg)', 'peso_kg', $av['peso_kg']).'
+                                            '.$renderMeasure('Altura (cm)', 'altura_cm', $av['altura_cm']).'
+                                            '.$renderMeasure('Pescoço', 'pescoco', $av['pescoco']).'
+                                            '.$renderMeasure('Ombros', 'ombro', $av['ombro']).'
+                                            '.$renderMeasure('Tórax', 'torax_relaxado', $av['torax_relaxado']).'
+                                            '.$renderMeasure('Cintura', 'cintura', $av['cintura']).'
+                                            '.$renderMeasure('Abdômen', 'abdomen', $av['abdomen']).'
+                                            '.$renderMeasure('Quadril', 'quadril', $av['quadril']).'
+                                        </div>
                                     </div>
-                                    <div class="tile">
-                                        <small>M. MAGRA</small>
-                                        <strong>'.($av['massa_magra_kg'] ? $av['massa_magra_kg'].'kg' : '-').'</strong>
-                                    </div>
-                                    <div class="tile">
-                                        <small>M. GORDA</small>
-                                        <strong>'.($av['massa_gorda_kg'] ? $av['massa_gorda_kg'].'kg' : '-').'</strong>
+
+                                    <div class="m-group">
+                                        <span class="mg-label">MEMBROS (D / E)</span>
+                                        <div class="mg-grid-wide">
+                                            '.$renderMeasureDouble('Braço (Rel)', 'braco_dir_relaxado', $av['braco_dir_relaxado'], 'braco_esq_relaxado', $av['braco_esq_relaxado']).'
+                                            '.$renderMeasureDouble('Braço (Con)', 'braco_dir_contraido', $av['braco_dir_contraido'], 'braco_esq_contraido', $av['braco_esq_contraido']).'
+                                            '.$renderMeasureDouble('Coxa', 'coxa_dir', $av['coxa_dir'], 'coxa_esq', $av['coxa_esq']).'
+                                            '.$renderMeasureDouble('Panturrilha', 'panturrilha_dir', $av['panturrilha_dir'], 'panturrilha_esq', $av['panturrilha_esq']).'
+                                        </div>
                                     </div>
                                 </div>
 
-                                ';
-                                if (!empty($arquivos)) {
-                                    echo '<div class="gallery-strip">
-                                            <span class="strip-title"><i class="fa-solid fa-camera"></i> Fotos do Dia</span>
-                                            <div class="strip-scroll">';
+                                <div class="card-footer-actions" style="margin-top:30px; text-align:center; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px; display:flex; justify-content:center; gap: 10px;">
                                     
-                                    foreach ($arquivos as $arq) {
-                                        if ($arq['tipo'] == 'foto') {
-                                            echo '<div class="strip-item"><img src="assets/uploads/'.$arq['caminho_ou_url'].'" loading="lazy" onclick="window.open(this.src)"></div>';
-                                        } else {
-                                            echo '<a href="'.$arq['caminho_ou_url'].'" target="_blank" class="strip-item video-item"><i class="fa-solid fa-play"></i></a>';
-                                        }
-                                    }
-                                    echo '  </div>
-                                          </div>';
-                                }
+                                    <button class="btn-gold-outline" id="btn-editar-av-'.$av['id'].'" onclick="alternarEdicaoAvaliacao('.$av['id'].', this)">
+                                        <i class="fa-solid fa-pen"></i> Editar Medidas
+                                    </button>
 
-                                // 3. MEDIDAS DETALHADAS (Usando as variáveis $renderMeasure)
-                                echo '<div class="measures-container">
-                                        
-                                        <div class="m-group">
-                                            <span class="mg-label">TRONCO</span>
-                                            <div class="mg-grid">
-                                                '.$renderMeasure('Ombros', $av['ombro']).'
-                                                '.$renderMeasure('Tórax', $av['torax_relaxado']).'
-                                                '.$renderMeasure('Cintura', $av['cintura']).'
-                                                '.$renderMeasure('Abdômen', $av['abdomen']).'
-                                                '.$renderMeasure('Quadril', $av['quadril']).'
-                                            </div>
-                                        </div>
-
-                                        <div class="m-group">
-                                            <span class="mg-label">MEMBROS (D / E)</span>
-                                            <div class="mg-grid-wide">
-                                                '.$renderMeasureDouble('Braço (Rel)', $av['braco_dir_relaxado'], $av['braco_esq_relaxado']).'
-                                                '.$renderMeasureDouble('Braço (Con)', $av['braco_dir_contraido'], $av['braco_esq_contraido']).'
-                                                '.$renderMeasureDouble('Coxa', $av['coxa_dir'], $av['coxa_esq']).'
-                                                '.$renderMeasureDouble('Panturrilha', $av['panturrilha_dir'], $av['panturrilha_esq']).'
-                                            </div>
-                                        </div>
-
-                                      </div>';
-                                
-                                if($av['observacoes']) {
-                                    echo '<div class="obs-box"><i class="fa-solid fa-quote-left"></i> '.$av['observacoes'].'</div>';
-                                }
-
-                                // Botão de Excluir (Admin tem poder)
-                                echo '<div class="card-footer-actions" style="margin-top:30px; text-align:center; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;">
-                                        <a href="actions/avaliacao_delete.php?id='.$av['id'].'" class="btn-danger-outline" onclick="return confirm(\'Apagar avaliação permanentemente?\');">
-                                            <i class="fa-solid fa-trash-can"></i> Excluir Avaliação
-                                        </a>
-                                      </div>';
-
-                echo '      </div> </div> </div> ';
+                                    <a href="actions/avaliacao_delete.php?id='.$av['id'].'" class="btn-danger-outline" onclick="return confirm(\'Apagar avaliação permanentemente?\');">
+                                        <i class="fa-solid fa-trash-can"></i> Excluir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>';
             }
             echo '</div>'; 
         }

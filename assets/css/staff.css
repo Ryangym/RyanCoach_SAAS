@@ -350,3 +350,13 @@
 .btn-undo { border-color: #ff9900; color: #ff9900; }
 .btn-undo:hover { background: #ff9900; color: #000; }
 
+@media (max-width: 768px){
+.dash-header-clean{
+    flex-direction: column !important;
+    gap: 8px;
+}
+#btn-trocar-aluno{
+    padding: 10px;
+    margin-bottom: 10px;
+}
+}

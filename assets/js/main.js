@@ -760,11 +760,10 @@ function alternarEdicaoAvaliacao(avId, btn) {
         viewEls.forEach(el => el.style.display = 'none');
         inputEls.forEach(el => el.style.display = 'inline-block');
         
-        // Muda botão para Salvar
+        // Muda botão para Salvar adicionando a classe verde
         btn.innerHTML = '<i class="fa-solid fa-check"></i> Salvar';
-        btn.style.background = 'rgba(0, 230, 118, 0.2)'; // Verde
-        btn.style.color = '#00e676';
-        btn.style.borderColor = '#00e676';
+        btn.classList.add('btn-edit-mode'); // Adiciona a classe com o hover verde
+        
     } else {
         // SALVAR ALTERAÇÕES
         salvarEdicaoAvaliacao(avId, inputEls, btn, viewEls, card);

@@ -35,10 +35,6 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
 </head>
 <body>
 
-    <a href="index.php" class="logo-link">
-        <h2 class="logo">Ryan Coach</h2>
-    </a>
-
     <div class="container" id="container">
 
         <div class="form-container sign-up-container">

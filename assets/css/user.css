@@ -576,6 +576,18 @@ section {
     font-size: 0.85rem;
 }
 .btn-gold:hover { background: #fff; box-shadow: 0 0 15px var(--gold); }
+
+.btn-edit-mode {
+    background: rgba(0, 230, 118, 0.2) !important;
+    color: #00e676 !important;
+    border-color: #00e676 !important;
+}
+
+.btn-edit-mode:hover {
+    background: rgba(0, 230, 118, 0.4) !important; /* Fica um pouco mais forte */
+    box-shadow: 0 0 15px #00e676 !important; /* Glow verde no lugar do dourado */
+    color: #fff !important; /* Texto branco ao passar o mouse */
+}
 @media (max-width: 768px) {
     .btn-gold {
         width: 100%;

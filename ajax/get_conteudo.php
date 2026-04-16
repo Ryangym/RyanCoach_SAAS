@@ -1602,9 +1602,9 @@ switch ($pagina) {
                                     </div>
                                 </div>
 
-                                <div class="card-footer-actions" style="margin-top:30px; text-align:center; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px; display:flex; justify-content:center; gap: 10px;">
+                                <div class="card-footer-actions" style="margin-top:30px; text-align:center; flex-direction: column; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px; display:flex; justify-content:center; gap: 10px;">
                                     
-                                    <button class="btn-gold-outline" id="btn-editar-av-'.$av['id'].'" onclick="alternarEdicaoAvaliacao('.$av['id'].', this)">
+                                    <button class="btn-gold id="btn-editar-av-'.$av['id'].'" onclick="alternarEdicaoAvaliacao('.$av['id'].', this)">
                                         <i class="fa-solid fa-pen"></i> Editar Medidas
                                     </button>
 

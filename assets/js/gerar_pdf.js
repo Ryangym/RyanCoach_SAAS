@@ -243,17 +243,9 @@ function renderizarTemplateTreino(dados, nomeAluno, nomePlano, configCores) {
     return template;
 }
 
+
 /**
- * Constrói o HTML da Periodização (NOVO)
- */
-/**
- * RENDERIZA PERIODIZAÇÃO (LAYOUT 2 COLUNAS x 6 LINHAS - BLOCOS LARGOS)
- */
-/**
- * RENDERIZA PERIODIZAÇÃO (LAYOUT 2 COLUNAS - ORDEM VERTICAL)
- */
-/**
- * RENDERIZA PERIODIZAÇÃO (LAYOUT FINAL - 2 DIVS)
+ * RENDERIZA PERIODIZAÇÃO (LAYOUT FINAL )
  */
 function renderizarTemplatePeriodizacao(micros, nomeAluno, nomePlano, configCores) {
     const { tema, fundo, borda } = configCores;
@@ -369,9 +361,9 @@ function renderizarTemplatePeriodizacao(micros, nomeAluno, nomePlano, configCore
                 <div class="col-info">
                     <span style="font-size: 14px;">Semana ${micro.semana_numero}: ${textoData}</span>
                     <span style="margin-right: 3px;">Microciclo: ${micro.nome_fase}</span>
-                    <div class="metrics-box">
-                        <span class="m-label">Compostos: ${micro.reps_compostos || '-'} | ${micro.descanso_compostos ? micro.descanso_compostos+'s' : ''}
-                            Isolados: ${micro.reps_isoladores || '-'} | ${micro.descanso_isoladores ? micro.descanso_isoladores+'s' : ''}</span>
+                    <div class="metrics-box" style="display: flex; flex-direction: column;">
+                        <span class="m-label">E. Compostos: ${micro.reps_compostos || '-'} | ${micro.descanso_compostos ? micro.descanso_compostos+'s' : ''}</span>
+                        <span class="m-label">E. Isolados: ${micro.reps_isoladores || '-'} | ${micro.descanso_isoladores ? micro.descanso_isoladores+'s' : ''}</span>
                     </div>
                 </div>
                 <div class="col-obs">

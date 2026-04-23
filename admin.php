@@ -18,6 +18,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['tipo_conta'] !== 'admin') {
     <link rel="stylesheet" href="assets/css/staff.css">
     <link rel="stylesheet" href="assets/css/pdf.css">
 
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
+
     <?php include 'includes/head_main.php'; ?>
 </head>
 <body>

@@ -2467,21 +2467,21 @@ switch ($pagina) {
                             <div>
                                 <label class="input-label">Tema</label>
                                 <div style="display:flex; align-items:center; gap:10px;">
-                                    <input type="color" id="pdf_theme_color" value="#000000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                    <input type="color" id="pdf_theme_color" value="#570e0e" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
                                     <span style="font-size:0.8rem; color:#888;">Cabeçalhos</span>
                                 </div>
                             </div>
                             <div>
                                 <label class="input-label">Fundo</label>
                                 <div style="display:flex; align-items:center; gap:10px;">
-                                    <input type="color" id="pdf_bg_color" value="#ffffff" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                    <input type="color" id="pdf_bg_color" value="#000000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
                                     <span style="font-size:0.8rem; color:#888;">Folha</span>
                                 </div>
                             </div>
                             <div>
                                 <label class="input-label">Bordas</label>
                                 <div style="display:flex; align-items:center; gap:10px;">
-                                    <input type="color" id="pdf_border_color" value="#000000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                    <input type="color" id="pdf_border_color" value="#ff0000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
                                     <span style="font-size:0.8rem; color:#888;">Linhas</span>
                                 </div>
                             </div>
@@ -2522,7 +2522,7 @@ switch ($pagina) {
                 </div>
 
                 <div id="template-periodizacao-full" style="display: none; width: 330mm; min-height: 190mm; background: black; color: #fff;">
-                    <div class="pdf-sheet landscape" style="padding: 10px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
+                    <div class="pdf-sheet landscape" style="padding: 10px; box-sizing: border-box; display: flex; flex-direction: column;">
                         
                         <div id="pdf-header-perio" style="display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 10px; margin-bottom: 15px; border-bottom: 4px solid #fff;">
                             <div class="sh-logo">

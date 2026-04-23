@@ -2087,7 +2087,7 @@ switch ($pagina) {
                         <div>
                             <label class="input-label">Tema</label>
                             <div style="display:flex; align-items:center; gap:10px;">
-                                <input type="color" id="pdf_theme_color" value="#000000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                <input type="color" id="pdf_theme_color" value="#500808" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
                                 <span style="font-size:0.8rem; color:#888;">Cabeçalhos</span>
                             </div>
                         </div>
@@ -2095,7 +2095,7 @@ switch ($pagina) {
                         <div>
                             <label class="input-label">Fundo</label>
                             <div style="display:flex; align-items:center; gap:10px;">
-                                <input type="color" id="pdf_bg_color" value="#ffffff" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                <input type="color" id="pdf_bg_color" value="#000000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
                                 <span style="font-size:0.8rem; color:#888;">Folha</span>
                             </div>
                         </div>
@@ -2103,7 +2103,7 @@ switch ($pagina) {
                         <div>
                             <label class="input-label">Bordas</label>
                             <div style="display:flex; align-items:center; gap:10px;">
-                                <input type="color" id="pdf_border_color" value="#000000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                <input type="color" id="pdf_border_color" value="#ff0303" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
                                 <span style="font-size:0.8rem; color:#888;">Linhas</span>
                             </div>
                         </div>

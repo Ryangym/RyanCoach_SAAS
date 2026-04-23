@@ -207,11 +207,11 @@
     padding: 0px;
     width: 100%;
     /* MUDANÇA AQUI: Remove height: 100% para evitar quebra de página fantasma */
-    min-height: 296mm; /* Garante que preencha 1 página A4 */
+    min-height: 210mm; /* Garante que preencha 1 página A4 */
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* Empurra o footer pra baixo */
+    justify-content: flex-start; /* Empurra o footer pra baixo */
 }
 
 /* =========================================
@@ -788,8 +788,12 @@
 }
 
 .sheet-header h1 {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.sh-logo{
     margin-left: auto;
-    margin-right: auto;
 }
 
 .sh-meta {

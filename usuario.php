@@ -1104,7 +1104,7 @@ function alternarEdicaoHistorico() {
     if (isEditingHistory) {
         // MODO EDIÇÃO ATIVADO
         viewEls.forEach(el => el.style.display = 'none');
-        inputEls.forEach(el => el.style.display = 'block');
+        inputEls.forEach(el => el.style.display = 'inline-block');
         
         // Muda botão para Salvar
         btn.innerHTML = '<i class="fa-solid fa-check"></i>';

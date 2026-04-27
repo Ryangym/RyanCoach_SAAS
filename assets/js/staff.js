@@ -181,7 +181,7 @@ function alternarEdicaoHistoricoAdm(alunoId) {
     if (isEditingHistoryAdm) {
         // ATIVAR MODO EDIÇÃO
         viewEls.forEach(el => el.style.display = 'none');
-        inputEls.forEach(el => el.style.display = 'block');
+        inputEls.forEach(el => el.style.display = 'inline-block');
         
         // Estilo do botão: Verde (Confirmar)
         btn.innerHTML = '<i class="fa-solid fa-check"></i>';

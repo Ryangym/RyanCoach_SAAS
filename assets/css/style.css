@@ -634,6 +634,7 @@ body.saas-body {
     scroll-snap-align: center; /* Centraliza ao parar de rolar */
     position: relative;
     transition: 0.3s;
+    text-decoration: none;
 }
 
 .review-card:hover {
@@ -661,6 +662,13 @@ body.saas-body {
     display: flex; align-items: center; justify-content: center;
     color: var(--text-gray);
     border: 1px solid #333;
+}
+.user-avatar img{
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    border-radius: 50%;
+    object-position: top;
 }
 
 .user-info strong {
@@ -695,8 +703,8 @@ body.saas-body {
 /* Ajuste Desktop */
 @media (min-width: 992px) {
     .reviews-scroll {
-        justify-content: center; /* Centraliza se couber na tela */
-        flex-wrap: wrap; /* Quebra linha se precisar */
+        /* justify-content: center; /* Centraliza se couber na tela */
+        /* flex-wrap: wrap; /* Quebra linha se precisar */
         overflow-x: visible;
     }
 }

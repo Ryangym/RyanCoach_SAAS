@@ -222,36 +222,48 @@ require_once 'includes/head_main.php';
         <div class="container">
             <h2 class="section-title">Quem usa, <span class="text-gold">Evolui</span>.</h2>
             <div class="reviews-scroll">
-                <div class="review-card">
+                <a href="https://www.instagram.com/joa0michel?igsh=azI1NDlrZ3M0ZGdw" class="review-card">
                     <div class="review-header">
                         <div class="user-info">
-                            <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
-                            <div><strong>Pedro S.</strong><span class="user-tag">Plano Pro</span></div>
+                            <div class="user-avatar"><img src="assets/img/user-reviews/joaomichel.jpeg" alt=""></div>
+                            <div><strong>João</strong><span class="user-tag">Plano Pro</span></div>
                         </div>
                         <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
                     </div>
-                    <p>"Finalmente parei de usar o bloco de notas. O gerador de PDF é sensacional, imprimo minha ficha e levo pra academia com visual profissional."</p>
-                </div>
-                <div class="review-card">
+                    <p>"Ryan tem me ajudado muito na perda de peso e no ganho de músculos nos treinos. As fichas de treino são muito boas, diretas, e com exercícios que a gente consegue fazer e, inclusive, até subir a carga.
+Melhorei muito mesmo depois que comecei a acompanhar com ele, e recomendo pra caramba! O site motiva a gente a ir treinar todo dia, pra marcar a evolução e ver o progresso.
+Só tenho a agradecer, tem me incentivado pra caramba"</p>
+                </a>
+                <a href="https://www.instagram.com/pedro_azvdo_?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" class="review-card">
                     <div class="review-header">
                         <div class="user-info">
-                            <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
-                            <div><strong>Lucas M.</strong><span class="user-tag">Plano Pro</span></div>
+                            <div class="user-avatar"><img src="assets/img/user-reviews/pedroazevedo.jpeg" alt=""></div>
+                            <div><strong>Pedro Azevedo</strong><span class="user-tag">Plano Start</span></div>
                         </div>
                         <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
                     </div>
-                    <p>"A periodização automática mudou meu jogo. Saber exatamente quando aumentar a carga ou fazer deload me fez sair do platô."</p>
-                </div>
-                <div class="review-card">
+                    <p>"O treino é excelente, gosto bastante da dinâmica, nao fica pesado e é eficiente. O site é melhor ainda, a interface é muito intuitiva, pratica e facil de ser utilizada."</p>
+                </a>
+                <a href="https://www.instagram.com/josiel_borges199?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" class="review-card">
                     <div class="review-header">
                         <div class="user-info">
-                            <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
-                            <div><strong>Matheus R.</strong><span class="user-tag">Plano Start</span></div>
+                            <div class="user-avatar"><img src="assets/img/user-reviews/josiel.jpeg" alt=""></div>
+                            <div><strong>Josiel</strong><span class="user-tag">Plano Pro</span></div>
                         </div>
                         <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
                     </div>
-                    <p>"Sistema simples e direto. Sem enrolação. É entrar, ver o treino do dia, anotar a carga e treinar. Recomendo muito."</p>
-                </div>
+                    <p>"Design bastante intuitivo e fácil de usar, realmente mudou minha forma de treinar e anotar meu progresso e isso acaba interferindo diretamente na minha evolução."</p>
+                </a>
+                <a href="https://www.instagram.com/rezende_vitor943?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" class="review-card">
+                    <div class="review-header">
+                        <div class="user-info">
+                            <div class="user-avatar"><img src="assets/img/user-reviews/vitor.jpeg" alt=""></div>
+                            <div><strong>Vitor</strong><span class="user-tag">Plano Start</span></div>
+                        </div>
+                        <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                    </div>
+                    <p>"Site genial e organizado, melhorou demais a minha rotina na academia, e os treinos então, foi o bum que precisava."</p>
+                </a>
             </div>
         </div>
     </section>

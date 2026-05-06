@@ -16,9 +16,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $telefone = filter_input(INPUT_POST, 'telefone', FILTER_SANITIZE_STRING);
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
     
+    // ADIÇÃO: Recebe o idioma do select
+    $pref_idioma = $_POST['pref_idioma'] ?? 'pt';
+    if (!in_array($pref_idioma, ['pt', 'en'])) { $pref_idioma = 'pt'; } // Fallback de segurança
+    
     // 2. Lógica da Senha
     $sql_senha = "";
-    $params = ['nome' => $nome, 'telefone' => $telefone, 'email' => $email, 'id' => $user_id];
+    $params = ['nome' => $nome, 'telefone' => $telefone, 'email' => $email, 'pref_idioma' => $pref_idioma, 'id' => $user_id];
 
     $nova_senha = $_POST['nova_senha'] ?? '';
     $confirma_senha = $_POST['confirma_senha'] ?? '';
@@ -84,12 +88,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // 4. Atualizar no Banco
     try {
-        $sql = "UPDATE usuarios SET nome = :nome, telefone = :telefone, email = :email $sql_senha $sql_foto WHERE id = :id";
+        // ADIÇÃO: Incluído pref_idioma = :pref_idioma na string do UPDATE
+        $sql = "UPDATE usuarios SET nome = :nome, telefone = :telefone, email = :email, pref_idioma = :pref_idioma $sql_senha $sql_foto WHERE id = :id";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
         $_SESSION['user_nome'] = $nome;
         $_SESSION['user_email'] = $email;
+        // ADIÇÃO: Atualiza a sessão do idioma
+        $_SESSION['pref_idioma'] = $pref_idioma;
 
         // 5. Redirecionamento Correto
         if ($tipo_conta === 'admin') {

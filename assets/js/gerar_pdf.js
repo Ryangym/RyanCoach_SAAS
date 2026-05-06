@@ -51,10 +51,33 @@ function renderizarTemplateTreino(dados, nomeAluno, nomePlano, configCores) {
     const { tema, fundo, borda } = configCores;
     const template = document.getElementById('template-impressao-full');
     
+    // Define o idioma. Se existir um input escondido ou variável global, ele pega, senão assume 'pt'
+    const inputIdioma = document.querySelector('input[name="pref_idioma_pdf"]');
+    const idioma_aluno = inputIdioma ? inputIdioma.value : 'pt';
+    
     if (!template) {
         console.error("Erro: Template de impressão não encontrado.");
         return null;
     }
+
+    // Mini-dicionário JavaScript (mesma lógica do PHP)
+    const traduzirSet = (termo) => {
+        if (idioma_aluno === 'en') return termo.toUpperCase();
+        
+        const dic = {
+            'warmup': 'AQUECIMENTO',
+            'work': 'TRABALHO',
+            'feeder': 'PREPARAÇÃO',
+            'topset': 'SÉRIE MÁXIMA',
+            'top': 'SÉRIE MÁXIMA', // Caso o banco traga só 'top'
+            'backoff': 'SÉRIE DE RETORNO',
+            'dropset': 'DROP-SET',
+            'restpause': 'REST-PAUSE',
+            'clusterset': 'CLUSTER-SET'
+        };
+        const termoClean = termo.toLowerCase().trim();
+        return dic[termoClean] || termoClean.toUpperCase();
+    };
 
     // Configura Cores Globais
     template.querySelector('.pdf-sheet').style.backgroundColor = fundo;
@@ -80,31 +103,23 @@ function renderizarTemplateTreino(dados, nomeAluno, nomePlano, configCores) {
         let grupoAtual = null;
 
         exerciciosRaw.forEach((ex) => {
-            // Verifica se o exercício tem hash de agrupamento
             const hash = ex.agrupamento_hash; 
 
             if (hash && hash !== "") {
-                // Se já existe um grupo aberto com esse mesmo hash, adiciona nele
                 if (grupoAtual && grupoAtual.hash === hash) {
                     grupoAtual.itens.push(ex);
                 } else {
-                    // Se tinha um grupo aberto de outro hash, salva ele
                     if (grupoAtual) { listaProcessada.push(grupoAtual); }
-                    
-                    // Abre novo grupo
                     grupoAtual = { type: 'grupo', hash: hash, itens: [ex] };
                 }
             } else {
-                // Se tinha grupo aberto, fecha e salva
                 if (grupoAtual) { 
                     listaProcessada.push(grupoAtual); 
                     grupoAtual = null; 
                 }
-                // Adiciona exercício solto
                 listaProcessada.push({ type: 'single', item: ex });
             }
         });
-        // Salva o último grupo se sobrou
         if (grupoAtual) { listaProcessada.push(grupoAtual); }
         // ---------------------------------------------
 
@@ -131,30 +146,25 @@ function renderizarTemplateTreino(dados, nomeAluno, nomePlano, configCores) {
         // --- 2. RENDERIZAÇÃO DA LISTA PROCESSADA ---
         listaProcessada.forEach((bloco) => {
             
-            // Define se é grupo ou single
             const isGroup = (bloco.type === 'grupo');
             const exerciciosParaRenderizar = isGroup ? bloco.itens : [bloco.item];
             
-            // Estilos do Agrupamento (Bi-set)
             let wrapperStyle = "";
             let conectorVisual = "";
             
             if (isGroup) {
-                // Cria a caixa visual do Bi-set
                 const qtd = exerciciosParaRenderizar.length;
                 const nomeTecnica = qtd === 2 ? "BI-SET" : (qtd === 3 ? "TRI-SET" : "GIANT-SET");
                 
-                // Borda lateral conectora e um fundo leve
                 wrapperStyle = `
                     margin-bottom: 12px; 
                     padding: 5px 0 5px 8px; 
                     border-left: 3px solid ${tema}; 
                     position: relative;
-                    background: rgba(0,0,0,0.02); /* Fundo super sutil */
+                    background: rgba(0,0,0,0.02); 
                     border-radius: 0 6px 6px 0;
                 `;
 
-                // Badge escrito BI-SET
                 conectorVisual = `
                     <div style="
                         position: absolute; 
@@ -173,15 +183,12 @@ function renderizarTemplateTreino(dados, nomeAluno, nomePlano, configCores) {
                 `;
             }
 
-            // Abre Wrapper (se for grupo, aplica estilo, se não, div vazia)
             htmlBlock += `<div style="${wrapperStyle}"> ${conectorVisual}`;
 
-            // Loop Interno (Renderiza os cards)
             exerciciosParaRenderizar.forEach((ex, index) => {
                 let nomeEx = ex.nome_exercicio.toLowerCase();
                 nomeEx = nomeEx.charAt(0).toUpperCase() + nomeEx.slice(1);
 
-                // Se for item de grupo, remove a margem bottom do último para ficar compacto
                 const marginRow = (isGroup && index < exerciciosParaRenderizar.length - 1) ? '6px' : '8px';
                 
                 htmlBlock += `
@@ -200,31 +207,31 @@ function renderizarTemplateTreino(dados, nomeAluno, nomePlano, configCores) {
                     ex.lista_series.forEach(serie => {
                         const cat = serie.categoria ? serie.categoria.toLowerCase() : 'work';
                         
-                        // Lógica de Técnicas
+                        // Lógica de Técnicas e Tradução AQUI
                         const tecnica = serie.tecnica ? serie.tecnica.toLowerCase() : 'normal';
                         const valor = serie.tecnica_valor;
                         let label = "";
 
                         if (tecnica === 'dropset') {
-                            label = "Drop Set - " + (valor || '1') + " drops";
+                            label = `${traduzirSet('dropset')} - ${valor || '1'} drops`;
                         }
                         else if (tecnica === 'restpause') {
-                            label = "Rest Pause";
+                            label = traduzirSet('restpause');
                         }
                         else if (tecnica === 'clusterset') {
                             let parts = valor ? valor.split('|') : [];
-                            label = (parts.length >= 2) ? `Cluster Set - ${parts[0]}x${parts[1]}` : "Cluster Set";
+                            label = (parts.length >= 2) ? `${traduzirSet('clusterset')} - ${parts[0]}x${parts[1]}` : traduzirSet('clusterset');
                         }
                         else {
-                            if (cat === 'warmup') { label = "Warm up"; } 
-                            else if (cat === 'backoff') { label = "Back off"; }
-                            else if (cat === 'feeder') { label = "Feeder"; }
-                            else if (cat === 'top') { label = "Top set"; } 
-                            else { label = "Work set"; } 
+                            // Se for série normal, apenas traduz a categoria
+                            label = traduzirSet(cat);
                         }
 
                         const qtd = serie.quantidade ? serie.quantidade : 1;
-                        htmlBlock += `<span class="set-box type-${serie.categoria}" style="border: none;">${qtd}x ${label}</span>`;
+                        // Transformando a 1ª letra em maiúscula apenas para o PDF ficar mais bonito
+                        let labelFormatado = label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
+                        
+                        htmlBlock += `<span class="set-box type-${serie.categoria}" style="border: none;">${qtd}x ${labelFormatado}</span>`;
                     });
                 } else {
                     htmlBlock += `<span style="font-size:10px; color:#ccc;">-</span>`;

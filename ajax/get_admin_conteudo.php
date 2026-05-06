@@ -752,7 +752,11 @@ switch ($pagina) {
 
     case 'aluno_historico':
         require_once '../config/db_connect.php';
+        require_once '../helpers/tradutor_treino.php'; // Chama o helper de tradução
         
+        // Pega a preferência de idioma do usuário logado (Admin) para não quebrar a lógica de tradução das séries
+        $idioma_sessao = $_SESSION['pref_idioma'] ?? 'pt';
+
         // Pega o ID do aluno via URL
         $aluno_id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT);
         $data_ref = $_GET['data_ref'] ?? null;
@@ -861,14 +865,15 @@ switch ($pagina) {
                                         $dados_tecnicos = !empty($serie['dados_tecnicos']) ? json_decode($serie['dados_tecnicos'], true) : [];
                                         $tecnica_original = strtolower($serie['tecnica'] ?? '');
 
-                                        // --- LÓGICA VISUAL (CÓPIA FIEL DO ALUNO) ---
+                                        // --- LÓGICA VISUAL COM TRADUÇÃO ---
                                         
                                         // 1. Definição Padrão
                                         $cat_visual = $serie['categoria'] ? strtolower($serie['categoria']) : 'work';
-                                        $label_visual = strtoupper($cat_visual);
+                                        
+                                        // AQUI APLICAMOS A TRADUÇÃO!
+                                        $label_visual = traduzirTermo($cat_visual, $idioma_sessao);
                                         
                                         $num_display = '#'.($serie['numero_serie'] > 0 ? $serie['numero_serie'] : '-');
-                                        // Admin precisa de padding na célula, mas a cor vem da lógica do aluno
                                         $num_style = "padding:10px; color:#666; font-weight:bold;"; 
                                         $row_style = "border-bottom:1px solid #1f1f1f;"; // Padrão admin
                                         $reps_display = $serie['reps_realizadas'];
@@ -876,15 +881,13 @@ switch ($pagina) {
                                         // 2. Drop Set
                                         if ($tecnica_original === 'dropset') {
                                             $cat_visual = 'technique-drop';
-                                            $label_visual = 'DROP SET';
+                                            $label_visual = traduzirTermo('dropset', $idioma_sessao);
                                             
                                             // A. Drop Filho
                                             if (isset($dados_tecnicos['drop_index'])) {
                                                 $idx_drop = $dados_tecnicos['drop_index'];
                                                 $num_display = '<i class="fa-solid fa-turn-up fa-rotate-90" style="margin-right:5px; font-size:0.7rem; opacity:0.7;"></i> DROP '.$idx_drop;
-                                                // Estilo do número rosa + padding admin
                                                 $num_style = "padding:10px; color:#ff4081; font-weight:bold; font-size:0.8rem;"; 
-                                                // Gradiente visual idêntico ao aluno
                                                 $row_style = "border-bottom:1px solid #1f1f1f; background: linear-gradient(90deg, rgba(255, 64, 129, 0.1) 0%, rgba(0,0,0,0) 100%);";
                                                 
                                                 $label_visual = ''; 
@@ -899,14 +902,14 @@ switch ($pagina) {
                                         // 3. Rest Pause
                                         elseif ($tecnica_original === 'restpause' || (isset($dados_tecnicos['tipo']) && $dados_tecnicos['tipo'] === 'restpause')) {
                                             $cat_visual = 'technique-rest';
-                                            $label_visual = 'REST PAUSE';
+                                            $label_visual = traduzirTermo('restpause', $idioma_sessao);
                                             if (!empty($dados_tecnicos['reps_string'])) $reps_display = $dados_tecnicos['reps_string'];
                                         }
 
                                         // 4. Cluster
                                         elseif ($tecnica_original === 'clusterset' || (isset($dados_tecnicos['tipo']) && $dados_tecnicos['tipo'] === 'clusterset')) {
                                             $cat_visual = 'technique-cluster';
-                                            $label_visual = 'CLUSTER';
+                                            $label_visual = traduzirTermo('clusterset', $idioma_sessao);
                                             if (!empty($dados_tecnicos['reps_string'])) $reps_display = $dados_tecnicos['reps_string'];
                                         }
 
@@ -948,7 +951,7 @@ switch ($pagina) {
                       LEFT JOIN treinos t ON th.treino_id = t.id
                       LEFT JOIN treino_divisoes td ON th.divisao_id = td.id
                       WHERE th.aluno_id = :uid
-                      GROUP BY th.data_treino
+                      GROUP BY th.data_treino, t.nome, td.letra
                       ORDER BY th.data_treino DESC";
         $stmt = $pdo->prepare($sql_lista);
         $stmt->execute(['uid' => $aluno_id]);
@@ -1456,8 +1459,10 @@ switch ($pagina) {
     
     case 'treino_painel':
         require_once '../config/db_connect.php';
+        require_once '../helpers/tradutor_treino.php'; // Chama o helper de tradução
         
         $treino_id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT);
+        $idioma_sessao = $_SESSION['pref_idioma'] ?? 'pt'; // Preferência de idioma do Admin/Coach
 
         if (!$treino_id) { 
             echo "<div class='glass-card'>ID do treino não fornecido.</div>"; 
@@ -1648,24 +1653,26 @@ switch ($pagina) {
                                                         foreach ($series as $s) {
                                                             $qtd = $s['quantidade'];
                                                             $reps = $s['reps_fixas'];
-                                                            $tecnica = $s['tecnica'] ?? 'normal';
+                                                            $tecnica = strtolower(trim($s['tecnica'] ?? 'normal'));
                                                             $valor = $s['tecnica_valor'] ?? '';
                                                             
                                                             $style = '';
-                                                            $label = strtoupper($s['categoria']);
+                                                            
+                                                            // --- AQUI ACONTECE A TRADUÇÃO DAS SÉRIES ---
+                                                            $label = traduzirTermo($s['categoria'] ?? 'normal', $idioma_sessao);
                                                             $extra = $reps ? "(".$reps.")" : "";
 
                                                             if ($tecnica === 'dropset') {
                                                                 $style = 'background:rgba(255, 64, 129, 0.1); color:#ff4081; border:1px solid rgba(255, 64, 129, 0.3);';
-                                                                $label = 'DROP SET';
+                                                                $label = traduzirTermo('dropset', $idioma_sessao);
                                                                 $extra = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor} drops)</small>";
                                                             } elseif ($tecnica === 'restpause') {
                                                                 $style = 'background:rgba(0, 188, 212, 0.1); color:#00bcd4; border:1px solid rgba(0, 188, 212, 0.3);';
-                                                                $label = 'REST PAUSE';
+                                                                $label = traduzirTermo('restpause', $idioma_sessao);
                                                                 $extra = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor}s)</small>";
                                                             } elseif ($tecnica === 'clusterset') {
                                                                 $style = 'background:rgba(255, 145, 0, 0.1); color:#ff9100; border:1px solid rgba(255, 145, 0, 0.3);';
-                                                                $label = 'CLUSTER SET';
+                                                                $label = traduzirTermo('clusterset', $idioma_sessao);
                                                                 $parts = explode('|', $valor);
                                                                 if(count($parts)===3) $extra = "<small>({$parts[0]}x{$parts[1]})</small>";
                                                             }
@@ -1692,8 +1699,6 @@ switch ($pagina) {
         echo '  </div>
             </section>';
             
-        // Os modais (HTML no final) podem ser mantidos iguais
-        // Cole aqui os modais modalExercicio e modalMicro (são iguais aos do Coach)
         echo '
             <div id="modalExercicio" class="modal-overlay">
                 <div class="modal-content" style="max-width: 700px;">
@@ -1701,7 +1706,6 @@ switch ($pagina) {
                     
                     <div class="editor-exercicio-header">
                         <h3 class="section-title" style="color:var(--gold); margin:0;">Novo Exercício</h3>
-                        
                         <div class="block-type-selector" style="display:flex; gap:5px; background:rgba(255,255,255,0.05); padding:4px; border-radius:6px;">
                             <button type="button" class="btn-type-select active" onclick="initBlockState(\'single\')" id="btn-mode-single">Padrão</button>
                             <button type="button" class="btn-type-select" onclick="initBlockState(\'biset\')" id="btn-mode-biset">Bi-set</button>
@@ -1751,15 +1755,15 @@ switch ($pagina) {
                                 <div style="flex:1; min-width:140px;">
                                     <label class="input-label" style="font-size:0.7rem;">Tipo</label>
                                     <select id="set_tipo" class="admin-input" style="padding:8px;" onchange="toggleTechniqueFields()">
-                                        <option value="work">Work Set</option>
-                                        <option value="warmup">Warm Up</option>
-                                        <option value="feeder">Feeder</option>
-                                        <option value="top">Top Set</option>
-                                        <option value="backoff">Backoff</option>
+                                        <option value="work">'.traduzirTermo('work', $idioma_sessao).'</option>
+                                        <option value="warmup">'.traduzirTermo('warmup', $idioma_sessao).'</option>
+                                        <option value="feeder">'.traduzirTermo('feeder', $idioma_sessao).'</option>
+                                        <option value="top">'.traduzirTermo('topset', $idioma_sessao).'</option>
+                                        <option value="backoff">'.traduzirTermo('backoff', $idioma_sessao).'</option>
                                         <option value="falha">Falha</option>
-                                        <option value="dropset" style="color:#ff4d4d;">Drop-set</option>
-                                        <option value="restpause" style="color:#00e676;">Rest-pause</option>
-                                        <option value="clusterset" style="color:#00bfff;">Cluster Set</option>
+                                        <option value="dropset" style="color:#ff4d4d;">'.traduzirTermo('dropset', $idioma_sessao).'</option>
+                                        <option value="restpause" style="color:#00e676;">'.traduzirTermo('restpause', $idioma_sessao).'</option>
+                                        <option value="clusterset" style="color:#00bfff;">'.traduzirTermo('clusterset', $idioma_sessao).'</option>
                                     </select>
                                 </div>
                                 <div style="flex:0 0 70px;"><label class="input-label" style="font-size:0.7rem;">Reps</label><input type="text" id="set_reps" class="admin-input" placeholder="10" style="padding:8px;"></div>
@@ -1789,7 +1793,7 @@ switch ($pagina) {
             <div id="modalMicro" class="modal-overlay">
                 <div class="modal-content">
                     <button class="modal-close" onclick="closeMicroModal()">&times;</button>
-                    <h3 class="section-title" style="color:var(--gold); margin-bottom:20px;">
+                    <h3 class="section-title" style="color:var(--gold); margin:bottom:20px;">
                         <i class="fa-solid fa-calendar-week"></i> Configurar Semana <span id="span_semana_num"></span>
                     </h3>
                     <form id="formMicro" onsubmit="salvarMicro(event)">
@@ -1846,6 +1850,9 @@ switch ($pagina) {
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     
     $foto = $user['foto'] ? $user['foto'] : 'assets/img/user-default.png';
+
+    // Garante que não dê erro se o usuário ainda não tiver a preferência salva
+    $pref_idioma = isset($user['pref_idioma']) ? $user['pref_idioma'] : 'pt';
 
     // --- LÓGICA DE CORES BASEADA EM 'tipo_conta' ---
     $tipo = $user['tipo_conta']; // Coluna correta do banco
@@ -1911,6 +1918,14 @@ switch ($pagina) {
                             <label class="input-label">Confirmar Senha</label>
                             <input type="password" name="confirma_senha" class="input-field" placeholder="********">
                         </div>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Idioma dos Treinos</label>
+                        <select name="pref_idioma" class="input-field">
+                            <option value="pt" '. ($pref_idioma == 'pt' ? 'selected' : '') .'>Português (Brasil)</option>
+                            <option value="en" '. ($pref_idioma == 'en' ? 'selected' : '') .'>English (Nomenclatura Técnica)</option>
+                        </select>
                     </div>
 
                     <div style="text-align: center; margin-top: 30px; margin-bottom: 10px;">
@@ -2279,7 +2294,6 @@ switch ($pagina) {
             } else {
                 foreach($atletas as $at) {
                     $foto = $at['foto'] ? $at['foto'] : 'assets/img/user-default.png';
-                    // CORREÇÃO AQUI: Alterado de $at['plano'] para $at['plano_atual']
                     echo '<div class="aluno-card" onclick="abrirGeradorPdfAluno('.$at['id'].')" style="background: #161616; border: 1px solid #333; border-radius: 12px; padding: 15px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s;">
                             <img src="'.$foto.'" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
                             <div>
@@ -2292,28 +2306,25 @@ switch ($pagina) {
             
             echo '  </div>
                     <script>
-                        // Função injetada para buscar o PDF do aluno específico via AJAX
                         function abrirGeradorPdfAluno(id) {
                             fetch(`ajax/get_admin_conteudo.php?pagina=gerar_pdf&aluno_id=${id}`)
                                 .then(res => res.text())
                                 .then(html => {
-                                    // Pega o elemento atual e substitui pelo novo conteúdo
                                     document.getElementById("selecionar-aluno-pdf").parentElement.innerHTML = html;
                                 })
                                 .catch(err => console.error("Erro ao carregar:", err));
                         }
                     </script>
                   </section>';
-            break; // Para a execução aqui se for só a tela de seleção
+            break; 
         }
 
-
         // =========================================================================
-        // PASSO 2: TELA DO GERADOR DE PDF (Exatamente o seu código adaptado)
+        // PASSO 2: TELA DO GERADOR DE PDF
         // =========================================================================
 
-        // Busca dados do Aluno Selecionado
-        $stmt_user = $pdo->prepare("SELECT nome, plano_atual FROM usuarios WHERE id = ?");
+        // AQUI ESTÁ A MÁGICA: Puxamos a pref_idioma do aluno diretamente do banco
+        $stmt_user = $pdo->prepare("SELECT nome, plano_atual, pref_idioma FROM usuarios WHERE id = ?");
         $stmt_user->execute([$aluno_id]);
         $aluno_selecionado = $stmt_user->fetch(PDO::FETCH_ASSOC);
 
@@ -2323,8 +2334,10 @@ switch ($pagina) {
         }
 
         $nome_aluno = $aluno_selecionado['nome'];
+        // Se a coluna estiver vazia, o padrão é pt
+        $idioma_do_aluno_para_pdf = $aluno_selecionado['pref_idioma'] ?? 'pt';
 
-        // 1. Busca o Plano Ativo (Treino)
+        // 1. Busca o Plano Ativo
         $stmt = $pdo->prepare("SELECT * FROM treinos WHERE aluno_id = ? ORDER BY criado_em DESC LIMIT 1");
         $stmt->execute([$aluno_id]);
         $plano = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -2423,7 +2436,7 @@ switch ($pagina) {
                         <h1 class="greeting-clean">Gerador de <span class="text-gold">Fichas</span></h1>
                         <p class="date-clean">Aluno: <strong style="color:#fff;">'.$nome_aluno.'</strong> | Plano: <strong>'.$plano['nome'].'</strong></p>
                     </div>
-                    <button class="btn-gold" id="btn-trocar-aluno" onclick="carregarConteudo(\'gerar_pdf\')">
+                    <button class="btn-outline btn-gold" onclick="carregarConteudo(\'gerar_pdf\')" style="padding: 8px 15px; border-radius: 8px; font-size: 0.8rem;">
                         <i class="fa-solid fa-arrow-left"></i> Trocar Aluno
                     </button>
                 </header>
@@ -2464,13 +2477,15 @@ switch ($pagina) {
                         </div>
 
                         <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
+                            
                             <div>
                                 <label class="input-label">Tema</label>
                                 <div style="display:flex; align-items:center; gap:10px;">
-                                    <input type="color" id="pdf_theme_color" value="#570e0e" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                    <input type="color" id="pdf_theme_color" value="#500808" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
                                     <span style="font-size:0.8rem; color:#888;">Cabeçalhos</span>
                                 </div>
                             </div>
+
                             <div>
                                 <label class="input-label">Fundo</label>
                                 <div style="display:flex; align-items:center; gap:10px;">
@@ -2478,19 +2493,24 @@ switch ($pagina) {
                                     <span style="font-size:0.8rem; color:#888;">Folha</span>
                                 </div>
                             </div>
+
                             <div>
                                 <label class="input-label">Bordas</label>
                                 <div style="display:flex; align-items:center; gap:10px;">
-                                    <input type="color" id="pdf_border_color" value="#ff0000" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
+                                    <input type="color" id="pdf_border_color" value="#ff0303" style="width:40px; height:40px; border:none; border-radius:5px; cursor:pointer;">
                                     <span style="font-size:0.8rem; color:#888;">Linhas</span>
                                 </div>
                             </div>
+                            
+                            <input type="hidden" name="pref_idioma_pdf" value="'.$idioma_do_aluno_para_pdf.'">
+
                         </div>
 
                         <div class="modal-actions">
                             <button class="btn-gold" onclick="gerarPDFSelecionado()" style="flex: 2; display:flex; align-items:center; justify-content:center; gap:8px;">
                                 <i class="fa-solid fa-file-pdf"></i> BAIXAR PDF
                             </button>
+                            
                             <button type="button" class="btn-outline" onclick="debugPreviewPDF()" style="flex: 1; border: 1px solid var(--gold); color: var(--gold); background: transparent; border-radius:10px;">
                                 <i class="fa-solid fa-eye"></i>
                             </button>

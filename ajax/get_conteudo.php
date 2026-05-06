@@ -295,14 +295,22 @@ switch ($pagina) {
 
     case 'realizar_treino':
         require_once '../config/db_connect.php'; 
+        require_once '../helpers/tradutor_treino.php'; // 1. Chama o helper de tradução
         
         if (!isset($_SESSION['user_id'])) { echo "Sessão expirada."; break; }
         
         $aluno_id = $_SESSION['user_id'];
         $hoje = date('Y-m-d');
 
-        // 1. Busca o Treino Ativo
-        $sql = "SELECT * FROM treinos WHERE aluno_id = :uid ORDER BY criado_em DESC LIMIT 1";
+        // 2. Tenta pegar o idioma da sessão, senão assume o padrão 'pt'
+        $idioma_aluno = $_SESSION['pref_idioma'] ?? 'pt';
+
+        // 1. Busca o Treino Ativo e se possível o idioma do banco (como backup)
+        // Usamos um JOIN para garantir que temos o idioma real, caso a sessão esteja desatualizada
+        $sql = "SELECT t.*, u.pref_idioma 
+                FROM treinos t 
+                JOIN usuarios u ON t.aluno_id = u.id 
+                WHERE t.aluno_id = :uid ORDER BY t.criado_em DESC LIMIT 1";
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['uid' => $aluno_id]);
         $treino_ativo = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -310,6 +318,12 @@ switch ($pagina) {
         if (!$treino_ativo) {
             echo '<section class="empty-state"><h2>Sem treino ativo</h2></section>';
             break;
+        }
+
+        // Atualiza a variável de idioma caso o banco traga algo diferente
+        if (isset($treino_ativo['pref_idioma'])) {
+            $idioma_aluno = $treino_ativo['pref_idioma'];
+            $_SESSION['pref_idioma'] = $idioma_aluno;
         }
 
         // 2. Lógica de Seleção Automática do Dia
@@ -404,11 +418,10 @@ switch ($pagina) {
                 $series_por_exercicio[$s['exercicio_id']][] = $s;
             }
 
-            // Tenta buscar histórico (Se falhar por falta de coluna, captura erro silenciosamente ou apenas evita crash)
+            // Tenta buscar histórico
             try {
                 $data_limite_hist = date('Y-m-d', strtotime('-60 days'));
-                // ATENÇÃO: Se as colunas tecnica/categoria não existirem no banco online, isso pode dar erro no execute.
-                // Verifique seu banco online.
+                
                 $sql_hist = "SELECT th.exercicio_id, th.serie_id, th.numero_serie, th.serie_numero, th.carga_kg, th.reps_realizadas, th.dados_tecnicos, th.data_treino,
                                     s.tecnica, s.categoria
                              FROM treino_historico th
@@ -443,8 +456,6 @@ switch ($pagina) {
                     }
                 }
             } catch (Exception $e) {
-                // Se der erro no histórico (ex: coluna faltando), segue o baile sem histórico
-                // para não travar a tela inteira.
                 $historico_por_exercicio = [];
             }
         }
@@ -502,7 +513,6 @@ switch ($pagina) {
             $grupos_temp = []; 
 
             foreach ($exercicios as $ex) {
-                // PROTEÇÃO: Verifica se a chave existe antes de usar
                 $hash = $ex['agrupamento_hash'] ?? null;
                 
                 if ($hash) {
@@ -559,7 +569,6 @@ switch ($pagina) {
 
                     if (count($series) > 0) {
                         foreach ($series as $s) {
-                            // PROTEÇÃO CRUCIAL CONTRA NULL
                             $tecnica_raw = strtolower(trim((string)($s['tecnica'] ?? 'normal')));
                             $valor_raw   = $s['tecnica_valor'] ?? '';
                             
@@ -574,7 +583,6 @@ switch ($pagina) {
                             if ($is_cluster) $js_type_arg = 'cluster';
 
                             // --- LÓGICA DE PREENCHIMENTO ---
-                            // PROTEÇÃO: (string) garante que trim não receba null
                             $reps = trim((string)($s['reps_fixas'] ?? ''));
                             $desc = trim((string)($s['descanso_fixo'] ?? ''));
                             
@@ -584,7 +592,7 @@ switch ($pagina) {
                             $categoria = strtolower($s['categoria'] ?? '');
                             $tipo_mec  = strtolower($ex['tipo_mecanica'] ?? '');
 
-                            // 1. Warmup / Feeder (Prioridade)
+                            // 1. Warmup / Feeder
                             if ($categoria === 'warmup') {
                                 if (empty($desc)) $desc = '30s';
                                 if (empty($reps)) $reps = '15';
@@ -648,12 +656,14 @@ switch ($pagina) {
                                     }
                                 }
 
+                                // 3. TRADUÇÃO DAS LABELS (O Segredo Acontece Aqui!)
                                 if ($has_technique) {
-                                    if ($is_drop) $label_serie = "DROP SET";
-                                    elseif ($is_rest) $label_serie = "REST PAUSE";
-                                    elseif ($is_cluster) $label_serie = "CLUSTER";
+                                    if ($is_drop) $label_serie = traduzirTermo("dropset", $idioma_aluno);
+                                    elseif ($is_rest) $label_serie = traduzirTermo("restpause", $idioma_aluno);
+                                    elseif ($is_cluster) $label_serie = traduzirTermo("clusterset", $idioma_aluno);
                                 } else {
-                                    $label_serie = strtoupper($s['categoria'] ?? 'NORMAL');
+                                    $cat_original = $s['categoria'] ?? 'normal';
+                                    $label_serie = traduzirTermo($cat_original, $idioma_aluno);
                                 }
 
                                 $indicador_num = ($qtd_series > 1) ? '#'.$i : '1';
@@ -690,22 +700,27 @@ switch ($pagina) {
                                     // COLUNAS 3 e 4
                                     if ($has_technique) {
                                         $modal_id = "modal_".$s['id']."_".$i;
-                                        $btn_text = "REGISTRAR";
+                                        
+                                        // Também podemos traduzir os textos dos botões se o idioma for EN
+                                        $txt_registrar = $idioma_aluno == 'en' ? 'REGISTER' : 'REGISTRAR';
+                                        $txt_abrir     = $idioma_aluno == 'en' ? 'OPEN' : 'ABRIR';
+
+                                        $btn_text = $txt_registrar;
                                         $icon = "fa-bolt";
                                         $btn_style = "width:100%; height:38px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:space-between; padding: 0 12px; transition:0.2s;";
                                         
                                         if ($is_drop) { 
-                                            $btn_text = "ABRIR DROP SET"; 
+                                            $btn_text = "$txt_abrir DROP SET"; 
                                             $btn_style .= "background: rgba(255, 64, 129, 0.15); border: 1px solid #ff4081; color: #ff4081; box-shadow: 0 0 10px rgba(255, 64, 129, 0.1);";
                                             $icon = "fa-layer-group";
                                         }
                                         elseif ($is_rest) { 
-                                            $btn_text = "ABRIR REST PAUSE"; 
+                                            $btn_text = "$txt_abrir REST PAUSE"; 
                                             $btn_style .= "background: rgba(0, 230, 118, 0.15); border: 1px solid #00e676; color: #00e676; box-shadow: 0 0 10px rgba(0, 230, 118, 0.1);";
                                             $icon = "fa-stopwatch";
                                         }
                                         elseif ($is_cluster) { 
-                                            $btn_text = "ABRIR CLUSTER"; 
+                                            $btn_text = "$txt_abrir CLUSTER"; 
                                             $btn_style .= "background: rgba(255, 145, 0, 0.15); border: 1px solid #ff9100; color: #ff9100; box-shadow: 0 0 10px rgba(255, 145, 0, 0.1);";
                                             $icon = "fa-cubes";
                                         }
@@ -723,17 +738,17 @@ switch ($pagina) {
                                         <div id="'.$modal_id.'" class="tq-modal-overlay">
                                             <div class="tq-modal-content">
                                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px;">
-                                                    <h3 style="margin:0; font-size:1rem; color:#fff;">'.$label_serie.' '.$indicador_num.'</h3>
+                                                    <h3 style="margin:0; font-size:1rem; color:#fff;">'.strip_tags($label_serie).'</h3>
                                                     <span onclick="closeTechniqueModal(\''.$modal_id.'\')" style="cursor:pointer; font-size:1.2rem; padding:0 10px;">&times;</span>
                                                 </div>
                                                 
                                                 <div style="margin-bottom:20px; text-align:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:6px;">
-                                                    <span style="color:#aaa; font-size:0.8rem;">META: </span> <b style="color:#fff">'.$reps.'</b>
-                                                    <span style="color:#aaa; font-size:0.8rem; margin-left:15px;">DESC: </span> <b style="color:#fff">'.$desc.'</b>
+                                                    <span style="color:#aaa; font-size:0.8rem;">'.($idioma_aluno == 'en' ? 'TARGET:' : 'META:').' </span> <b style="color:#fff">'.$reps.'</b>
+                                                    <span style="color:#aaa; font-size:0.8rem; margin-left:15px;">'.($idioma_aluno == 'en' ? 'REST:' : 'DESC:').' </span> <b style="color:#fff">'.$desc.'</b>
                                                 </div>';
 
                                                 if ($is_drop) {
-                                                    echo '<label style="font-size:0.7rem; color:#888;">Série Principal</label>
+                                                    echo '<label style="font-size:0.7rem; color:#888;">'.($idioma_aluno == 'en' ? 'Main Set' : 'Série Principal').'</label>
                                                         <div style="display:flex; gap:10px; margin-bottom:15px;">
                                                             <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.']" class="input-exec" placeholder="Kg: '.$ph_carga.'">
                                                             <input type="number" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Reps: '.$ph_reps.'">
@@ -743,56 +758,56 @@ switch ($pagina) {
                                                         echo '<label style="font-size:0.7rem; color:#ff4081;">DROP #'.$d.' (-20%)</label>
                                                             <div style="display:flex; gap:10px; margin-bottom:10px;">
                                                                 <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.'_drop_'.$d.']" class="input-exec" placeholder="Carga">
-                                                                <input type="number" name="reps['.$s['id'].']['.$i.'_drop_'.$d.']" class="input-exec" placeholder="Falha">
+                                                                <input type="number" name="reps['.$s['id'].']['.$i.'_drop_'.$d.']" class="input-exec" placeholder="'.($idioma_aluno == 'en' ? 'Failure' : 'Falha').'">
                                                             </div>';
                                                     }
                                                 }
 
                                                 if ($is_rest) {
-                                                    echo '<label style="font-size:0.7rem; color:#00e676;">Carga & Reps Totais</label>
+                                                    echo '<label style="font-size:0.7rem; color:#00e676;">'.($idioma_aluno == 'en' ? 'Load & Total Reps' : 'Carga & Reps Totais').'</label>
                                                         <div style="display:flex; gap:10px; margin-bottom:10px;">
                                                             <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.']" class="input-exec" placeholder="Kg: '.$ph_carga.'">
                                                             <input type="text" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Ex: 10+5+3">
                                                         </div>
                                                         <div style="margin-bottom:15px;">
                                                             <button type="button" onclick="iniciarTimerRest('.(int)$valor_raw.')" style="width:100%; padding:10px; background:rgba(0, 230, 118, 0.15); border:1px solid #00e676; color:#00e676; border-radius:6px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-                                                                <i class="fa-solid fa-stopwatch"></i> INICIAR DESCANSO ('.(int)$valor_raw.'s)
+                                                                <i class="fa-solid fa-stopwatch"></i> '.($idioma_aluno == 'en' ? 'START REST' : 'INICIAR DESCANSO').' ('.(int)$valor_raw.'s)
                                                             </button>
                                                         </div>
-                                                        <p style="font-size:0.7rem; color:#666;">Falha > Iniciar Descanso > Repete > Anota Soma.</p>';
+                                                        <p style="font-size:0.7rem; color:#666;">'.($idioma_aluno == 'en' ? 'Failure > Rest > Repeat > Sum Reps.' : 'Falha > Iniciar Descanso > Repete > Anota Soma.').'</p>';
                                                 }
 
                                                 if ($is_cluster) {
                                                     $parts = explode('|', $valor_raw); 
                                                     $tempo_descanso_cluster = isset($parts[2]) ? (int)$parts[2] : 0;
                                                     
-                                                    echo '<label style="font-size:0.7rem; color:#ff9100;">Carga Fixa</label>
+                                                    echo '<label style="font-size:0.7rem; color:#ff9100;">'.($idioma_aluno == 'en' ? 'Fixed Load' : 'Carga Fixa').'</label>
                                                         <div style="margin-bottom:15px;">
                                                             <input type="number" step="0.5" name="carga['.$s['id'].']['.$i.']" class="input-exec" placeholder="Kg: '.$ph_carga.'">
                                                         </div>
                                                         
-                                                        <label style="font-size:0.7rem; color:#ff9100;">Blocos ('.$parts[1].' reps cada)</label>
+                                                        <label style="font-size:0.7rem; color:#ff9100;">'.($idioma_aluno == 'en' ? 'Blocks' : 'Blocos').' ('.$parts[1].' reps '.($idioma_aluno == 'en' ? 'each' : 'cada').')</label>
                                                         <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;">';
                                                             for($b=1; $b<=$parts[0]; $b++) {
                                                                 echo '<div style="flex:1; background:#222; padding:10px; border-radius:4px; text-align:center; border:1px solid #444;">
-                                                                            <span style="font-size:0.7rem; color:#888;">B'.$b.'</span><br>
-                                                                            <strong style="color:#fff;">'.$parts[1].'</strong>
-                                                                        </div>';
+                                                                        <span style="font-size:0.7rem; color:#888;">B'.$b.'</span><br>
+                                                                        <strong style="color:#fff;">'.$parts[1].'</strong>
+                                                                    </div>';
                                                             }
                                                     echo '</div>
 
                                                         <div style="margin-bottom:15px;">
                                                             <button type="button" onclick="iniciarTimerRest('.$tempo_descanso_cluster.')" style="width:100%; padding:10px; background:rgba(255, 145, 0, 0.15); border:1px solid #ff9100; color:#ff9100; border-radius:6px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-                                                                <i class="fa-solid fa-stopwatch"></i> DESCANSO ENTRE BLOCOS ('.$tempo_descanso_cluster.'s)
+                                                                <i class="fa-solid fa-stopwatch"></i> '.($idioma_aluno == 'en' ? 'REST BETWEEN BLOCKS' : 'DESCANSO ENTRE BLOCOS').' ('.$tempo_descanso_cluster.'s)
                                                             </button>
                                                         </div>
 
-                                                        <label style="font-size:0.7rem; color:#888;">Reps Realizadas (Soma)</label>
+                                                        <label style="font-size:0.7rem; color:#888;">'.($idioma_aluno == 'en' ? 'Completed Reps (Sum)' : 'Reps Realizadas (Soma)').'</label>
                                                         <input type="text" name="reps['.$s['id'].']['.$i.']" class="input-exec" placeholder="Ex: 4+4+4+3">';
                                                 }
 
                                             echo '  <div style="margin-top:20px;">
-                                                    <button type="button" class="btn-gold" style="width:100%; border-radius:50px;" onclick="confirmTechniqueData(\''.$modal_id.'\', \''.$js_type_arg.'\')">SALVAR DADOS</button>
+                                                    <button type="button" class="btn-gold" style="width:100%; border-radius:50px;" onclick="confirmTechniqueData(\''.$modal_id.'\', \''.$js_type_arg.'\')">'.($idioma_aluno == 'en' ? 'SAVE DATA' : 'SALVAR DADOS').'</button>
                                                 </div>
                                             </div>
                                         </div>';
@@ -814,7 +829,7 @@ switch ($pagina) {
                             }
                         }
                     } else {
-                        echo '<p style="color:#666; padding:10px;">Sem séries cadastradas.</p>';
+                        echo '<p style="color:#666; padding:10px;">'.($idioma_aluno == 'en' ? 'No sets registered.' : 'Sem séries cadastradas.').'</p>';
                     }
 
                     echo '</div>'; // Fim exec-card
@@ -842,12 +857,16 @@ switch ($pagina) {
         
     case 'treinos':
         require_once '../config/db_connect.php'; 
+        require_once '../helpers/tradutor_treino.php'; // 1. Chama o helper de tradução
         
         // Verifica Sessão
         if (!isset($_SESSION['user_id'])) { echo "Sessão expirada."; break; }
         
         $aluno_id = $_SESSION['user_id'];
         $hoje = date('Y-m-d');
+        
+        // 2. Busca a preferência de idioma da sessão (Padrão: pt)
+        $idioma_aluno = $_SESSION['pref_idioma'] ?? 'pt';
 
         session_write_close();
 
@@ -1074,26 +1093,20 @@ switch ($pagina) {
 
                                         // 2. Regras de Warmup/Feeder (Prioridade Total)
                                         if ($categoria === 'warmup') {
-                                            // Se não tiver desc na série, usa 30s
                                             if (empty($desc)) $desc = '30s';
-                                            // Se não tiver reps na série, usa 15
                                             if (empty($reps) || $reps == '-') $reps = '15';
                                         } 
                                         elseif ($categoria === 'feeder') {
-                                            // Se não tiver desc na série, usa 60s
                                             if (empty($desc)) $desc = '60s';
-                                            // Se não tiver reps na série, usa 6
                                             if (empty($reps) || $reps == '-') $reps = '6';
                                         } 
                                         else {
-                                            // 3. Regra de Periodização (Só se o campo da série estiver VAZIO)
+                                            // 3. Regra de Periodização
                                             if ($micro_atual) {
                                                 if ($ex['tipo_mecanica'] == 'composto') {
-                                                    // Só sobrescreve se $reps estiver vazio
                                                     if (empty($reps) && !empty($micro_atual['reps_compostos'])) {
                                                         $reps = $micro_atual['reps_compostos'];
                                                     }
-                                                    // Só sobrescreve se $desc estiver vazio
                                                     if (empty($desc) && !empty($micro_atual['descanso_compostos'])) {
                                                         $desc = $micro_atual['descanso_compostos'].'s';
                                                     }
@@ -1109,32 +1122,41 @@ switch ($pagina) {
                                             }
                                         }
 
-                                        // 4. Fallback Final (Se continuou vazio, vira Falha/-)
+                                        // 4. Fallback Final
                                         if(empty($reps) || $reps == '-') $reps = "Falha";
                                         if(empty($desc)) $desc = "-";
 
-                                        // Técnicas
+                                        // Técnicas e Tradução
                                         $tecnica = strtolower(trim($s['tecnica'] ?? 'normal'));
                                         $valor   = $s['tecnica_valor'] ?? '';
                                         
                                         $cssClass = 'set-item ' . $s['categoria'];
-                                        $labelSet = $s['quantidade'].'x '.strtoupper($s['categoria']);
+                                        
+                                        // A MÁGICA ACONTECE AQUI:
+                                        $cat_traduzida = traduzirTermo($s['categoria'], $idioma_aluno);
+                                        $labelSet = $s['quantidade'].'x '.$cat_traduzida;
+                                        
                                         $extraInfo = '';
 
                                         if ($tecnica === 'dropset') {
                                             $cssClass .= ' technique-drop';
-                                            $labelSet = $s['quantidade'].'x DROP SET';
+                                            $labelSet = $s['quantidade'].'x '.traduzirTermo('dropset', $idioma_aluno);
                                             $extraInfo = '<div class="tech-info">+ '.$valor.' Drops</div>';
                                         } elseif ($tecnica === 'restpause') {
                                             $cssClass .= ' technique-rest';
-                                            $labelSet = $s['quantidade'].'x REST PAUSE';
-                                            $extraInfo = '<div class="tech-info">Pausa Intra: '.$valor.'s</div>';
+                                            $labelSet = $s['quantidade'].'x '.traduzirTermo('restpause', $idioma_aluno);
+                                            $str_pausa = $idioma_aluno == 'en' ? 'Intra Pause:' : 'Pausa Intra:';
+                                            $extraInfo = '<div class="tech-info">'.$str_pausa.' '.$valor.'s</div>';
                                         } elseif ($tecnica === 'clusterset') {
                                             $cssClass .= ' technique-cluster';
-                                            $labelSet = $s['quantidade'].'x CLUSTER';
+                                            $labelSet = $s['quantidade'].'x '.traduzirTermo('clusterset', $idioma_aluno);
                                             $parts = explode('|', $valor);
                                             if(count($parts) === 3) {
-                                                $extraInfo = '<div class="tech-info">'.$parts[0].' blocos de '.$parts[1].' reps ('.$parts[2].'s)</div>';
+                                                if ($idioma_aluno == 'en') {
+                                                    $extraInfo = '<div class="tech-info">'.$parts[0].' blocks of '.$parts[1].' reps ('.$parts[2].'s)</div>';
+                                                } else {
+                                                    $extraInfo = '<div class="tech-info">'.$parts[0].' blocos de '.$parts[1].' reps ('.$parts[2].'s)</div>';
+                                                }
                                             }
                                         }
 
@@ -1179,8 +1201,13 @@ switch ($pagina) {
         break; 
     }
     require_once '../config/db_connect.php';
+    require_once '../helpers/tradutor_treino.php'; // Chama o helper de tradução
+
     $aluno_id = $_SESSION['user_id'];
     $data_ref = $_GET['data_ref'] ?? null;
+    
+    // Busca a preferência de idioma da sessão (Padrão: pt)
+    $idioma_aluno = $_SESSION['pref_idioma'] ?? 'pt';
 
     // --- MODO 1: DETALHES DO TREINO ---
     if ($data_ref) {
@@ -1220,8 +1247,8 @@ switch ($pagina) {
                             <i class="fa-solid fa-arrow-left"></i>
                         </button>
                         <div>
-                            <span style="color:#888; font-size:0.8rem; text-transform:uppercase;">Visualizando</span>
-                            <h2 style="margin:0; color:#fff; font-size:1.2rem;">TREINO '.($info['letra'] ?? '?').'</h2>
+                            <span style="color:#888; font-size:0.8rem; text-transform:uppercase;">'.($idioma_aluno == 'en' ? 'Viewing' : 'Visualizando').'</span>
+                            <h2 style="margin:0; color:#fff; font-size:1.2rem;">'.($idioma_aluno == 'en' ? 'WORKOUT' : 'TREINO').' '.($info['letra'] ?? '?').'</h2>
                         </div>
                     </div>
                     
@@ -1245,7 +1272,7 @@ switch ($pagina) {
 
                 <div class="history-details-list">';
                 
-                if (empty($treino_agrupado)) echo '<p style="text-align:center; color:#666;">Nenhum dado encontrado.</p>';
+                if (empty($treino_agrupado)) echo '<p style="text-align:center; color:#666;">'.($idioma_aluno == 'en' ? 'No data found.' : 'Nenhum dado encontrado.').'</p>';
 
                 foreach ($treino_agrupado as $ex_id => $dados) {
                     echo '<div class="hist-exercise-group">
@@ -1258,7 +1285,7 @@ switch ($pagina) {
                                 <thead>
                                     <tr>
                                         <th width="20%">#</th>
-                                        <th width="25%">TIPO</th>
+                                        <th width="25%">'.($idioma_aluno == 'en' ? 'TYPE' : 'TIPO').'</th>
                                         <th width="25%">KG</th>
                                         <th width="30%">REPS</th>
                                     </tr>
@@ -1276,7 +1303,9 @@ switch ($pagina) {
 
                                     // -- 1. Definição Padrão (Normal) --
                                     $cat_visual = $serie['categoria'] ? strtolower($serie['categoria']) : 'work';
-                                    $label_visual = strtoupper($cat_visual);
+                                    
+                                    // Tradução do Termo Padrão
+                                    $label_visual = traduzirTermo($cat_visual, $idioma_aluno);
                                     
                                     // Número Padrão
                                     $num_display = '#'.($serie['numero_serie'] > 0 ? $serie['numero_serie'] : '-');
@@ -1289,7 +1318,7 @@ switch ($pagina) {
                                     // -- 2. Lógica para DROP SET --
                                     if ($tecnica_original === 'dropset') {
                                         $cat_visual = 'technique-drop'; // Rosa
-                                        $label_visual = 'DROP SET';
+                                        $label_visual = traduzirTermo('dropset', $idioma_aluno);
                                         
                                         // A. É um Drop Específico (tem índice no JSON)
                                         if (isset($dados_tecnicos['drop_index'])) {
@@ -1304,7 +1333,7 @@ switch ($pagina) {
                                         } 
                                         // B. É a Série Principal do Drop
                                         else {
-                                            // Mantém o número #1, mas pinta de Rosa e mantém o Label DROP SET
+                                            // Mantém o número #1, mas pinta de Rosa e mantém o Label Traduzido
                                             $num_style = "color:#ff4081; font-weight:bold;";
                                         }
                                     }
@@ -1312,7 +1341,7 @@ switch ($pagina) {
                                     // -- 3. Lógica para REST PAUSE --
                                     elseif ($tecnica_original === 'restpause' || (isset($dados_tecnicos['tipo']) && $dados_tecnicos['tipo'] === 'restpause')) {
                                         $cat_visual = 'technique-rest'; // Verde
-                                        $label_visual = 'REST PAUSE';
+                                        $label_visual = traduzirTermo('restpause', $idioma_aluno);
                                         if (!empty($dados_tecnicos['reps_string'])) {
                                             $reps_display = $dados_tecnicos['reps_string'];
                                         }
@@ -1321,7 +1350,7 @@ switch ($pagina) {
                                     // -- 4. Lógica para CLUSTER SET --
                                     elseif ($tecnica_original === 'clusterset' || (isset($dados_tecnicos['tipo']) && $dados_tecnicos['tipo'] === 'clusterset')) {
                                         $cat_visual = 'technique-cluster'; // Laranja
-                                        $label_visual = 'CLUSTER';
+                                        $label_visual = traduzirTermo('clusterset', $idioma_aluno);
                                         
                                         if (!empty($dados_tecnicos['reps_string'])) {
                                             $reps_display = $dados_tecnicos['reps_string'];
@@ -1375,25 +1404,36 @@ switch ($pagina) {
 
     echo '<section id="historico-lista" class="fade-in">
             <header class="dash-header">
-                <h1>MEU <span class="highlight-text">HISTÓRICO</span></h1>
+                <h1>'.($idioma_aluno == 'en' ? 'MY' : 'MEU').' <span class="highlight-text">'.($idioma_aluno == 'en' ? 'HISTORY' : 'HISTÓRICO').'</span></h1>
             </header>';
 
     if (empty($historico)) {
         echo '<div class="empty-state">
                 <i class="fa-solid fa-clock-rotate-left"></i>
-                <h2>Nenhum treino registrado</h2>
-                <p>Realize seu primeiro treino para ver o histórico.</p>
+                <h2>'.($idioma_aluno == 'en' ? 'No workout recorded' : 'Nenhum treino registrado').'</h2>
+                <p>'.($idioma_aluno == 'en' ? 'Complete your first workout to see the history.' : 'Realize seu primeiro treino para ver o histórico.').'</p>
               </div>';
     } else {
         echo '<div class="history-list">';
         foreach ($historico as $h) {
             $data_obj = new DateTime($h['data_treino']);
             $dia = $data_obj->format('d');
-            $meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            
+            // Meses em português x inglês
+            if ($idioma_aluno == 'en') {
+                $meses = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            } else {
+                $meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            }
             $mes_txt = $meses[(int)$data_obj->format('m') - 1];
+            
             $hora = $data_obj->format('H:i');
-            $treino_nome = $h['nome_treino'] ? $h['nome_treino'] : 'Treino Arquivado';
+            
+            $treino_arquivado_txt = $idioma_aluno == 'en' ? 'Archived Workout' : 'Treino Arquivado';
+            $treino_nome = $h['nome_treino'] ? $h['nome_treino'] : $treino_arquivado_txt;
+            
             $letra = $h['letra'] ? $h['letra'] : '?';
+            $treino_letra_txt = $idioma_aluno == 'en' ? 'Workout' : 'Treino';
 
             echo '<div class="history-card" onclick="carregarConteudo(\'historico&data_ref='.$h['data_treino'].'\')">
                     <div class="hist-date-box">
@@ -1401,7 +1441,7 @@ switch ($pagina) {
                         <span class="hist-month">'.$mes_txt.'</span>
                     </div>
                     <div class="hist-info">
-                        <span class="hist-title">Treino '.$letra.'</span>
+                        <span class="hist-title">'.$treino_letra_txt.' '.$letra.'</span>
                         <span class="hist-sub">'.$treino_nome.' • '.$hora.'</span>
                     </div>
                     <i class="fa-solid fa-chevron-right hist-arrow"></i>
@@ -1421,6 +1461,9 @@ switch ($pagina) {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
         $foto = $user['foto'] ? $user['foto'] : 'assets/img/user-default.png';
+        
+        // Garante que não dê erro se o usuário ainda não tiver a preferência salva
+        $pref_idioma = isset($user['pref_idioma']) ? $user['pref_idioma'] : 'pt';
 
         echo '
             <section id="perfil-section">
@@ -1476,13 +1519,20 @@ switch ($pagina) {
                             </div>
                         </div>
 
+                        <div>
+                            <label class="input-label">Idioma dos Treinos</label>
+                            <select name="pref_idioma" class="input-field">
+                                <option value="pt" '. ($pref_idioma == 'pt' ? 'selected' : '') .'>Português (Brasil)</option>
+                                <option value="en" '. ($pref_idioma == 'en' ? 'selected' : '') .'>English (Nomenclatura Técnica)</option>
+                            </select>
+                        </div>
+
                         <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
                             <button type="submit" class="btn-gold">SALVAR ALTERAÇÕES</button>
                         </div>
                     </form>
                 </div>
             </section>
-
         ';
         break;
 
@@ -1947,6 +1997,9 @@ switch ($pagina) {
 
     require_once '../config/db_connect.php';
     $aluno_id = $_SESSION['user_id'];
+    
+    // Pega o idioma da sessão, caso contrário assume português
+    $pref_idioma = $_SESSION['pref_idioma'] ?? 'pt';
 
     // 1. Busca o Plano Ativo
     $stmt = $pdo->prepare("SELECT * FROM treinos WHERE aluno_id = ? ORDER BY criado_em DESC LIMIT 1");
@@ -2107,6 +2160,8 @@ switch ($pagina) {
                                 <span style="font-size:0.8rem; color:#888;">Linhas</span>
                             </div>
                         </div>
+                        
+                        <input type="hidden" name="pref_idioma_pdf" value="'.$pref_idioma.'">
                     </div>
 
                     <div class="modal-actions">
@@ -2363,8 +2418,10 @@ switch ($pagina) {
 
     case 'treino_painel':
         require_once '../config/db_connect.php';
+        require_once '../helpers/tradutor_treino.php'; // Helper de tradução
         
         $treino_id = filter_input(INPUT_GET, 'id', FILTER_SANITIZE_NUMBER_INT);
+        $idioma_aluno = $_SESSION['pref_idioma'] ?? 'pt'; // Preferência do usuário logado para as séries
 
         if (!$treino_id) { 
             echo "<div class='glass-card'>ID do treino não fornecido.</div>"; 
@@ -2393,7 +2450,6 @@ switch ($pagina) {
         $series_por_exercicio = [];
 
         if (!empty($divisoes)) {
-            // A. Busca TODOS os exercícios dessas divisões
             $div_ids = array_column($divisoes, 'id');
             $placeholders_div = implode(',', array_fill(0, count($div_ids), '?'));
             
@@ -2408,7 +2464,6 @@ switch ($pagina) {
                     $ex_ids[] = $ex['id'];
                 }
 
-                // B. Busca TODAS as séries desses exercícios
                 if (!empty($ex_ids)) {
                     $placeholders_ex = implode(',', array_fill(0, count($ex_ids), '?'));
                     $stmt_series = $pdo->prepare("SELECT * FROM series WHERE exercicio_id IN ($placeholders_ex) ORDER BY id ASC");
@@ -2422,7 +2477,7 @@ switch ($pagina) {
             }
         }
 
-        // 3. BUSCAR PERIODIZAÇÃO (Mantido igual)
+        // 3. BUSCAR PERIODIZAÇÃO
         $microciclos = [];
         if ($treino['nivel_plano'] !== 'basico') {
             $stmt_per = $pdo->prepare("SELECT id FROM periodizacoes WHERE treino_id = ?");
@@ -2483,10 +2538,9 @@ switch ($pagina) {
                     foreach ($divisoes as $div) {
                         $display = $firstContent ? 'active' : '';
                         
-                        // Pega exercícios da memória (Otimização)
                         $exercicios_raw = $exercicios_por_divisao[$div['id']] ?? [];
 
-                        // AGRUPAMENTO (Bi-set / Tri-set)
+                        // AGRUPAMENTO
                         $lista_final = [];
                         $grupos_temp = []; 
 
@@ -2538,10 +2592,8 @@ switch ($pagina) {
                                         }
 
                                         foreach ($bloco['itens'] as $ex) {
-                                            // Pega as séries da memória
                                             $series = $series_por_exercicio[$ex['id']] ?? [];
                                             
-                                            // Prepara JSON para edição
                                             $ex_data = $ex;
                                             $ex_data['series'] = $series;
                                             $ex_json = htmlspecialchars(json_encode($ex_data), ENT_QUOTES, 'UTF-8');
@@ -2555,24 +2607,25 @@ switch ($pagina) {
                                                         foreach ($series as $s) {
                                                             $qtd = $s['quantidade'];
                                                             $reps = $s['reps_fixas'];
-                                                            $tecnica = $s['tecnica'] ?? 'normal';
+                                                            $tecnica = strtolower(trim($s['tecnica'] ?? 'normal'));
                                                             $valor = $s['tecnica_valor'] ?? '';
                                                             
                                                             $style = '';
-                                                            $label = strtoupper($s['categoria']);
+                                                            // TRADUZ O NOME DA CATEGORIA DA SÉRIE AQUI:
+                                                            $label = traduzirTermo($s['categoria'] ?? 'normal', $idioma_aluno);
                                                             $extra = $reps ? "(".$reps.")" : "";
 
                                                             if ($tecnica === 'dropset') {
                                                                 $style = 'background:rgba(255, 64, 129, 0.1); color:#ff4081; border:1px solid rgba(255, 64, 129, 0.3);';
-                                                                $label = 'DROP SET';
+                                                                $label = traduzirTermo('dropset', $idioma_aluno);
                                                                 $extra = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor} drops)</small>";
                                                             } elseif ($tecnica === 'restpause') {
                                                                 $style = 'background:rgba(0, 188, 212, 0.1); color:#00bcd4; border:1px solid rgba(0, 188, 212, 0.3);';
-                                                                $label = 'REST PAUSE';
+                                                                $label = traduzirTermo('restpause', $idioma_aluno);
                                                                 $extra = "<small style='opacity:0.8; font-size:0.85em; margin-left:2px;'>({$valor}s)</small>";
                                                             } elseif ($tecnica === 'clusterset') {
                                                                 $style = 'background:rgba(255, 145, 0, 0.1); color:#ff9100; border:1px solid rgba(255, 145, 0, 0.3);';
-                                                                $label = 'CLUSTER SET';
+                                                                $label = traduzirTermo('clusterset', $idioma_aluno);
                                                                 $parts = explode('|', $valor);
                                                                 if(count($parts)===3) $extra = "<small>({$parts[0]}x{$parts[1]})</small>";
                                                             }
@@ -2589,7 +2642,7 @@ switch ($pagina) {
                                             </div>';
                                         }
 
-                                        if ($bloco['tipo'] === 'grupo') echo '</div>'; // Fecha wrapper
+                                        if ($bloco['tipo'] === 'grupo') echo '</div>'; 
                                     }
                                 }
                         echo '</div></div>';
@@ -2599,6 +2652,7 @@ switch ($pagina) {
         echo '  </div>
             </section>';
             
+        // MODAL DO EXERCÍCIO COM O SELECT TRADUZIDO
         echo '
             <div id="modalExercicio" class="modal-overlay">
                 <div class="modal-content" style="max-width: 700px;">
@@ -2655,15 +2709,15 @@ switch ($pagina) {
                                 <div style="flex:1; min-width:140px;">
                                     <label class="input-label" style="font-size:0.7rem;">Tipo</label>
                                     <select id="set_tipo" class="user-input" style="padding:8px;" onchange="toggleTechniqueFields()">
-                                        <option value="work">Work Set</option>
-                                        <option value="warmup">Warm Up</option>
-                                        <option value="feeder">Feeder</option>
-                                        <option value="top">Top Set</option>
-                                        <option value="backoff">Backoff</option>
+                                        <option value="work">'.traduzirTermo('work', $idioma_aluno).' (Work Set)</option>
+                                        <option value="warmup">'.traduzirTermo('warmup', $idioma_aluno).' (Warm Up)</option>
+                                        <option value="feeder">'.traduzirTermo('feeder', $idioma_aluno).' (Feeder)</option>
+                                        <option value="top">'.traduzirTermo('topset', $idioma_aluno).' (Top Set)</option>
+                                        <option value="backoff">'.traduzirTermo('backoff', $idioma_aluno).' (Backoff)</option>
                                         <option value="falha">Falha</option>
-                                        <option value="dropset" style="color:#ff4d4d;">Drop-set</option>
-                                        <option value="restpause" style="color:#00e676;">Rest-pause</option>
-                                        <option value="clusterset" style="color:#00bfff;">Cluster Set</option>
+                                        <option value="dropset" style="color:#ff4d4d;">'.traduzirTermo('dropset', $idioma_aluno).'</option>
+                                        <option value="restpause" style="color:#00e676;">'.traduzirTermo('restpause', $idioma_aluno).'</option>
+                                        <option value="clusterset" style="color:#00bfff;">'.traduzirTermo('clusterset', $idioma_aluno).'</option>
                                     </select>
                                 </div>
                                 <div style="flex:0 0 70px;"><label class="input-label" style="font-size:0.7rem;">Reps</label><input type="text" id="set_reps" class="user-input" placeholder="10" style="padding:8px;"></div>

@@ -264,6 +264,16 @@ Só tenho a agradecer, tem me incentivado pra caramba"</p>
                     </div>
                     <p>"Site genial e organizado, melhorou demais a minha rotina na academia, e os treinos então, foi o bum que precisava."</p>
                 </a>
+                <a href="https://www.instagram.com/gui_ribeiro_374?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" class="review-card">
+                    <div class="review-header">
+                        <div class="user-info">
+                            <div class="user-avatar"><img src="assets/img/user-reviews/guilherme.jpeg" alt=""></div>
+                            <div><strong>Guilherme</strong><span class="user-tag">Plano Start</span></div>
+                        </div>
+                        <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                    </div>
+                    <p>"O site é bem completo, você consegue entender fácil como ele funciona, ajuda bastante na hora de lembrar cargas e as reps que falta, o site é excelente"</p>
+                </a>
             </div>
         </div>
     </section>

@@ -2256,6 +2256,7 @@ switch ($pagina) {
     case 'novo_treino':
         require_once '../config/db_connect.php';
         $user_id = $_SESSION['user_id'];
+        $idioma_aluno = $_SESSION['pref_idioma'] ?? 'pt'; // Preferência do usuário logado
 
         // 1. Verifica se tem Coach (Bloqueio de Segurança)
         $stmt_check = $pdo->prepare("SELECT coach_id FROM usuarios WHERE id = ?");
@@ -2267,10 +2268,10 @@ switch ($pagina) {
             echo '<section class="fade-in" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:60vh; text-align:center;">
                     <div class="glass-card" style="padding:40px; max-width:400px; width:90%;">
                         <i class="fa-solid fa-user-lock" style="font-size:3rem; color:var(--gold); margin-bottom:20px;"></i>
-                        <h2 style="color:#fff; margin-bottom:10px;">Gerenciamento Restrito</h2>
-                        <p style="color:#888; margin-bottom:25px;">Seus treinos são definidos exclusivamente pelo seu Treinador. Você não pode criar ou editar fichas manualmente.</p>
+                        <h2 style="color:#fff; margin-bottom:10px;">'.($idioma_aluno == 'en' ? 'Restricted Access' : 'Gerenciamento Restrito').'</h2>
+                        <p style="color:#888; margin-bottom:25px;">'.($idioma_aluno == 'en' ? 'Your workouts are defined exclusively by your Coach. You cannot manually create or edit routines.' : 'Seus treinos são definidos exclusivamente pelo seu Treinador. Você não pode criar ou editar fichas manualmente.').'</p>
                         <button class="btn-gold" onclick="carregarConteudo(\'treinos\')" style="width:100%;">
-                            <i class="fa-solid fa-arrow-left"></i> VOLTAR PARA MINHAS FICHAS
+                            <i class="fa-solid fa-arrow-left"></i> '.($idioma_aluno == 'en' ? 'BACK TO MY WORKOUTS' : 'VOLTAR PARA MINHAS FICHAS').'
                         </button>
                     </div>
                   </section>';
@@ -2295,11 +2296,11 @@ switch ($pagina) {
         echo '<section id="meus-treinos-painel" class="fade-in">
                 <div class="meus-treinos-header">
                     <div>
-                        <h2 style="font-family:Orbitron; color:var(--gold); margin:0;">Meus Treinos</h2>
-                        <p style="color:#888; font-size:0.9rem;">Gerencie seus planejamentos</p>
+                        <h2 style="font-family:Orbitron; color:var(--gold); margin:0;">'.($idioma_aluno == 'en' ? 'My Workouts' : 'Meus Treinos').'</h2>
+                        <p style="color:#888; font-size:0.9rem;">'.($idioma_aluno == 'en' ? 'Manage your routines' : 'Gerencie seus planejamentos').'</p>
                     </div>
                     <button class="btn-gold" onclick="toggleNovoTreino()">
-                        <i class="fa-solid fa-plus"></i> <span class="mobile-hide">NOVO TREINO</span>
+                        <i class="fa-solid fa-plus"></i> <span class="mobile-hide">'.($idioma_aluno == 'en' ? 'NEW WORKOUT' : 'NOVO TREINO').'</span>
                     </button>
                 </div>
 
@@ -2328,27 +2329,27 @@ switch ($pagina) {
                             </div>
                             <div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; font-size:0.8rem; color:#666; display:flex; justify-content:space-between;">
                                 <span>Início: '.$data_inicio.'</span>
-                                <span><i class="fa-solid fa-arrow-right"></i> Acessar</span>
+                                <span><i class="fa-solid fa-arrow-right"></i> '.($idioma_aluno == 'en' ? 'Access' : 'Acessar').'</span>
                             </div>
                         </div>';
                     }
                 } else {
                     echo '<div style="grid-column: 1 / -1; text-align:center; padding:50px; color:#666; border:1px dashed #333; border-radius:10px;">
                             <i class="fa-solid fa-ghost" style="font-size:2rem; margin-bottom:15px; opacity:0.5;"></i>
-                            <p>Nenhum treino encontrado.</p>
+                            <p>'.($idioma_aluno == 'en' ? 'No workouts found.' : 'Nenhum treino encontrado.').'</p>
                           </div>';
                 }
 
         echo '  </div>
               </section>';
 
-        // MODAL NOVO TREINO (Só renderiza aqui porque se tiver coach, já deu break lá em cima)
+        // MODAL NOVO TREINO
         echo '
         <div id="box-novo-treino" class="modal-overlay" style="display:none;">
             <div class="modal-content selection-modal" style="max-width: 650px; text-align: left; position: relative;">
                 <button class="modal-close" onclick="toggleNovoTreino()">&times;</button>
                 <h3 class="section-title" style="color: var(--gold); margin-bottom: 25px; text-align: center;">
-                    <i class="fa-solid fa-dumbbell"></i> Criar Nova Estrutura
+                    <i class="fa-solid fa-dumbbell"></i> '.($idioma_aluno == 'en' ? 'Create New Routine' : 'Criar Nova Estrutura').'
                 </h3>
 
                 <div style="margin-bottom: 25px;">
@@ -2358,7 +2359,7 @@ switch ($pagina) {
                             onmouseout="this.style.borderColor=\'#333\'; this.style.background=\'rgba(255,255,255,0.03)\'; this.querySelector(\'span\').style.color=\'#999\'">
                         
                         <i class="fa-solid fa-book-open" style="color:var(--gold); font-size:0.9rem;"></i>
-                        <span style="font-family:Roboto, sans-serif;">Prefere agilidade? <strong style="color:#eee; font-weight:500;">Explorar Biblioteca de Treinos</strong></span>
+                        <span style="font-family:Roboto, sans-serif;">'.($idioma_aluno == 'en' ? 'Want a faster start? <strong style="color:#eee; font-weight:500;">Explore Workout Library</strong>' : 'Prefere agilidade? <strong style="color:#eee; font-weight:500;">Explorar Biblioteca de Treinos</strong>').'</span>
                         <i class="fa-solid fa-chevron-right" style="font-size:0.7rem; margin-left:auto; opacity:0.5;"></i>
                     </button>
                 </div>
@@ -2366,49 +2367,48 @@ switch ($pagina) {
                 <form id="formNovoTreino" onsubmit="criarTreino(event)">
                     <div class="form-row">
                         <div class="form-col">
-                            <label class="input-label">Nome do Planejamento</label>
+                            <label class="input-label">'.($idioma_aluno == 'en' ? 'Routine Name' : 'Nome do Planejamento').'</label>
                             <input type="text" name="nome" class="user-input" placeholder="Ex: Hipertrofia Fase 1" required>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-col">
-                            <label class="input-label">Tipo de Plano</label>
+                            <label class="input-label">'.($idioma_aluno == 'en' ? 'Plan Type' : 'Tipo de Plano').'</label>
                             <select name="nivel" class="user-input" id="selectNivel" onchange="togglePeriodizacao()" required>';
                                 if ($plano_atual === 'start') {
-                                    echo '<option value="basico" selected>Básico (Ficha Fixa)</option>';
-                                    echo '<option value="avancado" disabled>Avançado (Bloqueado - Alunos PRO)</option>';
+                                    echo '<option value="basico" selected>'.($idioma_aluno == 'en' ? 'Basic (Fixed)' : 'Básico (Ficha Fixa)').'</option>';
+                                    echo '<option value="avancado" disabled>'.($idioma_aluno == 'en' ? 'Advanced (Locked - PRO only)' : 'Avançado (Bloqueado - Alunos PRO)').'</option>';
                                 } else {
-                                    echo '<option value="basico">Básico (Ficha Fixa)</option>';
-                                    echo '<option value="avancado" selected>Avançado (Periodizado)</option>';
+                                    echo '<option value="basico">'.($idioma_aluno == 'en' ? 'Basic (Fixed)' : 'Básico (Ficha Fixa)').'</option>';
+                                    echo '<option value="avancado" selected>'.($idioma_aluno == 'en' ? 'Advanced (Periodized)' : 'Avançado (Periodizado)').'</option>';
                                 }
                         echo '</select>
                         </div>
                         <div class="form-col">
-                            <label class="input-label">Data de Início</label>
+                            <label class="input-label">'.($idioma_aluno == 'en' ? 'Start Date' : 'Data de Início').'</label>
                             <input type="date" name="data_inicio" class="user-input" required value="'.date('Y-m-d').'">
                         </div>
-                        <div class="form-col" style="flex: 0 0 120px;">
-                            <label class="input-label">Divisão</label>
-                            <input type="text" name="divisao" class="user-input" placeholder="ABC" maxlength="7" style="text-transform:uppercase;" required>
-                        </div>
+                        
+                        <input type="hidden" name="divisao" id="divisao-auto" required>
                     </div>
+                    
                     <div style="margin-bottom: 25px;">
-                        <label class="input-label">Dias de Treino</label>
+                        <label class="input-label">'.($idioma_aluno == 'en' ? 'Training Days' : 'Dias de Treino (Gera a Divisão Automática)').'</label>
                         <div class="days-selector">
-                            <label><input type="checkbox" name="dias_semana[]" value="0" class="day-checkbox"><span class="day-label">DOM</span></label>
-                            <label><input type="checkbox" name="dias_semana[]" value="1" class="day-checkbox"><span class="day-label">SEG</span></label>
-                            <label><input type="checkbox" name="dias_semana[]" value="2" class="day-checkbox"><span class="day-label">TER</span></label>
-                            <label><input type="checkbox" name="dias_semana[]" value="3" class="day-checkbox"><span class="day-label">QUA</span></label>
-                            <label><input type="checkbox" name="dias_semana[]" value="4" class="day-checkbox"><span class="day-label">QUI</span></label>
-                            <label><input type="checkbox" name="dias_semana[]" value="5" class="day-checkbox"><span class="day-label">SEX</span></label>
-                            <label><input type="checkbox" name="dias_semana[]" value="6" class="day-checkbox"><span class="day-label">SÁB</span></label>
+                            <label><input type="checkbox" name="dias_semana[]" value="0" class="day-checkbox auto-calc-divisao"><span class="day-label">'.($idioma_aluno == 'en' ? 'SUN' : 'DOM').'</span></label>
+                            <label><input type="checkbox" name="dias_semana[]" value="1" class="day-checkbox auto-calc-divisao"><span class="day-label">'.($idioma_aluno == 'en' ? 'MON' : 'SEG').'</span></label>
+                            <label><input type="checkbox" name="dias_semana[]" value="2" class="day-checkbox auto-calc-divisao"><span class="day-label">'.($idioma_aluno == 'en' ? 'TUE' : 'TER').'</span></label>
+                            <label><input type="checkbox" name="dias_semana[]" value="3" class="day-checkbox auto-calc-divisao"><span class="day-label">'.($idioma_aluno == 'en' ? 'WED' : 'QUA').'</span></label>
+                            <label><input type="checkbox" name="dias_semana[]" value="4" class="day-checkbox auto-calc-divisao"><span class="day-label">'.($idioma_aluno == 'en' ? 'THU' : 'QUI').'</span></label>
+                            <label><input type="checkbox" name="dias_semana[]" value="5" class="day-checkbox auto-calc-divisao"><span class="day-label">'.($idioma_aluno == 'en' ? 'FRI' : 'SEX').'</span></label>
+                            <label><input type="checkbox" name="dias_semana[]" value="6" class="day-checkbox auto-calc-divisao"><span class="day-label">'.($idioma_aluno == 'en' ? 'SAT' : 'SÁB').'</span></label>
                         </div>
                     </div>
                     <div id="aviso-periodizacao" class="alert-box" '.($plano_atual === 'start' ? 'style="display:none;"' : '').'>
-                        <span class="alert-title">Modo Periodização Ativo</span>
-                        <p class="alert-text">Serão gerados 12 Microciclos automaticamente.</p>
+                        <span class="alert-title">'.($idioma_aluno == 'en' ? 'Periodization Active' : 'Modo Periodização Ativo').'</span>
+                        <p class="alert-text">'.($idioma_aluno == 'en' ? '12 Microcycles will be generated automatically.' : 'Serão gerados 12 Microciclos automaticamente.').'</p>
                     </div>
-                    <button type="submit" class="btn-gold" style="width:100%; margin-top: 15px; padding: 15px;">CRIAR ESTRUTURA</button>
+                    <button type="submit" class="btn-gold" style="width:100%; margin-top: 15px; padding: 15px;">'.($idioma_aluno == 'en' ? 'CREATE ROUTINE' : 'CRIAR ESTRUTURA').'</button>
                 </form>
             </div>
         </div>';
@@ -2709,11 +2709,11 @@ switch ($pagina) {
                                 <div style="flex:1; min-width:140px;">
                                     <label class="input-label" style="font-size:0.7rem;">Tipo</label>
                                     <select id="set_tipo" class="user-input" style="padding:8px;" onchange="toggleTechniqueFields()">
-                                        <option value="work">'.traduzirTermo('work', $idioma_aluno).' (Work Set)</option>
-                                        <option value="warmup">'.traduzirTermo('warmup', $idioma_aluno).' (Warm Up)</option>
-                                        <option value="feeder">'.traduzirTermo('feeder', $idioma_aluno).' (Feeder)</option>
-                                        <option value="top">'.traduzirTermo('topset', $idioma_aluno).' (Top Set)</option>
-                                        <option value="backoff">'.traduzirTermo('backoff', $idioma_aluno).' (Backoff)</option>
+                                        <option value="work">'.traduzirTermo('work', $idioma_aluno).'</option>
+                                        <option value="warmup">'.traduzirTermo('warmup', $idioma_aluno).'</option>
+                                        <option value="feeder">'.traduzirTermo('feeder', $idioma_aluno).'</option>
+                                        <option value="top">'.traduzirTermo('topset', $idioma_aluno).'</option>
+                                        <option value="backoff">'.traduzirTermo('backoff', $idioma_aluno).'</option>
                                         <option value="falha">Falha</option>
                                         <option value="dropset" style="color:#ff4d4d;">'.traduzirTermo('dropset', $idioma_aluno).'</option>
                                         <option value="restpause" style="color:#00e676;">'.traduzirTermo('restpause', $idioma_aluno).'</option>

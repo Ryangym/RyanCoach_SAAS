@@ -2393,7 +2393,7 @@ switch ($pagina) {
                     </div>
                     
                     <div style="margin-bottom: 25px;">
-                        <label class="input-label">'.($idioma_aluno == 'en' ? 'Training Days' : 'Dias de Treino (Gera a Divisão Automática)').'</label>
+                        <label class="input-label">'.($idioma_aluno == 'en' ? 'Training Days' : 'Dias de Treino').'</label>
                         <div class="days-selector">
                             <label><input type="checkbox" name="dias_semana[]" value="0" class="day-checkbox auto-calc-divisao"><span class="day-label">'.($idioma_aluno == 'en' ? 'SUN' : 'DOM').'</span></label>
                             <label><input type="checkbox" name="dias_semana[]" value="1" class="day-checkbox auto-calc-divisao"><span class="day-label">'.($idioma_aluno == 'en' ? 'MON' : 'SEG').'</span></label>

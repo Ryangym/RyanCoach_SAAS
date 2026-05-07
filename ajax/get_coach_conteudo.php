@@ -239,7 +239,6 @@ switch ($pagina) {
             </div>';
         break;
 
-    // --- EDITOR DE TREINOS (Coach só vê os treinos que ELE criou) ---
     // --- EDITOR DE TREINOS (COACH) ---
     case 'treinos_editor':
         // 1. LISTA DE TREINOS DO COACH
@@ -360,22 +359,20 @@ switch ($pagina) {
                                 <label class="input-label">Data de Início</label>
                                 <input type="date" name="data_inicio" class="admin-input" required value="'.date('Y-m-d').'">
                             </div>
-                            <div class="form-col" style="flex: 0 0 120px;">
-                                <label class="input-label">Divisão</label>
-                                <input type="text" name="divisao" class="admin-input" placeholder="ABC" maxlength="7" style="text-transform:uppercase;" required>
-                            </div>
+                            
+                            <input type="hidden" name="divisao" value="AUTO">
                         </div>
 
                         <div style="margin-bottom: 25px;">
-                            <label class="input-label">Dias de Treino</label>
+                            <label class="input-label">Dias de Treino (Gera a Divisão Automática)</label>
                             <div class="days-selector">
-                                <label><input type="checkbox" name="dias_semana[]" value="0" class="day-checkbox"><span class="day-label">DOM</span></label>
-                                <label><input type="checkbox" name="dias_semana[]" value="1" class="day-checkbox"><span class="day-label">SEG</span></label>
-                                <label><input type="checkbox" name="dias_semana[]" value="2" class="day-checkbox"><span class="day-label">TER</span></label>
-                                <label><input type="checkbox" name="dias_semana[]" value="3" class="day-checkbox"><span class="day-label">QUA</span></label>
-                                <label><input type="checkbox" name="dias_semana[]" value="4" class="day-checkbox"><span class="day-label">QUI</span></label>
-                                <label><input type="checkbox" name="dias_semana[]" value="5" class="day-checkbox"><span class="day-label">SEX</span></label>
-                                <label><input type="checkbox" name="dias_semana[]" value="6" class="day-checkbox"><span class="day-label">SÁB</span></label>
+                                <label><input type="checkbox" name="dias_semana[]" value="0" class="day-checkbox auto-calc-divisao"><span class="day-label">DOM</span></label>
+                                <label><input type="checkbox" name="dias_semana[]" value="1" class="day-checkbox auto-calc-divisao"><span class="day-label">SEG</span></label>
+                                <label><input type="checkbox" name="dias_semana[]" value="2" class="day-checkbox auto-calc-divisao"><span class="day-label">TER</span></label>
+                                <label><input type="checkbox" name="dias_semana[]" value="3" class="day-checkbox auto-calc-divisao"><span class="day-label">QUA</span></label>
+                                <label><input type="checkbox" name="dias_semana[]" value="4" class="day-checkbox auto-calc-divisao"><span class="day-label">QUI</span></label>
+                                <label><input type="checkbox" name="dias_semana[]" value="5" class="day-checkbox auto-calc-divisao"><span class="day-label">SEX</span></label>
+                                <label><input type="checkbox" name="dias_semana[]" value="6" class="day-checkbox auto-calc-divisao"><span class="day-label">SÁB</span></label>
                             </div>
                         </div>
 

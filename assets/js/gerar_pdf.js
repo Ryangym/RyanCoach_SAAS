@@ -60,7 +60,7 @@ function renderizarTemplateTreino(dados, nomeAluno, nomePlano, configCores) {
         return null;
     }
 
-    // Mini-dicionário JavaScript (mesma lógica do PHP)
+    // Mini-dicionário JavaScript
     const traduzirSet = (termo) => {
         if (idioma_aluno === 'en') return termo.toUpperCase();
         
@@ -69,7 +69,7 @@ function renderizarTemplateTreino(dados, nomeAluno, nomePlano, configCores) {
             'work': 'TRABALHO',
             'feeder': 'PREPARAÇÃO',
             'topset': 'SÉRIE MÁXIMA',
-            'top': 'SÉRIE MÁXIMA', // Caso o banco traga só 'top'
+            'top': 'SÉRIE MÁXIMA', 
             'backoff': 'SÉRIE DE RETORNO',
             'dropset': 'DROP-SET',
             'restpause': 'REST-PAUSE',
@@ -94,6 +94,19 @@ function renderizarTemplateTreino(dados, nomeAluno, nomePlano, configCores) {
     // Limpa Container
     const container = document.getElementById('pdf-container-treinos');
     container.innerHTML = ''; 
+
+    // --- MÁGICA DO LAYOUT: Define o estilo de grid com base na qtd de dias ---
+    const totalDias = Object.keys(dados).length;
+    let styleFlexDay = "";
+    
+    if (totalDias === 4 || totalDias === 2) {
+        // Força exatamente 2 blocos por linha (grade 2x2 para 4 dias, 1x2 para 2 dias)
+        styleFlexDay = "flex: 1 1 calc(50% - 20px); max-width: calc(50% - 10px);";
+    } else if (totalDias === 1) {
+        // Se for apenas 1 dia, ocupa a linha inteira
+        styleFlexDay = "flex: 1 1 100%; max-width: 100%;";
+    }
+    // Se for 3, 5 ou 6 dias, a classe original do CSS (.day-block { flex: 30% }) vai continuar mantendo o formato 3x3 normal.
 
     for (const [letra, conteudo] of Object.entries(dados)) {
         const exerciciosRaw = conteudo.exercicios;
@@ -128,9 +141,9 @@ function renderizarTemplateTreino(dados, nomeAluno, nomePlano, configCores) {
         let nomeTreinoBD = conteudo.nome ? conteudo.nome.trim() : "";
         let subtitulo = (nomeTreinoBD && nomeTreinoBD !== "") ? nomeTreinoBD : `TREINO ${letra}`;
 
-        // Início do Bloco HTML do Dia
+        // Início do Bloco HTML do Dia (O styleFlexDay é injetado AQUI)
         let htmlBlock = `
-            <div class="day-block" style="page-break-inside: avoid; background: transparent; margin-bottom: 20px;">
+            <div class="day-block" style="page-break-inside: avoid; background: transparent; margin-bottom: 20px; ${styleFlexDay}">
                 
                 <div class="day-header" style="border-top: 2px solid ${borda}; border-right: 2px solid ${borda}; border-left: 2px solid ${borda}; background: ${tema}; text-align: center;">
                     <span class="day-title" style="color: #fff; font-weight:800;">${nomeDia}</span>
@@ -228,7 +241,6 @@ function renderizarTemplateTreino(dados, nomeAluno, nomePlano, configCores) {
                         }
 
                         const qtd = serie.quantidade ? serie.quantidade : 1;
-                        // Transformando a 1ª letra em maiúscula apenas para o PDF ficar mais bonito
                         let labelFormatado = label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
                         
                         htmlBlock += `<span class="set-box type-${serie.categoria}" style="border: none;">${qtd}x ${labelFormatado}</span>`;

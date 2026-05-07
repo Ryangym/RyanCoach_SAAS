@@ -202,7 +202,7 @@ require_once 'includes/head_main.php';
                 <div class="feature-card">
                     <div class="f-icon"><i class="fa-solid fa-calendar-days"></i></div>
                     <h3>Periodização Automática</h3>
-                    <p>Organize macrociclos e microciclos. Saiba quando é semana de choque ou semana regenerativa.</p>
+                    <p>Organize mesociclos e microciclos. Saiba quando é semana de choque ou semana regenerativa.</p>
                 </div>
                 <div class="feature-card">
                     <div class="f-icon"><i class="fa-solid fa-utensils"></i></div>

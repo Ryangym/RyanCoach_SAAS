@@ -2208,7 +2208,7 @@ switch ($pagina) {
                         </div>
                         <div style="text-align: center; flex: 1;">
                             <h1 id="render-aluno-nome-perio" style="font-family: \'Lobster\', cursive; font-size: 35px; margin: 0; text-decoration: none; font-weight: 500;">Nome do Aluno</h1>
-                            <span id="render-plano-nome-perio" style="font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #fff; font-weight: bold;">MACROCICLO</span>
+                            <span id="render-plano-nome-perio" style="font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #fff; font-weight: bold;">MESOCICLO</span>
                         </div>
                         <div class="sh-meta" style="text-align: right;">
                             <span style="color: #fff; font-size: 10px; font-weight: bold;">PERIODIZAÇÃO</span>

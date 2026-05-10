@@ -7,6 +7,7 @@
    2. PAINEL DO TREINO (Abas, Exercícios e Periodização)
    3. MODAL DE AVALIAÇÃO FÍSICA (Upload e Gráficos)
    4. MODAIS DE DIETA (Refeições e Alimentos)
+   5. ATALHOS DE TECLADO
    ========================================================================== */
 
 /* ==========================================================================
@@ -856,3 +857,145 @@ function abrirModalImportar() {
 function fecharModalImportar() {
     document.getElementById("modalImportar").style.display = "none";
 }
+
+
+// =========================================================================
+// CENTRAL DE ATALHOS DE TECLADO (MODAL DE EXERCÍCIOS)
+// =========================================================================
+document.addEventListener('keydown', function(e) {
+    
+    // Verifica se o modal de exercícios está aberto na tela
+    const modalExercicio = document.getElementById('modalExercicio');
+    if (!modalExercicio || modalExercicio.style.display === 'none' || modalExercicio.style.display === '') {
+        return;
+    }
+
+    // Função interna para injetar a série e resetar visualmente
+    function injetarSerieRapida(tipoSerie, qtd = '1') {
+        e.preventDefault(); 
+
+        const setQtd = document.getElementById('set_qtd');
+        const setTipo = document.getElementById('set_tipo');
+        const setReps = document.getElementById('set_reps');
+        const setDesc = document.getElementById('set_desc');
+
+        setQtd.value = qtd;
+        setTipo.value = tipoSerie;
+        setReps.value = ''; 
+        setDesc.value = ''; 
+
+        // Adiciona à lista (Função original do seu sistema)
+        if (typeof addSetToList === 'function') addSetToList();
+
+        // Reseta o formulário de volta para "Work Set" padrão
+        setQtd.value = '1';
+        setTipo.value = 'work';
+        
+        if(typeof toggleTechniqueFields === 'function') toggleTechniqueFields();
+
+        // Efeito visual rápido (pisca verde) no botão "+"
+        const btnAdd = document.querySelector('#modalExercicio .btn-gold[onclick="addSetToList()"]');
+        if (btnAdd) {
+            const corOriginal = btnAdd.style.backgroundColor || '';
+            btnAdd.style.backgroundColor = '#00e676';
+            setTimeout(() => { btnAdd.style.backgroundColor = corOriginal; }, 200);
+        }
+    }
+
+    // Função para piscar um campo (feedback visual da mecânica)
+    function piscarElemento(el) {
+        if(!el) return;
+        const bgOriginal = el.style.backgroundColor || '';
+        el.style.backgroundColor = 'rgba(255, 186, 66, 0.4)'; // Fica dourado
+        setTimeout(() => { el.style.backgroundColor = bgOriginal; }, 300);
+    }
+
+    // Verifica se a tecla "Alt" está pressionada
+    if (e.altKey) {
+        const tecla = e.key.toLowerCase();
+
+        switch(tecla) {
+            // --- SÉRIES ÚNICAS ---
+            case 'w': injetarSerieRapida('warmup'); break;
+            case 'f': injetarSerieRapida('feeder'); break;
+            case 't': injetarSerieRapida('top'); break;
+            case 'b': injetarSerieRapida('backoff'); break;
+
+            // --- COMBO WARMUP + FEEDER ---
+            case 'c': 
+                e.preventDefault();
+                document.getElementById('set_qtd').value = '1';
+                document.getElementById('set_tipo').value = 'warmup';
+                document.getElementById('set_reps').value = '';
+                document.getElementById('set_desc').value = '';
+                if(typeof addSetToList === 'function') addSetToList();
+                injetarSerieRapida('feeder');
+                break;
+
+            // --- WORK SETS MÚLTIPLOS ---
+            case '1': injetarSerieRapida('work', '1'); break;
+            case '2': injetarSerieRapida('work', '2'); break;
+            case '3': injetarSerieRapida('work', '3'); break;
+            case '4': injetarSerieRapida('work', '4'); break;
+
+            // --- MECÂNICA DO EXERCÍCIO ---
+            case 'l': 
+                e.preventDefault();
+                const selMecL = document.getElementById('inp_mecanica');
+                if (selMecL) { selMecL.value = 'livre'; piscarElemento(selMecL); }
+                break;
+            case 'o': 
+                e.preventDefault();
+                const selMecO = document.getElementById('inp_mecanica');
+                if (selMecO) { selMecO.value = 'composto'; piscarElemento(selMecO); }
+                break;
+            case 'i': 
+                e.preventDefault();
+                const selMecI = document.getElementById('inp_mecanica');
+                if (selMecI) { selMecI.value = 'isolador'; piscarElemento(selMecI); }
+                break;
+
+            // --- DESFAZER (REMOVER ÚLTIMA SÉRIE REALMENTE) ---
+            case 'z':
+                e.preventDefault();
+                const listaTemp = document.getElementById('temp-sets-list');
+                
+                if (listaTemp && listaTemp.children.length > 0) {
+                    // Pega a ÚLTIMA série que foi renderizada na tela
+                    const ultimaSerie = listaTemp.lastElementChild;
+                    
+                    // Procura o botão de deletar DENTRO dessa série. 
+                    // Simulando o clique, ativamos a sua função original que remove do Array!
+                    const btnDeletar = ultimaSerie.querySelector('button, .btn-delete, [onclick*="remove"], [onclick*="deletar"]');
+                    
+                    if (btnDeletar) {
+                        btnDeletar.click();
+                        
+                        // Efeito visual na div inteira para mostrar que foi apagado
+                        ultimaSerie.style.opacity = '0.5';
+                        ultimaSerie.style.backgroundColor = 'rgba(255, 66, 66, 0.2)';
+                    }
+                }
+                break;
+
+            // --- SALVAR TUDO E FECHAR ---
+            case 'enter':
+                e.preventDefault();
+                const btnSalvarTudo = document.getElementById('btn-save-modal');
+                if (btnSalvarTudo) btnSalvarTudo.click();
+                break;
+        }
+    }
+});
+
+// Alt + W: Adiciona apenas Warm Up.
+// Alt + F: Adiciona apenas Feeder.
+// Alt + 1, 2, 3, 4: Adiciona Work Set.
+// Alt + T: Adiciona Top Set.
+// Alt + B: Adiciona Backoff Set.
+// Alt + C: (Combo) Adiciona Warm Up e logo abaixo um Feeder numa tacada só.
+// Alt + Enter: Clique automático no botão de SALVAR TUDO.
+// Alt + Z: Desfazer
+// Alt + O: Exercicio Composto
+// Alt + I: Exercicio Isolador
+// Alt + L: Exercicio Livre

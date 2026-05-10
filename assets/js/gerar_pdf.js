@@ -6,6 +6,7 @@
    2. Renderização de Templates (Treino, em breve Avaliação/Dieta)
    3. Geração do Arquivo (Download)
    4. Preview com Zoom (Overlay)
+   5. Gerar Relatório de Texto
    ========================================================================== */
 
 /* ==========================================================================
@@ -886,4 +887,135 @@ function debugPreviewPDF() {
         overlay.remove();
         document.getElementById('modalPDFConfig').style.display = 'flex';
     };
+}
+/* ==========================================================================
+   5. Gerar Relatório de Texto
+   ========================================================================== */
+   // ============================================================================
+// EXPORTAÇÃO DE TREINO PARA TEXTO (WHATSAPP)
+// ============================================================================
+function exportarTreinoTexto() {
+    const inputJson = document.getElementById('json-dados-treinos');
+    const inputPlano = document.getElementById('plano-nome-atual');
+    const inputIdioma = document.getElementById('idioma_texto_relatorio');
+    
+    if (!inputJson || !inputJson.value) {
+        alert("Nenhum dado de treino encontrado.");
+        return;
+    }
+
+    const dados = JSON.parse(inputJson.value);
+    const planoNome = inputPlano ? inputPlano.value : "Meu Treino";
+    const idioma = inputIdioma ? inputIdioma.value : 'pt';
+
+    const traduzir = (termo) => {
+        if (idioma === 'en') return termo.toUpperCase();
+        const dic = {
+            'warmup': 'AQUECIMENTO', 'work': 'TRABALHO', 'feeder': 'PREPARAÇÃO',
+            'topset': 'SÉRIE MÁXIMA', 'top': 'SÉRIE MÁXIMA', 'backoff': 'SÉRIE DE RETORNO',
+            'dropset': 'DROP-SET', 'restpause': 'REST-PAUSE', 'clusterset': 'CLUSTER-SET'
+        };
+        const t = termo.toLowerCase().trim();
+        return dic[t] || t.toUpperCase();
+    };
+
+    let textoFinal = `🏋🏻‍♂️ *${planoNome.toUpperCase()}*\n\n`;
+
+    for (const [letra, div] of Object.entries(dados)) {
+        const nomeTreinoBD = div.nome ? div.nome.trim() : "";
+        const subtitulo = (nomeTreinoBD && nomeTreinoBD !== "") ? nomeTreinoBD : `TREINO ${letra}`;
+        
+        textoFinal += `🗓️ *${div.dia_real.toUpperCase()}* - ${subtitulo}\n`;
+        textoFinal += `-----------------------------------\n`;
+
+        const exerciciosRaw = div.exercicios;
+        const listaProcessada = [];
+        let grupoAtual = null;
+
+        // Pré-processamento de Bi-Sets
+        exerciciosRaw.forEach((ex) => {
+            const hash = ex.agrupamento_hash;
+            if (hash && hash !== "") {
+                if (grupoAtual && grupoAtual.hash === hash) {
+                    grupoAtual.itens.push(ex);
+                } else {
+                    if (grupoAtual) listaProcessada.push(grupoAtual);
+                    grupoAtual = { type: 'grupo', hash: hash, itens: [ex] };
+                }
+            } else {
+                if (grupoAtual) { listaProcessada.push(grupoAtual); grupoAtual = null; }
+                listaProcessada.push({ type: 'single', item: ex });
+            }
+        });
+        if (grupoAtual) listaProcessada.push(grupoAtual);
+
+        // Montagem do texto
+        listaProcessada.forEach((bloco) => {
+            const isGroup = (bloco.type === 'grupo');
+            const itens = isGroup ? bloco.itens : [bloco.item];
+
+            if (isGroup) {
+                const tipoAgrup = (itens.length === 2) ? "BI-SET" : "TRI-SET";
+                textoFinal += `🔗 *[${tipoAgrup}]*\n`;
+            }
+
+            itens.forEach((ex, idx) => {
+                let marcaConector = isGroup ? ((idx === itens.length - 1) ? " ╚ " : " ╠ ") : "🔸 ";
+                textoFinal += `${marcaConector}*${ex.nome_exercicio}*\n`;
+                
+                if (ex.lista_series && ex.lista_series.length > 0) {
+                    ex.lista_series.forEach(serie => {
+                        const qtd = serie.quantidade || 1;
+                        const reps = serie.reps_fixas ? `${serie.reps_fixas} reps` : '';
+                        const desc = serie.descanso_fixo ? `(${serie.descanso_fixo} rest)` : '';
+                        
+                        let nomeTecnica = serie.tecnica ? serie.tecnica.toLowerCase() : 'normal';
+                        let label = "";
+
+                        if (nomeTecnica === 'dropset') {
+                            label = `${traduzir('dropset')} - ${serie.tecnica_valor || '1'} drops`;
+                        } else if (nomeTecnica === 'restpause') {
+                            label = traduzir('restpause');
+                        } else if (nomeTecnica === 'clusterset') {
+                            label = traduzir('clusterset');
+                        } else {
+                            const cat = serie.categoria ? serie.categoria.toLowerCase() : 'work';
+                            label = traduzir(cat);
+                        }
+
+                        // Formatação final da linha da série
+                        let linhaSerie = `    • ${qtd}x ${label}`;
+                        if (reps) linhaSerie += ` | ${reps}`;
+                        if (desc) linhaSerie += ` ${desc}`;
+                        
+                        textoFinal += `${linhaSerie}\n`;
+                    });
+                } else {
+                    textoFinal += `    • (Séries não definidas)\n`;
+                }
+            });
+            textoFinal += `\n`;
+        });
+        textoFinal += `\n`;
+    }
+
+    // RESOLUÇÃO DO BUG DA SIDEBAR: Move o modal para a raiz do Body antes de abrir
+    const modalTexto = document.getElementById('modalTextoCopia');
+    document.body.appendChild(modalTexto);
+
+    // Escreve na textarea e abre o modal
+    document.getElementById('texto-pronto-whatsapp').value = textoFinal;
+    document.getElementById('modalTextoCopia').style.display = 'flex';
+}
+
+function copiarTextoDoArea() {
+    const area = document.getElementById('texto-pronto-whatsapp');
+    area.select();
+    area.setSelectionRange(0, 99999); // Para mobile
+
+    navigator.clipboard.writeText(area.value).then(() => {
+        alert("Texto copiado para a área de transferência!");
+    }).catch(err => {
+        alert("Falha ao copiar. Tente selecionar o texto manualmente.");
+    });
 }

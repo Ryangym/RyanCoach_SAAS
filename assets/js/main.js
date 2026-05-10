@@ -860,15 +860,43 @@ function fecharModalImportar() {
 
 
 // =========================================================================
-// CENTRAL DE ATALHOS DE TECLADO (MODAL DE EXERCÍCIOS)
+// CENTRAL DE ATALHOS DE TECLADO (PAINEL E MODAL DE EXERCÍCIOS)
 // =========================================================================
 document.addEventListener('keydown', function(e) {
     
-    // Verifica se o modal de exercícios está aberto na tela
+    // Se a tecla Alt (ou Option no Mac) não estiver pressionada, ignora.
+    if (!e.altKey) return;
+
     const modalExercicio = document.getElementById('modalExercicio');
-    if (!modalExercicio || modalExercicio.style.display === 'none' || modalExercicio.style.display === '') {
-        return;
+    const isModalOpen = modalExercicio && modalExercicio.style.display !== 'none' && modalExercicio.style.display !== '';
+    const tecla = e.key.toLowerCase();
+
+    // ---------------------------------------------------------------------
+    // 1. ATALHOS GERAIS DA TELA (QUANDO O MODAL ESTÁ FECHADO)
+    // ---------------------------------------------------------------------
+    if (!isModalOpen) {
+        if (tecla === 'n') { 
+            // Alt + N: Adicionar Novo Exercício
+            e.preventDefault();
+            
+            // Procura o botão "ADD EXERCÍCIO" apenas na aba da divisão que está ativa no momento
+            const btnAddExercicio = document.querySelector('.division-content.active .btn-gerenciar');
+            if (btnAddExercicio) {
+                btnAddExercicio.click();
+                
+                // Opcional: focar automaticamente no campo de nome do exercício assim que abrir
+                setTimeout(() => {
+                    const inputNome = document.getElementById('inp_nome');
+                    if(inputNome) inputNome.focus();
+                }, 100);
+            }
+        }
+        return; // Retorna para não processar os atalhos de dentro do modal
     }
+
+    // ---------------------------------------------------------------------
+    // 2. ATALHOS DE DENTRO DO MODAL (QUANDO O MODAL ESTÁ ABERTO)
+    // ---------------------------------------------------------------------
 
     // Função interna para injetar a série e resetar visualmente
     function injetarSerieRapida(tipoSerie, qtd = '1') {
@@ -910,84 +938,72 @@ document.addEventListener('keydown', function(e) {
         setTimeout(() => { el.style.backgroundColor = bgOriginal; }, 300);
     }
 
-    // Verifica se a tecla "Alt" está pressionada
-    if (e.altKey) {
-        const tecla = e.key.toLowerCase();
+    switch(tecla) {
+        // --- SÉRIES ÚNICAS ---
+        case 'w': injetarSerieRapida('warmup'); break;
+        case 'f': injetarSerieRapida('feeder'); break;
+        case 't': injetarSerieRapida('top'); break;
+        case 'b': injetarSerieRapida('backoff'); break;
 
-        switch(tecla) {
-            // --- SÉRIES ÚNICAS ---
-            case 'w': injetarSerieRapida('warmup'); break;
-            case 'f': injetarSerieRapida('feeder'); break;
-            case 't': injetarSerieRapida('top'); break;
-            case 'b': injetarSerieRapida('backoff'); break;
+        // --- COMBO WARMUP + FEEDER ---
+        case 'c': 
+            e.preventDefault();
+            document.getElementById('set_qtd').value = '1';
+            document.getElementById('set_tipo').value = 'warmup';
+            document.getElementById('set_reps').value = '';
+            document.getElementById('set_desc').value = '';
+            if(typeof addSetToList === 'function') addSetToList();
+            injetarSerieRapida('feeder');
+            break;
 
-            // --- COMBO WARMUP + FEEDER ---
-            case 'c': 
-                e.preventDefault();
-                document.getElementById('set_qtd').value = '1';
-                document.getElementById('set_tipo').value = 'warmup';
-                document.getElementById('set_reps').value = '';
-                document.getElementById('set_desc').value = '';
-                if(typeof addSetToList === 'function') addSetToList();
-                injetarSerieRapida('feeder');
-                break;
+        // --- WORK SETS MÚLTIPLOS ---
+        case '1': injetarSerieRapida('work', '1'); break;
+        case '2': injetarSerieRapida('work', '2'); break;
+        case '3': injetarSerieRapida('work', '3'); break;
+        case '4': injetarSerieRapida('work', '4'); break;
 
-            // --- WORK SETS MÚLTIPLOS ---
-            case '1': injetarSerieRapida('work', '1'); break;
-            case '2': injetarSerieRapida('work', '2'); break;
-            case '3': injetarSerieRapida('work', '3'); break;
-            case '4': injetarSerieRapida('work', '4'); break;
+        // --- MECÂNICA DO EXERCÍCIO ---
+        case 'l': 
+            e.preventDefault();
+            const selMecL = document.getElementById('inp_mecanica');
+            if (selMecL) { selMecL.value = 'livre'; piscarElemento(selMecL); }
+            break;
+        case 'o': 
+            e.preventDefault();
+            const selMecO = document.getElementById('inp_mecanica');
+            if (selMecO) { selMecO.value = 'composto'; piscarElemento(selMecO); }
+            break;
+        case 'i': 
+            e.preventDefault();
+            const selMecI = document.getElementById('inp_mecanica');
+            if (selMecI) { selMecI.value = 'isolador'; piscarElemento(selMecI); }
+            break;
 
-            // --- MECÂNICA DO EXERCÍCIO ---
-            case 'l': 
-                e.preventDefault();
-                const selMecL = document.getElementById('inp_mecanica');
-                if (selMecL) { selMecL.value = 'livre'; piscarElemento(selMecL); }
-                break;
-            case 'o': 
-                e.preventDefault();
-                const selMecO = document.getElementById('inp_mecanica');
-                if (selMecO) { selMecO.value = 'composto'; piscarElemento(selMecO); }
-                break;
-            case 'i': 
-                e.preventDefault();
-                const selMecI = document.getElementById('inp_mecanica');
-                if (selMecI) { selMecI.value = 'isolador'; piscarElemento(selMecI); }
-                break;
-
-            // --- DESFAZER (REMOVER ÚLTIMA SÉRIE REALMENTE) ---
-            case 'z':
-                e.preventDefault();
-                const listaTemp = document.getElementById('temp-sets-list');
-                
-                if (listaTemp && listaTemp.children.length > 0) {
-                    // Pega a ÚLTIMA série que foi renderizada na tela
-                    const ultimaSerie = listaTemp.lastElementChild;
-                    
-                    // Procura o botão de deletar DENTRO dessa série. 
-                    // Simulando o clique, ativamos a sua função original que remove do Array!
-                    const btnDeletar = ultimaSerie.querySelector('button, .btn-delete, [onclick*="remove"], [onclick*="deletar"]');
-                    
-                    if (btnDeletar) {
-                        btnDeletar.click();
-                        
-                        // Efeito visual na div inteira para mostrar que foi apagado
-                        ultimaSerie.style.opacity = '0.5';
-                        ultimaSerie.style.backgroundColor = 'rgba(255, 66, 66, 0.2)';
-                    }
+        // --- DESFAZER (REMOVER ÚLTIMA SÉRIE REALMENTE) ---
+        case 'z':
+            e.preventDefault();
+            const listaTemp = document.getElementById('temp-sets-list');
+            if (listaTemp && listaTemp.children.length > 0) {
+                const ultimaSerie = listaTemp.lastElementChild;
+                const btnDeletar = ultimaSerie.querySelector('button, .btn-delete, [onclick*="remove"], [onclick*="deletar"]');
+                if (btnDeletar) {
+                    btnDeletar.click();
+                    ultimaSerie.style.opacity = '0.5';
+                    ultimaSerie.style.backgroundColor = 'rgba(255, 66, 66, 0.2)';
                 }
-                break;
+            }
+            break;
 
-            // --- SALVAR TUDO E FECHAR ---
-            case 'enter':
-                e.preventDefault();
-                const btnSalvarTudo = document.getElementById('btn-save-modal');
-                if (btnSalvarTudo) btnSalvarTudo.click();
-                break;
-        }
+        // --- SALVAR TUDO E FECHAR ---
+        case 'enter':
+            e.preventDefault();
+            const btnSalvarTudo = document.getElementById('btn-save-modal');
+            if (btnSalvarTudo) btnSalvarTudo.click();
+            break;
     }
 });
 
+// Alt + N: Modal Novo Exercicio
 // Alt + W: Adiciona apenas Warm Up.
 // Alt + F: Adiciona apenas Feeder.
 // Alt + 1, 2, 3, 4: Adiciona Work Set.

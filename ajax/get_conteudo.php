@@ -2116,11 +2116,11 @@ switch ($pagina) {
                 <div class="pac-arrow"><i class="fa-solid fa-chevron-right"></i></div>
             </div>
 
-            <div class="pdf-action-card" onclick="exportarTreinoTexto()" style="border-color: #25D366; background: rgba(37, 211, 102, 0.05);">
+            <div class="pdf-action-card" onclick="abrirModalTexto()" style="border-color: #25D366; background: rgba(37, 211, 102, 0.05);">
                 <div class="pac-icon" style="color: #fff;"><i class="fa-brands fa-whatsapp"></i></div>
                 <div class="pac-info">
                     <h3 style="color:#fff;">Exportar em Texto</h3>
-                    <p>Copia o treino limpo e estruturado para você colar no WhatsApp.</p>
+                    <p>Copia dados estruturados para enviar ao aluno via WhatsApp.</p>
                 </div>
                 <div class="pac-arrow"><i class="fa-solid fa-copy"></i></div>
             </div>
@@ -2188,8 +2188,19 @@ switch ($pagina) {
 
             <div id="modalTextoCopia" class="modal-overlay" style="display:none;">
                 <div class="modal-content-premium" style="max-width: 500px; text-align: left;">
-                    <h3 class="modal-title" style="margin-bottom:15px;"><i class="fa-solid fa-copy"></i> Texto Gerado</h3>
-                    <p style="color:#aaa; font-size:0.85rem; margin-bottom:15px;">Copie o texto abaixo e cole diretamente no WhatsApp, Telegram ou Bloco de Notas.</p>
+                    <h3 class="modal-title" style="margin-bottom:15px;"><i class="fa-solid fa-copy"></i> Exportar Texto</h3>
+                    
+                    <div style="margin-bottom:15px;">
+                        <label class="input-label">Selecione o Relatório</label>
+                        <select id="tipo_exportacao_texto" class="modal-input" onchange="gerarTextoSelecionado()" style="cursor:pointer; background:#1a1a1a;">
+                            <option value="treino">Ficha de Treino</option>
+                            <option value="periodizacao">Periodização (Microciclos)</option>
+                            <option value="avaliacao">Avaliações Físicas</option>
+                        </select>
+                    </div>
+
+                    <p style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">O texto abaixo está pronto para ser copiado e colado.</p>
+                    
                     <textarea id="texto-pronto-whatsapp" style="width: 100%; height: 300px; background: #111; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 15px; font-family: monospace; font-size: 0.9rem; resize: none;" readonly></textarea>
                     
                     <div style="display:flex; gap:10px; margin-top:20px;">

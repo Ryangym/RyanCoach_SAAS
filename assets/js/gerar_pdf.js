@@ -891,18 +891,47 @@ function debugPreviewPDF() {
 /* ==========================================================================
    5. Gerar Relatório de Texto
    ========================================================================== */
-   // ============================================================================
-// EXPORTAÇÃO DE TREINO PARA TEXTO (WHATSAPP)
+
 // ============================================================================
-function exportarTreinoTexto() {
+// EXPORTAÇÃO DE TEXTO PARA WHATSAPP (TREINOS, PERIODIZAÇÃO, AVALIAÇÃO)
+// ============================================================================
+
+function abrirModalTexto() {
+    const modalTexto = document.getElementById('modalTextoCopia');
+    if (!modalTexto) return;
+
+    // Move para a raiz do body para resolver bugs da barra lateral cobrindo o modal
+    document.body.appendChild(modalTexto);
+
+    // Reseta o select para a opção de Treino e gera o primeiro texto
+    const selectTipo = document.getElementById('tipo_exportacao_texto');
+    if (selectTipo) selectTipo.value = 'treino';
+    
+    gerarTextoSelecionado();
+    modalTexto.style.display = 'flex';
+}
+
+function gerarTextoSelecionado() {
+    const selectTipo = document.getElementById('tipo_exportacao_texto');
+    const area = document.getElementById('texto-pronto-whatsapp');
+    if (!selectTipo || !area) return;
+
+    area.value = "Gerando dados...";
+    const tipo = selectTipo.value;
+
+    if (tipo === 'treino') area.value = gerarTextoTreino();
+    if (tipo === 'periodizacao') area.value = gerarTextoPeriodizacao();
+    if (tipo === 'avaliacao') area.value = gerarTextoAvaliacao();
+}
+
+//TREINOS
+// ----------------------------------------------------
+function gerarTextoTreino() {
     const inputJson = document.getElementById('json-dados-treinos');
     const inputPlano = document.getElementById('plano-nome-atual');
     const inputIdioma = document.getElementById('idioma_texto_relatorio');
     
-    if (!inputJson || !inputJson.value) {
-        alert("Nenhum dado de treino encontrado.");
-        return;
-    }
+    if (!inputJson || !inputJson.value || inputJson.value === '[]') return "Nenhum dado de treino encontrado.";
 
     const dados = JSON.parse(inputJson.value);
     const planoNome = inputPlano ? inputPlano.value : "Meu Treino";
@@ -932,7 +961,6 @@ function exportarTreinoTexto() {
         const listaProcessada = [];
         let grupoAtual = null;
 
-        // Pré-processamento de Bi-Sets
         exerciciosRaw.forEach((ex) => {
             const hash = ex.agrupamento_hash;
             if (hash && hash !== "") {
@@ -949,7 +977,6 @@ function exportarTreinoTexto() {
         });
         if (grupoAtual) listaProcessada.push(grupoAtual);
 
-        // Montagem do texto
         listaProcessada.forEach((bloco) => {
             const isGroup = (bloco.type === 'grupo');
             const itens = isGroup ? bloco.itens : [bloco.item];
@@ -972,18 +999,14 @@ function exportarTreinoTexto() {
                         let nomeTecnica = serie.tecnica ? serie.tecnica.toLowerCase() : 'normal';
                         let label = "";
 
-                        if (nomeTecnica === 'dropset') {
-                            label = `${traduzir('dropset')} - ${serie.tecnica_valor || '1'} drops`;
-                        } else if (nomeTecnica === 'restpause') {
-                            label = traduzir('restpause');
-                        } else if (nomeTecnica === 'clusterset') {
-                            label = traduzir('clusterset');
-                        } else {
+                        if (nomeTecnica === 'dropset') label = `${traduzir('dropset')} - ${serie.tecnica_valor || '1'} drops`;
+                        else if (nomeTecnica === 'restpause') label = traduzir('restpause');
+                        else if (nomeTecnica === 'clusterset') label = traduzir('clusterset');
+                        else {
                             const cat = serie.categoria ? serie.categoria.toLowerCase() : 'work';
                             label = traduzir(cat);
                         }
 
-                        // Formatação final da linha da série
                         let linhaSerie = `    • ${qtd}x ${label}`;
                         if (reps) linhaSerie += ` | ${reps}`;
                         if (desc) linhaSerie += ` ${desc}`;
@@ -998,14 +1021,103 @@ function exportarTreinoTexto() {
         });
         textoFinal += `\n`;
     }
+    return textoFinal;
+}
 
-    // RESOLUÇÃO DO BUG DA SIDEBAR: Move o modal para a raiz do Body antes de abrir
-    const modalTexto = document.getElementById('modalTextoCopia');
-    document.body.appendChild(modalTexto);
+// PERIODIZAÇÃO (MICROCICLOS)
+// ----------------------------------------------------
+function gerarTextoPeriodizacao() {
+    const inputMicros = document.getElementById('json-dados-micros');
+    if (!inputMicros || !inputMicros.value || inputMicros.value === '[]') {
+        return "⚠️ Nenhuma periodização ativa encontrada para este aluno.";
+    }
 
-    // Escreve na textarea e abre o modal
-    document.getElementById('texto-pronto-whatsapp').value = textoFinal;
-    document.getElementById('modalTextoCopia').style.display = 'flex';
+    const micros = JSON.parse(inputMicros.value);
+    const nomeAluno = document.getElementById('pdf_aluno_nome') ? document.getElementById('pdf_aluno_nome').value : "Aluno";
+    
+    // Função auxiliar para formatar data DD/MM
+    const formataDataCurta = (dt) => {
+        if(!dt) return '';
+        const p = dt.split('-');
+        return p.length === 3 ? `${p[2]}/${p[1]}` : dt;
+    };
+
+    let textoFinal = `📊 *PERIODIZAÇÃO - MACROCICLO*\n`;
+    textoFinal += `👤 Aluno(a): ${nomeAluno}\n\n`;
+
+    micros.forEach(m => {
+        const dInicio = formataDataCurta(m.data_inicio_semana);
+        const dFim = formataDataCurta(m.data_fim_semana);
+        
+        textoFinal += `🗓️ *SEMANA ${m.semana_numero}* (${dInicio} a ${dFim})\n`;
+        textoFinal += `Fase: *${m.nome_fase}*\n`;
+
+        if (m.reps_compostos || m.descanso_compostos) {
+            textoFinal += `  • Compostos: ${m.reps_compostos || '-'} reps | ${m.descanso_compostos || '-'}s rest\n`;
+        }
+        if (m.reps_isoladores || m.descanso_isoladores) {
+            textoFinal += `  • Isoladores: ${m.reps_isoladores || '-'} reps | ${m.descanso_isoladores || '-'}s rest\n`;
+        }
+        if (m.foco_comentario) {
+            textoFinal += `  💡 Foco: ${m.foco_comentario}\n`;
+        }
+        textoFinal += `\n`;
+    });
+
+    return textoFinal;
+}
+
+// AVALIAÇÕES FÍSICAS
+// ----------------------------------------------------
+function gerarTextoAvaliacao() {
+    const inputAv = document.getElementById('json-dados-avaliacoes');
+    if (!inputAv || !inputAv.value || inputAv.value === '[]') {
+        return "⚠️ Nenhuma avaliação física cadastrada para este aluno.";
+    }
+
+    const avaliacoes = JSON.parse(inputAv.value);
+    const nomeAluno = document.getElementById('pdf_aluno_nome') ? document.getElementById('pdf_aluno_nome').value : "Aluno";
+    
+    // Função auxiliar para formatar data DD/MM/YYYY
+    const formataDataLonga = (dt) => {
+        if(!dt) return '';
+        const p = dt.split('-');
+        return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : dt;
+    };
+
+    let textoFinal = `📈 *RELATÓRIO DE AVALIAÇÕES FÍSICAS*\n`;
+    textoFinal += `👤 Aluno(a): ${nomeAluno}\n\n`;
+
+    avaliacoes.forEach((av, i) => {
+        const dAv = formataDataLonga(av.data_avaliacao);
+        
+        textoFinal += `📅 *Avaliação ${avaliacoes.length - i} - ${dAv}*\n`;
+        textoFinal += `-----------------------------------\n`;
+        
+        if (av.peso_kg) textoFinal += `⚖️ Peso: ${av.peso_kg} kg\n`;
+        if (av.altura_cm) textoFinal += `📏 Altura: ${av.altura_cm} cm\n`;
+        if (av.perc_gordura) textoFinal += `💧 % Gordura (BF): ${av.perc_gordura}%\n`;
+        if (av.massa_magra_kg) textoFinal += `💪 Massa Magra: ${av.massa_magra_kg} kg\n`;
+        
+        // Verifica se existem medidas e adiciona
+        const temMedidas = av.peito || av.cintura || av.quadril || av.braco_dir || av.coxa_dir;
+        if (temMedidas) {
+            textoFinal += `\n*Medidas (cm):*\n`;
+            if (av.peito || av.torax) textoFinal += ` • Peitoral/Tórax: ${av.peito || av.torax}\n`;
+            if (av.cintura || av.abdomen) textoFinal += ` • Cintura: ${av.cintura || '-'} | Abdômen: ${av.abdomen || '-'}\n`;
+            if (av.quadril) textoFinal += ` • Quadril: ${av.quadril}\n`;
+            if (av.braco_dir || av.braco_esq) textoFinal += ` • Braço (Dir/Esq): ${av.braco_dir || '-'} / ${av.braco_esq || '-'}\n`;
+            if (av.coxa_dir || av.coxa_esq) textoFinal += ` • Coxa (Dir/Esq): ${av.coxa_dir || '-'} / ${av.coxa_esq || '-'}\n`;
+            if (av.panturrilha_dir || av.panturrilha_esq) textoFinal += ` • Panturrilha (Dir/Esq): ${av.panturrilha_dir || '-'} / ${av.panturrilha_esq || '-'}\n`;
+        }
+
+        if (av.observacoes) {
+            textoFinal += `\n📝 *Obs:* ${av.observacoes}\n`;
+        }
+        textoFinal += `\n\n`;
+    });
+
+    return textoFinal;
 }
 
 function copiarTextoDoArea() {
@@ -1014,8 +1126,8 @@ function copiarTextoDoArea() {
     area.setSelectionRange(0, 99999); // Para mobile
 
     navigator.clipboard.writeText(area.value).then(() => {
-        alert("Texto copiado para a área de transferência!");
+        alert("Texto copiado! Agora é só colar no WhatsApp.");
     }).catch(err => {
-        alert("Falha ao copiar. Tente selecionar o texto manualmente.");
+        alert("Falha ao copiar. Tente selecionar o texto manualmente e usar Ctrl+C.");
     });
 }

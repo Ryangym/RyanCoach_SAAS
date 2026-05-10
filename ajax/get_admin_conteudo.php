@@ -2276,7 +2276,7 @@ switch ($pagina) {
                     <header class="dash-header-clean">
                         <div>
                             <h1 class="greeting-clean">Selecionar <span class="text-gold">Aluno</span></h1>
-                            <p class="date-clean">Escolha de qual aluno deseja gerar os relatórios em PDF</p>
+                            <p class="date-clean">Escolha de qual aluno deseja exportar os treinos e relatórios</p>
                         </div>
                     </header>
                     
@@ -2313,10 +2313,9 @@ switch ($pagina) {
         }
 
         // =========================================================================
-        // PASSO 2: TELA DO GERADOR DE PDF
+        // PASSO 2: TELA DO GERADOR DE PDF / EXPORTAÇÃO
         // =========================================================================
 
-        // AQUI ESTÁ A MÁGICA: Puxamos a pref_idioma do aluno diretamente do banco
         $stmt_user = $pdo->prepare("SELECT nome, plano_atual, pref_idioma FROM usuarios WHERE id = ?");
         $stmt_user->execute([$aluno_id]);
         $aluno_selecionado = $stmt_user->fetch(PDO::FETCH_ASSOC);
@@ -2327,7 +2326,6 @@ switch ($pagina) {
         }
 
         $nome_aluno = $aluno_selecionado['nome'];
-        // Se a coluna estiver vazia, o padrão é pt
         $idioma_do_aluno_para_pdf = $aluno_selecionado['pref_idioma'] ?? 'pt';
 
         // 1. Busca o Plano Ativo
@@ -2366,9 +2364,10 @@ switch ($pagina) {
         $stmt_av->execute([$aluno_id]);
         $avaliacoes_lista = $stmt_av->fetchAll(PDO::FETCH_ASSOC);
         $json_avaliacoes = htmlspecialchars(json_encode($avaliacoes_lista), ENT_QUOTES, 'UTF-8');
-        // -------------------------------------------------------------
 
+        // -------------------------------------------------------------
         // 2. Busca Divisões e Exercícios
+        // -------------------------------------------------------------
         $stmt_div = $pdo->prepare("SELECT * FROM treino_divisoes WHERE treino_id = ? ORDER BY letra ASC");
         $stmt_div->execute([$plano['id']]);
         $divisoes = $stmt_div->fetchAll(PDO::FETCH_ASSOC);
@@ -2421,12 +2420,12 @@ switch ($pagina) {
         
         $json_treinos = htmlspecialchars(json_encode($dados_treinos), ENT_QUOTES, 'UTF-8');
 
-        // RENDERIZAÇÃO DO PAINEL DE PDF
+        // RENDERIZAÇÃO DO PAINEL
         echo '<section id="area-relatorios" class="fade-in">
                 
                 <header class="dash-header-clean" style="display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <h1 class="greeting-clean">Gerador de <span class="text-gold">Fichas</span></h1>
+                        <h1 class="greeting-clean">Exportação de <span class="text-gold">Relatórios</span></h1>
                         <p class="date-clean">Aluno: <strong style="color:#fff;">'.$nome_aluno.'</strong> | Plano: <strong>'.$plano['nome'].'</strong></p>
                     </div>
                     <button class="btn-outline btn-gold" onclick="carregarConteudo(\'gerar_pdf\')" style="padding: 8px 15px; border-radius: 8px; font-size: 0.8rem;">
@@ -2438,14 +2437,24 @@ switch ($pagina) {
                 <input type="hidden" id="json-dados-micros" value="'.$json_micros.'">
                 <input type="hidden" id="json-dados-avaliacoes" value="'.$json_avaliacoes.'">
                 <input type="hidden" id="plano-nome-atual" value="'.$plano['nome'].'">
+                <input type="hidden" id="idioma_texto_relatorio" value="'.$idioma_do_aluno_para_pdf.'">
 
-                <div class="pdf-action-card" onclick="abrirModalPDF()">
+                <div class="pdf-action-card" onclick="abrirModalPDF()" style="margin-bottom:15px;">
                     <div class="pac-icon"><i class="fa-solid fa-file-pdf"></i></div>
                     <div class="pac-info">
                         <h3>Gerar Arquivos PDF</h3>
                         <p>Ficha de Treino, Periodização e Avaliação Física.</p>
                     </div>
                     <div class="pac-arrow"><i class="fa-solid fa-chevron-right"></i></div>
+                </div>
+
+                <div class="pdf-action-card" onclick="abrirModalTexto()" style="border-color: #25D366; background: rgba(37, 211, 102, 0.05);">
+                    <div class="pac-icon" style="background:color: #fff;"><i class="fa-brands fa-whatsapp"></i></div>
+                    <div class="pac-info">
+                        <h3 style="color:#fff;">Exportar em Texto</h3>
+                        <p>Copia dados estruturados para enviar ao aluno via WhatsApp.</p>
+                    </div>
+                    <div class="pac-arrow"><i class="fa-solid fa-copy"></i></div>
                 </div>
 
                 <div id="modalPDFConfig" class="modal-overlay" style="display:none;">
@@ -2470,7 +2479,6 @@ switch ($pagina) {
                         </div>
 
                         <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
-                            
                             <div>
                                 <label class="input-label">Tema</label>
                                 <div style="display:flex; align-items:center; gap:10px;">
@@ -2478,7 +2486,6 @@ switch ($pagina) {
                                     <span style="font-size:0.8rem; color:#888;">Cabeçalhos</span>
                                 </div>
                             </div>
-
                             <div>
                                 <label class="input-label">Fundo</label>
                                 <div style="display:flex; align-items:center; gap:10px;">
@@ -2486,7 +2493,6 @@ switch ($pagina) {
                                     <span style="font-size:0.8rem; color:#888;">Folha</span>
                                 </div>
                             </div>
-
                             <div>
                                 <label class="input-label">Bordas</label>
                                 <div style="display:flex; align-items:center; gap:10px;">
@@ -2494,16 +2500,13 @@ switch ($pagina) {
                                     <span style="font-size:0.8rem; color:#888;">Linhas</span>
                                 </div>
                             </div>
-                            
                             <input type="hidden" name="pref_idioma_pdf" value="'.$idioma_do_aluno_para_pdf.'">
-
                         </div>
 
                         <div class="modal-actions">
                             <button class="btn-gold" onclick="gerarPDFSelecionado()" style="flex: 2; display:flex; align-items:center; justify-content:center; gap:8px;">
                                 <i class="fa-solid fa-file-pdf"></i> BAIXAR PDF
                             </button>
-                            
                             <button type="button" class="btn-outline" onclick="debugPreviewPDF()" style="flex: 1; border: 1px solid var(--gold); color: var(--gold); background: transparent; border-radius:10px;">
                                 <i class="fa-solid fa-eye"></i>
                             </button>
@@ -2512,6 +2515,30 @@ switch ($pagina) {
                         <button class="btn-cancel" onclick="document.getElementById(\'modalPDFConfig\').style.display=\'none\'" style="margin-top:15px;">
                             Cancelar
                         </button>
+                    </div>
+                </div>
+
+                <div id="modalTextoCopia" class="modal-overlay" style="display:none;">
+                    <div class="modal-content-premium" style="max-width: 500px; text-align: left;">
+                        <h3 class="modal-title" style="margin-bottom:15px;"><i class="fa-solid fa-copy"></i> Exportar Texto</h3>
+                        
+                        <div style="margin-bottom:15px;">
+                            <label class="input-label">Selecione o Relatório</label>
+                            <select id="tipo_exportacao_texto" class="modal-input" onchange="gerarTextoSelecionado()" style="cursor:pointer; background:#1a1a1a;">
+                                <option value="treino">Ficha de Treino</option>
+                                <option value="periodizacao">Periodização (Microciclos)</option>
+                                <option value="avaliacao">Avaliações Físicas</option>
+                            </select>
+                        </div>
+
+                        <p style="color:#aaa; font-size:0.85rem; margin-bottom:10px;">O texto abaixo está pronto para ser copiado e colado.</p>
+                        
+                        <textarea id="texto-pronto-whatsapp" style="width: 100%; height: 300px; background: #111; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 15px; font-family: monospace; font-size: 0.9rem; resize: none;" readonly></textarea>
+                        
+                        <div style="display:flex; gap:10px; margin-top:20px;">
+                            <button class="btn-gold" onclick="copiarTextoDoArea()" style="flex: 1;"><i class="fa-solid fa-check"></i> COPIAR TUDO</button>
+                            <button class="btn-cancel" onclick="document.getElementById(\'modalTextoCopia\').style.display=\'none\'" style="flex: 1;">FECHAR</button>
+                        </div>
                     </div>
                 </div>
 
@@ -2543,7 +2570,7 @@ switch ($pagina) {
                             </div>
                             <div style="text-align: center; flex: 1;">
                                 <h1 id="render-aluno-nome-perio" style="font-family: \'Lobster\', cursive; font-size: 35px; margin: 0; text-decoration: none; font-weight: 500;">Nome do Aluno</h1>
-                                <span id="render-plano-nome-perio" style="font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #fff; font-weight: bold;">MESOCICLO</span>
+                                <span id="render-plano-nome-perio" style="font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #fff; font-weight: bold;">MACROCICLO</span>
                             </div>
                             <div class="sh-meta" style="text-align: right;">
                                 <span style="color: #fff; font-size: 10px; font-weight: bold;">PERIODIZAÇÃO</span>

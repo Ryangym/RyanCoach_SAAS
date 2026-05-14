@@ -577,6 +577,7 @@ if ($dados_usuario['data_expiracao_plano']) {
    5. MÓDULO: HISTÓRICO (DELETE & EDIT & PREVIEW)
    6. MÓDULO: TUTORIAIS VIDEOS
    7. MÓDULO: TREINOS PRONTOS (Biblioteca)
+   8. MÓDULO: AUTO-SAVE (RASCUNHO) DO TREINO EM EXECUÇÃO
    ========================================================================== */
 
 /* ==========================================================================
@@ -1424,6 +1425,77 @@ function fecharModalVideo() {
         alert('Erro de conexão.');
     });
 }
+
+/* ==========================================================================
+8. MÓDULO: AUTO-SAVE (RASCUNHO) DO TREINO EM EXECUÇÃO
+========================================================================== */
+
+
+    // 1. ESCUTA TUDO O QUE É DIGITADO E SALVA NO CELULAR/PC
+    document.addEventListener('input', function(e) {
+        // Verifica se a digitação ocorreu dentro do formulário de execução de treino
+        const form = document.getElementById('form-execucao');
+        if (!form || !form.contains(e.target)) return;
+
+        // Se não for um campo de repetição ou carga, ignora
+        if (!e.target.classList.contains('input-exec')) return;
+
+        // Pega os IDs para criar uma chave única (assim o rascunho do treino A não se mistura com o B)
+        const treinoId = form.querySelector('[name="treino_id"]').value;
+        const divisaoId = form.querySelector('[name="divisao_id"]').value;
+        const storageKey = `rascunho_treino_${treinoId}_${divisaoId}`;
+
+        // Coleta todos os inputs que já foram preenchidos
+        const rascunho = {};
+        const inputs = form.querySelectorAll('input.input-exec');
+        inputs.forEach(inp => {
+            if (inp.value.trim() !== '') {
+                rascunho[inp.name] = inp.value;
+            }
+        });
+
+        // Salva no navegador instantaneamente
+        localStorage.setItem(storageKey, JSON.stringify(rascunho));
+    });
+
+    // 2. RECUPERA OS DADOS QUANDO A PÁGINA É CARREGADA
+    // Como o seu site usa AJAX para trocar de tela, usamos um "Observer" para detectar quando o form aparece na tela
+    const observerTreino = new MutationObserver(function(mutations) {
+        const form = document.getElementById('form-execucao');
+        
+        // Se o formulário acabou de aparecer na tela e ainda não carregamos o rascunho dele
+        if (form && !form.dataset.draftLoaded) {
+            form.dataset.draftLoaded = 'true'; // Marca como carregado para não repetir
+            
+            const treinoId = form.querySelector('[name="treino_id"]').value;
+            const divisaoId = form.querySelector('[name="divisao_id"]').value;
+            const storageKey = `rascunho_treino_${treinoId}_${divisaoId}`;
+            
+            // Verifica se tem rascunho salvo
+            const rascunhoSalvo = localStorage.getItem(storageKey);
+            if (rascunhoSalvo) {
+                const rascunho = JSON.parse(rascunhoSalvo);
+                
+                // Preenche os campos automaticamente
+                for (const name in rascunho) {
+                    const input = form.querySelector(`[name="${name}"]`);
+                    if (input) {
+                        input.value = rascunho[name];
+                    }
+                }
+            }
+            
+            // 3. APAGA O RASCUNHO APENAS QUANDO FINALIZAR O TREINO
+            form.addEventListener('submit', function() {
+                localStorage.removeItem(storageKey);
+            });
+        }
+    });
+
+    // Inicia o observador na raiz do site assim que ele carregar
+    document.addEventListener('DOMContentLoaded', () => {
+        observerTreino.observe(document.body, { childList: true, subtree: true });
+    });
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>

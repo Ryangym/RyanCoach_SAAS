@@ -1220,8 +1220,8 @@ switch ($pagina) {
         $stmt->execute(['uid' => $aluno_id, 'dt' => $data_ref]);
         $info = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Detalhes
-        $stmt = $pdo->prepare("SELECT th.*, e.nome_exercicio, s.categoria, s.tecnica, s.reps_fixas 
+        // Detalhes (Adicionamos e.tipo_mecanica, s.reps_fixas)
+        $stmt = $pdo->prepare("SELECT th.*, e.nome_exercicio, e.tipo_mecanica, s.categoria, s.tecnica, s.reps_fixas 
                           FROM treino_historico th
                           JOIN exercicios e ON th.exercicio_id = e.id
                           LEFT JOIN series s ON COALESCE(th.serie_id, th.serie_numero) = s.id 
@@ -1235,18 +1235,39 @@ switch ($pagina) {
         foreach ($registros as $reg) {
             $id_ex = $reg['exercicio_id'];
             if (!isset($treino_agrupado[$id_ex])) {
-                $treino_agrupado[$id_ex] = ['nome' => $reg['nome_exercicio'], 'series' => []];
+                $treino_agrupado[$id_ex] = ['nome' => $reg['nome_exercicio'], 'mecanica' => strtolower($reg['tipo_mecanica']), 'series' => []];
             }
             $treino_agrupado[$id_ex]['series'][] = $reg;
         }
 
-        // --- NOVO: EMBALA OS DADOS DO HISTÓRICO PARA O JS LER ---
+        // --- BUSCA O MICROCICLO ATIVO NA DATA DO TREINO ---
+        $micro_historico = null;
+        // Pega o ID do Treino a partir do primeiro registro
+        $id_treino_hist = $registros[0]['treino_id'] ?? null;
+
+        if ($id_treino_hist) {
+            $stmt_per = $pdo->prepare("SELECT id FROM periodizacoes WHERE treino_id = ?");
+            $stmt_per->execute([$id_treino_hist]);
+            $pid = $stmt_per->fetchColumn();
+            
+            if ($pid) {
+                // Descobre a data base do histórico para procurar
+                $data_base_hist = explode(' ', $data_ref)[0]; // Pega só YYYY-MM-DD
+                
+                $stmt_m = $pdo->prepare("SELECT * FROM microciclos WHERE periodizacao_id = ? AND data_inicio_semana <= ? AND data_fim_semana >= ?");
+                $stmt_m->execute([$pid, $data_base_hist, $data_base_hist]);
+                $micro_historico = $stmt_m->fetch(PDO::FETCH_ASSOC);
+            }
+        }
+
+        // --- EMBALA OS DADOS DO HISTÓRICO PARA O JS LER ---
         $json_dados_historico = htmlspecialchars(json_encode([
-        'info' => $info,
-        'data_ref' => $data_ref,
-        'agrupado' => $treino_agrupado,
-        'idioma' => $idioma_aluno ?? 'pt'
-    ]), ENT_QUOTES, 'UTF-8');
+            'info' => $info,
+            'data_ref' => $data_ref,
+            'agrupado' => $treino_agrupado,
+            'idioma' => $idioma_aluno ?? 'pt',
+            'micro' => $micro_historico
+        ]), ENT_QUOTES, 'UTF-8');
 
         echo '<section class="fade-in">
                 

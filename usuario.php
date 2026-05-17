@@ -1336,9 +1336,9 @@ function abrirModalExportarHistorico() {
     const data = JSON.parse(inputJson.value);
     const info = data.info;
     const agrupado = data.agrupado;
-    const idioma = data.idioma || 'pt'; // Recupera o idioma do aluno
+    const idioma = data.idioma || 'pt';
+    const micro = data.micro; // Microciclo que estava ativo no dia
 
-    // Mini dicionário tradutor para as categorias das séries
     const traduzir = (termo) => {
         if (!termo) return '';
         if (idioma === 'en') return termo.toUpperCase();
@@ -1351,7 +1351,6 @@ function abrirModalExportarHistorico() {
         return dic[t] || t.toUpperCase();
     };
     
-    // Converte a data salva em string de forma segura ("YYYY-MM-DD HH:mm:ss" para "DD/MM/YYYY às HH:mm")
     let dataFormatada = data.data_ref;
     const partesData = data.data_ref.split(' ');
     if (partesData.length === 2) {
@@ -1367,18 +1366,16 @@ function abrirModalExportarHistorico() {
     textoFinal += `🏋🏻‍♂️ Treino ${info.letra || '?'} - ${info.nome_treino || ''}\n`;
     textoFinal += `-----------------------------------\n\n`;
 
-    // Varre o Agrupamento de Exercícios
     for (const ex_id in agrupado) {
         const exercicio = agrupado[ex_id];
+        const tipoMec = exercicio.mecanica;
         textoFinal += `🔸 *${exercicio.nome}*\n`;
         
-        // Varre as séries do Exercício
         exercicio.series.forEach((serie) => {
             const num = serie.numero_serie > 0 ? `#${serie.numero_serie}` : '-';
             const carga = parseFloat(serie.carga_kg);
             let repsFeitas = serie.reps_realizadas;
             
-            // Puxa as reps detalhadas se for uma técnica complexa (Cluster/Rest-Pause)
             if (serie.dados_tecnicos) {
                 try {
                     const dtJson = JSON.parse(serie.dados_tecnicos);
@@ -1386,30 +1383,45 @@ function abrirModalExportarHistorico() {
                 } catch(e) {}
             }
 
-            // Descobre o Tipo da Série e a Técnica
             let tecnicaStr = '';
             const tecnicaDb = serie.tecnica ? serie.tecnica.toLowerCase() : '';
             if (tecnicaDb === 'dropset') tecnicaStr = ' + Drop-Set';
             if (tecnicaDb === 'restpause') tecnicaStr = ' + Rest-Pause';
             if (tecnicaDb === 'clusterset') tecnicaStr = ' + Cluster';
             
-            const tipoSerie = traduzir(serie.categoria || 'work');
-            const labelTipo = `[${tipoSerie}${tecnicaStr}]`;
+            const categoria = serie.categoria ? serie.categoria.toLowerCase() : 'work';
+            const labelTipo = `[${traduzir(categoria)}${tecnicaStr}]`;
 
-            // Define a Meta de Repetições (Se vier vazia do banco, considera "Falha")
-            let metaReps = serie.reps_fixas ? serie.reps_fixas : (idioma === 'en' ? 'Falha' : 'Falha');
+            // --- LÓGICA DE CALCULAR A META DA SÉRIE (Igual ao realizar_treino) ---
+            let metaReps = serie.reps_fixas ? String(serie.reps_fixas).trim() : '';
 
-            // Linha final estruturada
+            if (categoria === 'warmup') {
+                if (!metaReps) metaReps = '15';
+            } else if (categoria === 'feeder') {
+                if (!metaReps) metaReps = '6';
+            } else {
+                if (micro) {
+                    if (tipoMec === 'composto' || tipoMec === 'multiarticular') {
+                        if (!metaReps && micro.reps_compostos) metaReps = micro.reps_compostos;
+                    } else if (tipoMec === 'isolador' || tipoMec === 'monoarticular') {
+                        if (!metaReps && micro.reps_isoladores) metaReps = micro.reps_isoladores;
+                    }
+                }
+            }
+
+            // Fallback final
+            if (!metaReps || metaReps === '-' || metaReps.toLowerCase() === 'falha') {
+                metaReps = idioma === 'en' ? 'Falha' : 'Falha';
+            }
+
             textoFinal += `    • ${num} ${labelTipo} | Meta: ${metaReps} | Feito: ${carga}kg x ${repsFeitas}\n`;
         });
         textoFinal += `\n`;
     }
 
-    // Preenche o textarea visual
     const area = document.getElementById('texto-historico-whatsapp');
     if (area) area.value = textoFinal;
     
-    // Mostra o modal (Mover para o Body resolve o bug da barra lateral)
     const modalTexto = document.getElementById('modalTextoHistorico');
     if (modalTexto) {
         document.body.appendChild(modalTexto); 

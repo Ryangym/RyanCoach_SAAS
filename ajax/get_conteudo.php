@@ -1221,7 +1221,7 @@ switch ($pagina) {
         $info = $stmt->fetch(PDO::FETCH_ASSOC);
 
         // Detalhes
-        $stmt = $pdo->prepare("SELECT th.*, e.nome_exercicio, s.categoria, s.tecnica 
+        $stmt = $pdo->prepare("SELECT th.*, e.nome_exercicio, s.categoria, s.tecnica, s.reps_fixas 
                           FROM treino_historico th
                           JOIN exercicios e ON th.exercicio_id = e.id
                           LEFT JOIN series s ON COALESCE(th.serie_id, th.serie_numero) = s.id 
@@ -1240,7 +1240,18 @@ switch ($pagina) {
             $treino_agrupado[$id_ex]['series'][] = $reg;
         }
 
+        // --- NOVO: EMBALA OS DADOS DO HISTÓRICO PARA O JS LER ---
+        $json_dados_historico = htmlspecialchars(json_encode([
+        'info' => $info,
+        'data_ref' => $data_ref,
+        'agrupado' => $treino_agrupado,
+        'idioma' => $idioma_aluno ?? 'pt'
+    ]), ENT_QUOTES, 'UTF-8');
+
         echo '<section class="fade-in">
+                
+                <input type="hidden" id="json-dados-historico-treino" value="'.$json_dados_historico.'">
+
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
                     <div style="display:flex; align-items:center; gap:15px;">
                         <button onclick="carregarConteudo(\'historico\')" style="background:none; border:none; color:#fff; font-size:1.2rem; cursor:pointer;">
@@ -1253,6 +1264,10 @@ switch ($pagina) {
                     </div>
                     
                     <div style="display:flex; gap:10px;">
+                        <button onclick="abrirModalExportarHistorico()" style="width:40px; height:40px; border-radius:50%; background:rgba(255, 255, 255, 0.05); border:1px solid #555; color:#ccc; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.3s;" title="Exportar em Texto" onmouseover="this.style.borderColor=\'#fff\'; this.style.color=\'#fff\'; this.style.background=\'rgba(255,255,255,0.1)\';" onmouseout="this.style.borderColor=\'#555\'; this.style.color=\'#ccc\'; this.style.background=\'rgba(255,255,255,0.05)\';">
+                            <i class="fa-solid fa-file-lines"></i>
+                        </button>
+
                         <button id="btn-editar-hist" onclick="alternarEdicaoHistorico()" style="width:40px; height:40px; border-radius:50%; background:rgba(255, 186, 66, 0.1); border:1px solid var(--gold); color:var(--gold); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.3s;">
                             <i class="fa-solid fa-pen"></i>
                         </button>
@@ -1385,6 +1400,21 @@ switch ($pagina) {
                           </div>';
                 }
         echo '  </div>
+
+                <div id="modalTextoHistorico" class="modal-overlay" style="display:none;">
+                    <div class="modal-content-premium" style="max-width: 500px; text-align: left;">
+                        <h3 class="modal-title" style="margin-bottom:15px;"><i class="fa-solid fa-copy"></i> '.($idioma_aluno == 'en' ? 'Generated History' : 'Histórico Gerado').'</h3>
+                        <p style="color:#aaa; font-size:0.85rem; margin-bottom:15px;">'.($idioma_aluno == 'en' ? 'Copy the history below to share or save.' : 'Copie o histórico abaixo para enviar ou salvar onde desejar.').'</p>
+                        
+                        <textarea id="texto-historico-whatsapp" style="width: 100%; height: 300px; background: #111; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 15px; font-family: monospace; font-size: 0.9rem; resize: none;" readonly></textarea>
+                        
+                        <div style="display:flex; gap:10px; margin-top:20px;">
+                            <button class="btn-gold" onclick="copiarHistoricoArea()" style="flex: 1;"><i class="fa-solid fa-check"></i> '.($idioma_aluno == 'en' ? 'COPY ALL' : 'COPIAR TUDO').'</button>
+                            <button class="btn-cancel" onclick="document.getElementById(\'modalTextoHistorico\').style.display=\'none\'" style="flex: 1;">'.($idioma_aluno == 'en' ? 'CLOSE' : 'FECHAR').'</button>
+                        </div>
+                    </div>
+                </div>
+
               </section>';
         break;
     }

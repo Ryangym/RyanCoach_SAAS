@@ -1322,6 +1322,100 @@ function abrirHistoricoExercicio(historicoData, nomeExercicio) {
     lista.innerHTML = tabelaHtml;
     modal.style.display = 'flex';
 }
+// ============================================================================
+// EXPORTAÇÃO DO HISTÓRICO DE TREINO (WHATSAPP)
+// ============================================================================
+
+function abrirModalExportarHistorico() {
+    const inputJson = document.getElementById('json-dados-historico-treino');
+    if (!inputJson || !inputJson.value) {
+        alert("Dados do histórico não encontrados.");
+        return;
+    }
+
+    const data = JSON.parse(inputJson.value);
+    const info = data.info;
+    const agrupado = data.agrupado;
+    const idioma = data.idioma || 'pt'; // Recupera o idioma do aluno
+
+    // Mini dicionário tradutor para as categorias das séries
+    const traduzir = (termo) => {
+        if (!termo) return '';
+        if (idioma === 'en') return termo.toUpperCase();
+        const dic = {
+            'warmup': 'AQUECIMENTO', 'work': 'TRABALHO', 'feeder': 'PREPARAÇÃO',
+            'topset': 'SÉRIE MÁXIMA', 'top': 'SÉRIE MÁXIMA', 'backoff': 'SÉRIE DE RETORNO',
+            'dropset': 'DROP-SET', 'restpause': 'REST-PAUSE', 'clusterset': 'CLUSTER-SET'
+        };
+        const t = termo.toLowerCase().trim();
+        return dic[t] || t.toUpperCase();
+    };
+    
+    // Converte a data salva em string de forma segura ("YYYY-MM-DD HH:mm:ss" para "DD/MM/YYYY às HH:mm")
+    let dataFormatada = data.data_ref;
+    const partesData = data.data_ref.split(' ');
+    if (partesData.length === 2) {
+        const d = partesData[0].split('-');
+        const h = partesData[1].split(':');
+        if (d.length === 3 && h.length >= 2) {
+            dataFormatada = `${d[2]}/${d[1]}/${d[0]} às ${h[0]}:${h[1]}`;
+        }
+    }
+
+    let textoFinal = `✅ *TREINO CONCLUÍDO*\n`;
+    textoFinal += `🗓️ Data: ${dataFormatada}\n`;
+    textoFinal += `🏋🏻‍♂️ Treino ${info.letra || '?'} - ${info.nome_treino || ''}\n`;
+    textoFinal += `-----------------------------------\n\n`;
+
+    // Varre o Agrupamento de Exercícios
+    for (const ex_id in agrupado) {
+        const exercicio = agrupado[ex_id];
+        textoFinal += `🔸 *${exercicio.nome}*\n`;
+        
+        // Varre as séries do Exercício
+        exercicio.series.forEach((serie) => {
+            const num = serie.numero_serie > 0 ? `#${serie.numero_serie}` : '-';
+            const carga = parseFloat(serie.carga_kg);
+            let repsFeitas = serie.reps_realizadas;
+            
+            // Puxa as reps detalhadas se for uma técnica complexa (Cluster/Rest-Pause)
+            if (serie.dados_tecnicos) {
+                try {
+                    const dtJson = JSON.parse(serie.dados_tecnicos);
+                    if (dtJson.reps_string) repsFeitas = dtJson.reps_string;
+                } catch(e) {}
+            }
+
+            // Descobre o Tipo da Série e a Técnica
+            let tecnicaStr = '';
+            const tecnicaDb = serie.tecnica ? serie.tecnica.toLowerCase() : '';
+            if (tecnicaDb === 'dropset') tecnicaStr = ' + Drop-Set';
+            if (tecnicaDb === 'restpause') tecnicaStr = ' + Rest-Pause';
+            if (tecnicaDb === 'clusterset') tecnicaStr = ' + Cluster';
+            
+            const tipoSerie = traduzir(serie.categoria || 'work');
+            const labelTipo = `[${tipoSerie}${tecnicaStr}]`;
+
+            // Define a Meta de Repetições (Se vier vazia do banco, considera "Falha")
+            let metaReps = serie.reps_fixas ? serie.reps_fixas : (idioma === 'en' ? 'Falha' : 'Falha');
+
+            // Linha final estruturada
+            textoFinal += `    • ${num} ${labelTipo} | Meta: ${metaReps} | Feito: ${carga}kg x ${repsFeitas}\n`;
+        });
+        textoFinal += `\n`;
+    }
+
+    // Preenche o textarea visual
+    const area = document.getElementById('texto-historico-whatsapp');
+    if (area) area.value = textoFinal;
+    
+    // Mostra o modal (Mover para o Body resolve o bug da barra lateral)
+    const modalTexto = document.getElementById('modalTextoHistorico');
+    if (modalTexto) {
+        document.body.appendChild(modalTexto); 
+        modalTexto.style.display = 'flex';
+    }
+}
 
 /* ==========================================================================
    6. MÓDULO: TUTORIAIS VIDEOS

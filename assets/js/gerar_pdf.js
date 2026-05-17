@@ -1119,15 +1119,58 @@ function gerarTextoAvaliacao() {
 
     return textoFinal;
 }
+// ============================================================================
+// FUNÇÕES DE COPIAR TEXTO (À PROVA DE FALHAS - FUNCIONA EM HTTP E HTTPS)
+// ============================================================================
 
+// 1. Função para copiar os relatórios gerais (Ficha, Periodização, Avaliação)
 function copiarTextoDoArea() {
     const area = document.getElementById('texto-pronto-whatsapp');
+    if (!area) return;
+    
     area.select();
-    area.setSelectionRange(0, 99999); // Para mobile
+    area.setSelectionRange(0, 99999); // Suporte para Mobile
 
-    navigator.clipboard.writeText(area.value).then(() => {
-        alert("Texto copiado! Agora é só colar no WhatsApp.");
-    }).catch(err => {
-        alert("Falha ao copiar. Tente selecionar o texto manualmente e usar Ctrl+C.");
-    });
+    // Tenta a API moderna (HTTPS)
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(area.value).then(() => {
+            alert("Texto copiado com sucesso! Agora é só colar.");
+        }).catch(() => fallbackCopiarTexto(area));
+    } else {
+        // Fallback para HTTP (Localhost) ou navegadores antigos
+        fallbackCopiarTexto(area);
+    }
+}
+
+// 2. Função para copiar o Histórico
+function copiarHistoricoArea() {
+    const area = document.getElementById('texto-historico-whatsapp');
+    if (!area) return;
+    
+    area.select();
+    area.setSelectionRange(0, 99999); // Suporte para Mobile
+
+    // Tenta a API moderna (HTTPS)
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(area.value).then(() => {
+            alert("Histórico copiado com sucesso! Agora é só colar.");
+        }).catch(() => fallbackCopiarTexto(area));
+    } else {
+        // Fallback para HTTP (Localhost) ou navegadores antigos
+        fallbackCopiarTexto(area);
+    }
+}
+
+// Função auxiliar de Fallback universal
+function fallbackCopiarTexto(textAreaElement) {
+    try {
+        // Usa o comando nativo de cópia do sistema
+        document.execCommand('copy');
+        alert("Copiado com sucesso! Agora é só colar.");
+    } catch (err) {
+        alert("O seu navegador bloqueou a cópia automática. Por favor, selecione o texto manualmente e copie.");
+    }
+    
+    // Tira a seleção do texto para não ficar azul na tela
+    window.getSelection().removeAllRanges();
 }

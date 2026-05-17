@@ -1430,7 +1430,7 @@ switch ($pagina) {
                         <textarea id="texto-historico-whatsapp" style="width: 100%; height: 300px; background: #111; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 15px; font-family: monospace; font-size: 0.9rem; resize: none;" readonly></textarea>
                         
                         <div style="display:flex; gap:10px; margin-top:20px;">
-                            <button class="btn-gold" onclick="copiarHistoricoArea()" style="flex: 1;"><i class="fa-solid fa-check"></i> '.($idioma_aluno == 'en' ? 'COPY ALL' : 'COPIAR TUDO').'</button>
+                            <button class="btn-gold" onclick="copiarTextoDoArea()" style="flex: 1;"><i class="fa-solid fa-check"></i> '.($idioma_aluno == 'en' ? 'COPY ALL' : 'COPIAR TUDO').'</button>
                             <button class="btn-cancel" onclick="document.getElementById(\'modalTextoHistorico\').style.display=\'none\'" style="flex: 1;">'.($idioma_aluno == 'en' ? 'CLOSE' : 'FECHAR').'</button>
                         </div>
                     </div>

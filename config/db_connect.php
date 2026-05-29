@@ -13,7 +13,7 @@ if(in_array($_SERVER['REMOTE_ADDR'], $whitelist)){
     $host = 'localhost';
     $dbname = 'ryancoach_saas';
     $username = 'root';
-    $password = ''; 
+    $password = 'vertrigo'; 
     $is_dev = true; 
 } else {
     // --- AMBIENTE PRODUÇÃO (ONLINE) ---

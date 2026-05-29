@@ -62,50 +62,13 @@ switch ($pagina) {
         $volume = $stmt_vol->fetchColumn() ?: 0;
         $vol_fmt = ($volume > 1000) ? number_format($volume/1000, 1).'k' : $volume;
 
-        // 3. Streak (Ofensiva) - INTELIGENTE (Considera dias de descanso)
-        $streak = 0;
-        
-        // MUDANÇA AQUI: Aumentamos para 365 dias (1 Ano)
+        // 3. Total de Treinos Realizados (Substituindo a antiga Ofensiva)
+        // Conta os dias únicos em que o aluno treinou nos últimos 365 dias.
         $data_limite = date('Y-m-d', strtotime('-365 days')); 
         
-        $stmt_chk = $pdo->prepare("SELECT DISTINCT DATE(data_treino) as dia FROM treino_historico WHERE aluno_id = ? AND data_treino >= ? ORDER BY data_treino DESC");
-        $stmt_chk->execute([$aluno_id, $data_limite]);
-        $dias_treinados = $stmt_chk->fetchAll(PDO::FETCH_COLUMN);
-
-        // Busca configuração de dias
-        $stmt_dias = $pdo->prepare("SELECT dias_semana FROM treinos WHERE aluno_id = ? AND ativo = 1 ORDER BY criado_em DESC LIMIT 1");
-        $stmt_dias->execute([$aluno_id]);
-        $dias_config_json = $stmt_dias->fetchColumn();
-        
-        $dias_obrigatorios = $dias_config_json ? json_decode($dias_config_json) : [0,1,2,3,4,5,6];
-        if (!is_array($dias_obrigatorios)) $dias_obrigatorios = [0,1,2,3,4,5,6];
-
-
-        for ($i = 0; $i < 365; $i++) {
-            $check_date = date('Y-m-d', strtotime("-$i days"));
-            $check_dia_semana = date('w', strtotime($check_date)); 
-
-            // Tratamento Domingo (0 ou 7)
-            $dia_buscado = $check_dia_semana;
-            if ($check_dia_semana == 0 && in_array(7, $dias_obrigatorios)) {
-                $dia_buscado = 7;
-            }
-
-            $eh_dia_de_treino = in_array($dia_buscado, $dias_obrigatorios);
-            $treinou = in_array($check_date, $dias_treinados);
-
-            if ($treinou) {
-                $streak++;
-            } 
-            else {
-                // Se faltou num dia obrigatório (e não é hoje), quebra.
-                if ($eh_dia_de_treino) {
-                     if ($i > 0) {
-                         break; 
-                     }
-                }
-            }
-        }
+        $stmt_total = $pdo->prepare("SELECT COUNT(DISTINCT DATE(data_treino)) FROM treino_historico WHERE aluno_id = ? AND data_treino >= ?");
+        $stmt_total->execute([$aluno_id, $data_limite]);
+        $total_treinos_ano = $stmt_total->fetchColumn() ?: 0;
 
         // --- 4. LÓGICA DO "TREINO DE HOJE"  ---
         $hoje_dia_num = date('w'); // 0 (Dom) a 6 (Sáb)
@@ -201,10 +164,10 @@ switch ($pagina) {
                     
                     <div class="status-bar-float">
                         <div class="sb-item">
-                            <i class="fa-solid fa-fire sb-icon fire"></i>
+                            <i class="fa-solid fa-medal sb-icon" style="color: var(--gold);"></i>
                             <div class="sb-info">
-                                <strong>'.$streak.'</strong>
-                                <span>Dias seguidos</span>
+                                <strong>'.$total_treinos_ano.'</strong>
+                                <span>Treinos no Ano</span>
                             </div>
                         </div>
                         <div class="sb-divider"></div>
@@ -3361,8 +3324,157 @@ switch ($pagina) {
         $pdo = null;
         break;
 
+    case 'conquistas':
+        require_once '../config/db_connect.php';
+        $user_id = $_SESSION['user_id'];
+        
+        // --- 1. LÓGICA DA PATENTE PESSOAL ---
+        $sql_me = "SELECT COUNT(DISTINCT DATE(data_treino)) as meus_treinos FROM treino_historico WHERE aluno_id = ?";
+        $stmt_me = $pdo->prepare($sql_me);
+        $stmt_me->execute([$user_id]);
+        $meus_treinos = $stmt_me->fetchColumn() ?: 0;
 
+        // Define as patentes MAROMBA (Máximo 200 treinos)
+        if ($meus_treinos >= 200) {
+            $patente = 'Mr. Olympia';
+            $prox_patente = 'Nível Máximo';
+            $meta = $meus_treinos; 
+            $classe_patente = 'patente-olimpo';
+            $icone = 'fa-trophy'; // Troféu
+        } elseif ($meus_treinos >= 130) {
+            $patente = 'Gigante';
+            $prox_patente = 'Mr. Olympia';
+            $meta = 200;
+            $classe_patente = 'patente-monstro';
+            $icone = 'fa-hand-fist'; // Punho fechado/Força
+        } elseif ($meus_treinos >= 80) {
+            $patente = 'Mutante';
+            $prox_patente = 'Gigante';
+            $meta = 130;
+            $classe_patente = 'patente-mutante';
+            $icone = 'fa-dna'; // DNA
+        } elseif ($meus_treinos >= 40) {
+            $patente = 'Shape de Praia';
+            $prox_patente = 'Mutante';
+            $meta = 80;
+            $classe_patente = 'patente-praia';
+            $icone = 'fa-umbrella-beach'; // Praia
+        } elseif ($meus_treinos >= 15) {
+            $patente = 'Rato de Academia';
+            $prox_patente = 'Shape de Praia';
+            $meta = 40;
+            $classe_patente = 'patente-rato';
+            $icone = 'fa-mouse'; // Rato
+        } else {
+            $patente = 'Frango de Verão';
+            $prox_patente = 'Rato de Academia';
+            $meta = 15;
+            $classe_patente = 'patente-frango';
+            $icone = 'fa-egg'; // Ovo/Frango
+        }
 
+        $porcentagem = ($meta > 0 && $meus_treinos < 200) ? ($meus_treinos / $meta) * 100 : 100;
+
+        // --- 2. LÓGICA DO RANKING GLOBAL (TOP 10) ---
+        $sql_rank = "SELECT u.id, u.nome, u.foto, COUNT(DISTINCT DATE(th.data_treino)) as total_treinos
+                     FROM usuarios u
+                     INNER JOIN treino_historico th ON u.id = th.aluno_id
+                     WHERE u.tipo_conta = 'atleta'
+                     GROUP BY u.id
+                     ORDER BY total_treinos DESC
+                     LIMIT 10"; // Limitado ao Top 10
+        $stmt_rank = $pdo->query($sql_rank);
+        $ranking = $stmt_rank->fetchAll(PDO::FETCH_ASSOC);
+
+        // --- RENDERIZAÇÃO DA PÁGINA ---
+        echo '<section id="conquistas-view" class="fade-in">
+                <header class="dash-header conquistas-header">
+                    <h1>HALL DA <span class="highlight-text '.$classe_patente.'-text">FAMA</span></h1>
+                    <p>O ferro não mente. Construa seu legado!</p>
+                </header>
+                
+                <!-- CARD DA PATENTE PESSOAL -->
+                <div class="patente-card '.$classe_patente.'">
+                    <div class="patente-glow"></div>
+                    <div class="patente-content">
+                        <div class="patente-icon-wrapper">
+                            <i class="fa-solid '.$icone.' patente-icon"></i>
+                        </div>
+                        
+                        <h4 class="patente-subtitle">Seu Nível Atual:</h4>
+                        <h2 class="patente-title">'.$patente.'</h2>
+                        
+                        <div class="patente-treinos-badge">
+                            <span class="treinos-count">'.$meus_treinos.'</span> 
+                            <span class="treinos-label">Treinos Realizados</span>
+                        </div>
+                        
+                        <div class="xp-container">
+                            <div class="xp-header">
+                                <span class="xp-next">Próxima meta: <span>'.$prox_patente.'</span></span>
+                                <span class="xp-count">'.$meus_treinos.' / '.$meta.' XP</span>
+                            </div>
+                            <div class="xp-bar-bg">
+                                <div class="xp-bar-fill" style="width: '.$porcentagem.'%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ranking-divider">
+                    <hr>
+                    <h3>TOP 10 GLOBAL</h3>
+                    <hr>
+                </div>
+
+                <!-- LISTA DO RANKING -->
+                <div class="ranking-list-container">';
+                
+        if(empty($ranking)) {
+            echo '<div class="ranking-empty">
+                    <i class="fa-solid fa-dumbbell"></i>
+                    <p>A arena está vazia.<br>Seja o primeiro a puxar ferro!</p>
+                  </div>';
+        } else {
+            $posicao = 1;
+            foreach($ranking as $atleta) {
+                $foto_atleta = !empty($atleta['foto']) ? $atleta['foto'] : 'assets/img/user-default.png';
+                
+                $is_me_class = ($atleta['id'] == $user_id) ? 'rank-item-me' : '';
+                $nome_display = htmlspecialchars($atleta['nome']);
+                
+                $podium_class = ($posicao <= 3) ? 'podium-'.$posicao : 'podium-default';
+                $icone_podium = ($posicao == 1) ? '<i class="fa-solid fa-crown crown-icon"></i>' : '';
+                
+                echo '<div class="rank-item '.$is_me_class.'">
+                        <div class="rank-info-left">
+                            <div class="rank-position-wrapper">
+                                '.$icone_podium.'
+                                <div class="rank-position '.$podium_class.'">
+                                    '.$posicao.'º
+                                </div>
+                            </div>
+
+                            <img src="'.$foto_atleta.'" class="rank-avatar">
+                            
+                            <div class="rank-user-info">
+                                <strong class="rank-name">'.$nome_display.'</strong>
+                                <small class="rank-role">Atleta</small>
+                            </div>
+                        </div>
+                        
+                        <div class="rank-info-right">
+                            <span class="rank-score">'.$atleta['total_treinos'].'</span>
+                            <small class="rank-score-label">Treinos</small>
+                        </div>
+                      </div>';
+                $posicao++;
+            }
+        }
+        
+        echo '  </div>
+              </section>';
+        break;
 
     // --- MENU GERAL (HUB DE NAVEGAÇÃO) ---
     case 'menu':
@@ -3421,12 +3533,6 @@ switch ($pagina) {
 
                 <h3 class="section-label" style="margin-left: 10px;">PRINCIPAL</h3>
                 <div class="menu-grid">
-                    <div class="menu-card" onclick="carregarConteudo(\'treinos\')">
-                        <div class="mc-icon" style="background: rgba(255, 186, 66, 0.1); color: var(--gold);">
-                            <i class="fa-solid fa-dumbbell"></i>
-                        </div>
-                        <span>Meus Treinos</span>
-                    </div>
 
                     <div class="menu-card" onclick="carregarConteudo(\'avaliacoes\')">
                         <div class="mc-icon" style="background: rgba(0, 200, 255, 0.1); color: #00c8ff;">
@@ -3482,6 +3588,13 @@ switch ($pagina) {
                             <i class="fa-solid fa-graduation-cap"></i>
                         </div>
                         <span>Tutoriais do sistema</span>
+                    </div>
+
+                    <div class="menu-card" onclick="carregarConteudo(\'conquistas\')">
+                        <div class="mc-icon" style="background: rgba(255, 215, 0, 0.1); color: #ffd700; border: 1px solid #ffd700;">
+                            <i class="fa-solid fa-trophy"></i>
+                        </div>
+                        <span>Conquistas</span>
                     </div>
                 </div>
 

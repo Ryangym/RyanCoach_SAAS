@@ -66,6 +66,11 @@
     z-index: 3;
     box-shadow: 0 10px 25px rgba(0,0,0,0.4);
 }
+@media screen and (max-width: 350px) {
+    .status-bar-float {
+        padding: 10px 15px;
+    }
+}
 
 .sb-item {
     display: flex;
@@ -946,4 +951,343 @@
 
 .coach-badge i {
     font-size: 1rem;
+}
+
+/* ==========================================================================
+   SISTEMA DE CONQUISTAS E RANKING (MAROMBA)
+   ========================================================================== */
+
+.conquistas-header {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* --- Card de Patente Pessoal --- */
+.patente-card {
+    max-width: 600px;
+    margin: 0 auto 40px auto;
+    padding: 30px 20px;
+    border-radius: 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+}
+
+.patente-glow {
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    height: 150px;
+    filter: blur(80px);
+    opacity: 0.3;
+    z-index: 0;
+}
+
+.patente-content {
+    position: relative;
+    z-index: 1;
+}
+
+.patente-icon-wrapper {
+    background: rgba(0,0,0,0.5);
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px auto;
+}
+
+.patente-icon {
+    font-size: 3rem;
+}
+
+.patente-subtitle {
+    color: #888;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+.patente-title {
+    margin: 5px 0 15px 0;
+    font-size: 2rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+}
+
+.patente-treinos-badge {
+    background: rgba(0,0,0,0.4);
+    display: inline-block;
+    padding: 8px 20px;
+    border-radius: 30px;
+    border: 1px solid #333;
+    margin-bottom: 25px;
+}
+
+.treinos-count {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.treinos-label {
+    color: #aaa;
+    font-size: 0.9rem;
+    margin-left: 5px;
+}
+
+/* Barra de XP */
+.xp-container {
+    text-align: left;
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #222;
+}
+
+.xp-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #ccc;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.xp-next { text-transform: uppercase; letter-spacing: 1px; }
+.xp-next span { color: #fff; }
+
+.xp-bar-bg {
+    background: #111;
+    border-radius: 20px;
+    height: 14px;
+    width: 100%;
+    padding: 2px;
+    border: 1px solid #333;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.8);
+}
+
+.xp-bar-fill {
+    height: 100%;
+    border-radius: 20px;
+    transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Cores das Patentes (Estilização Dinâmica via PHP) --- */
+
+/* 1. Frango de Verão (Branco/Amarelo ovo) */
+.patente-frango { background: linear-gradient(145deg, #2a2a2a, #0a0a0a); border: 1px solid #f9d71c40; }
+.patente-frango .patente-glow { background: #f9d71c; }
+.patente-frango .patente-icon-wrapper { border: 2px solid #f9d71c; box-shadow: 0 0 20px #f9d71c60, inset 0 0 15px #f9d71c40; }
+.patente-frango .patente-icon { color: #f9d71c; text-shadow: 0 0 15px #f9d71c; }
+.patente-frango .patente-title, .patente-frango-text { color: #f9d71c; }
+.patente-frango .xp-bar-fill { background: linear-gradient(90deg, transparent, #f9d71c); box-shadow: 0 0 10px #f9d71c80; }
+
+/* 2. Rato de Academia (Cinza/Dark) */
+.patente-rato { background: linear-gradient(145deg, #1f1f1f, #050505); border: 1px solid #a0a0a040; }
+.patente-rato .patente-glow { background: #a0a0a0; }
+.patente-rato .patente-icon-wrapper { border: 2px solid #a0a0a0; box-shadow: 0 0 20px #a0a0a060, inset 0 0 15px #a0a0a040; }
+.patente-rato .patente-icon { color: #a0a0a0; text-shadow: 0 0 15px #a0a0a0; }
+.patente-rato .patente-title, .patente-rato-text { color: #a0a0a0; }
+.patente-rato .xp-bar-fill { background: linear-gradient(90deg, transparent, #a0a0a0); box-shadow: 0 0 10px #a0a0a080; }
+
+/* 3. Shape de Praia (Azul Ciano) */
+.patente-praia { background: linear-gradient(145deg, #002233, #0a0a0a); border: 1px solid #00d2ff40; }
+.patente-praia .patente-glow { background: #00d2ff; }
+.patente-praia .patente-icon-wrapper { border: 2px solid #00d2ff; box-shadow: 0 0 20px #00d2ff60, inset 0 0 15px #00d2ff40; }
+.patente-praia .patente-icon { color: #00d2ff; text-shadow: 0 0 15px #00d2ff; }
+.patente-praia .patente-title, .patente-praia-text { color: #00d2ff; }
+.patente-praia .xp-bar-fill { background: linear-gradient(90deg, transparent, #00d2ff); box-shadow: 0 0 10px #00d2ff80; }
+
+/* 4. Mutante (Verde Tóxico Neon) */
+.patente-mutante { background: linear-gradient(145deg, #0a290a, #0a0a0a); border: 1px solid #39ff1440; }
+.patente-mutante .patente-glow { background: #39ff14; }
+.patente-mutante .patente-icon-wrapper { border: 2px solid #39ff14; box-shadow: 0 0 20px #39ff1460, inset 0 0 15px #39ff1440; }
+.patente-mutante .patente-icon { color: #39ff14; text-shadow: 0 0 15px #39ff14; }
+.patente-mutante .patente-title, .patente-mutante-text { color: #39ff14; }
+.patente-mutante .xp-bar-fill { background: linear-gradient(90deg, transparent, #39ff14); box-shadow: 0 0 10px #39ff1480; }
+
+/* 5. Gigante (Vermelho Sangue) */
+.patente-monstro { background: linear-gradient(145deg, #330000, #0a0a0a); border: 1px solid #ff003c40; }
+.patente-monstro .patente-glow { background: #ff003c; }
+.patente-monstro .patente-icon-wrapper { border: 2px solid #ff003c; box-shadow: 0 0 20px #ff003c60, inset 0 0 15px #ff003c40; }
+.patente-monstro .patente-icon { color: #ff003c; text-shadow: 0 0 15px #ff003c; }
+.patente-monstro .patente-title, .patente-monstro-text { color: #ff003c; }
+.patente-monstro .xp-bar-fill { background: linear-gradient(90deg, transparent, #ff003c); box-shadow: 0 0 10px #ff003c80; }
+
+/* 6. Mr. Olympia (Dourado/Ouro) */
+.patente-olimpo { background: linear-gradient(145deg, #332700, #0a0a0a); border: 1px solid #ffb70040; }
+.patente-olimpo .patente-glow { background: #ffb700; }
+.patente-olimpo .patente-icon-wrapper { border: 2px solid #ffb700; box-shadow: 0 0 20px #ffb70060, inset 0 0 15px #ffb70040; }
+.patente-olimpo .patente-icon { color: #ffb700; text-shadow: 0 0 15px #ffb700; }
+.patente-olimpo .patente-title, .patente-olimpo-text { color: #ffb700; }
+.patente-olimpo .xp-bar-fill { background: linear-gradient(90deg, transparent, #ffb700); box-shadow: 0 0 10px #ffb70080; }
+
+/* --- Ranking Global --- */
+.ranking-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.ranking-divider hr {
+    flex: 1;
+    border: 0;
+    border-top: 1px solid #333;
+    max-width: 150px;
+}
+
+.ranking-divider h3 {
+    color: #fff;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    margin: 0;
+}
+
+.ranking-list-container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: linear-gradient(180deg, #111, #080808);
+    padding: 10px;
+    border-radius: 16px;
+    border: 1px solid #222;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.ranking-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #555;
+}
+
+.ranking-empty i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.3;
+}
+
+.rank-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    transition: 0.3s;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid transparent;
+    border-bottom: 1px solid #222;
+}
+
+.rank-item:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.rank-item-me {
+    background: rgba(255, 215, 0, 0.05);
+    border: 1px solid var(--gold);
+    transform: scale(1.02);
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.1);
+    z-index: 2;
+    position: relative;
+}
+
+.rank-info-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.rank-position-wrapper {
+    position: relative;
+}
+
+.crown-icon {
+    position: absolute;
+    top: -10px;
+    left: -5px;
+    color: #ffd700;
+    font-size: 1rem;
+    transform: rotate(-20deg);
+}
+
+.rank-position {
+    width: 35px;
+    height: 35px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.podium-1 { background: linear-gradient(135deg, #ffd700, #b8860b); color: #000; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+.podium-2 { background: linear-gradient(135deg, #e0e0e0, #888); color: #000; }
+.podium-3 { background: linear-gradient(135deg, #cd7f32, #8b4513); color: #fff; }
+.podium-default { background: #222; color: #888; }
+
+.rank-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #333;
+}
+
+.rank-user-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.rank-name {
+    color: #fff;
+    font-size: 1.05rem;
+}
+
+.rank-badge-me {
+    background: var(--gold);
+    color: #000;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.6rem;
+    font-weight: bold;
+    margin-left: 5px;
+    text-transform: uppercase;
+}
+
+.rank-role {
+    color: #777;
+    font-size: 0.75rem;
+}
+
+.rank-info-right {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.rank-score {
+    color: var(--gold);
+    font-size: 1.4rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.rank-score-label {
+    color: #666;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }

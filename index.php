@@ -3,6 +3,20 @@
 require_once 'includes/head_main.php';
 ?>
 <head>
+    <!-- SEO e Meta Tags Otimizadas para o Google -->
+    <title>Ryan Coach App | Sistema de Gerenciamento de Treinos por Ryan Borges</title>
+    <meta name="description" content="O sistema definitivo de gerenciamento de treinos criado por Ryan Borges. Periodização, controle de carga e análise de dados para quem busca alta performance.">
+    <meta name="keywords" content="Ryan Borges, Ryan Coach, aplicativo de treino, gestão de treino, SaaS fitness, controle de carga, periodização de treino, consultoria esportiva">
+    <meta name="author" content="Ryan Borges">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph (Para ficar perfeito no WhatsApp, Instagram e Links) -->
+    <meta property="og:title" content="Ryan Coach App | A Evolução é Método">
+    <meta property="og:description" content="O sistema definitivo de gerenciamento de treinos criado por Ryan Borges. Abandone as planilhas e tenha controle total da sua evolução.">
+    <meta property="og:image" content="https://ryanborges.com/assets/img/ryan_coach.webp">
+    <meta property="og:url" content="https://ryanborges.com/">
+    <meta property="og:type" content="website">
+
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/menu.css">
 </head>
@@ -12,7 +26,7 @@ require_once 'includes/head_main.php';
     <nav class="saas-nav">
         <a href="index.php">
             <div class="logo-container">
-                <img src="assets/img/icones/icon-nav.png" alt="Ryan Coach">
+                <img src="assets/img/icones/icon-nav.png" alt="Logo Ryan Coach App por Ryan Borges">
                 <h1 class="title">Ryan Coach</h1>
             </div>
         </a>
@@ -31,7 +45,7 @@ require_once 'includes/head_main.php';
                 </p>
                 <div class="hero-actions">
                     <a href="planos.php" class="btn-cta-gold pulse-animation">COMEÇAR AGORA</a>
-                    <a href="#features" class="btn-link-sec">Ver Funcionalides</a>
+                    <a href="#features" class="btn-link-sec">Ver Funcionalidades</a>
                 </div>
             </div>
 
@@ -46,7 +60,7 @@ require_once 'includes/head_main.php';
                                     <h1 class="greeting-main">Olá, <span style="color:var(--gold)">Ryan</span></h1>
                                 </div>
                                 <div class="header-avatar">
-                                    <img> </div>
+                                    <img alt="Avatar de Usuário Ryan Coach"> </div>
                             </div>
                             
                             <div class="status-bar-float">
@@ -145,7 +159,8 @@ require_once 'includes/head_main.php';
     <section id="metodo" class="section-authority">
         <div class="container auth-grid">
             <div class="img-frame">
-                <img src="assets/img/ryan_coach_atualizado-removebg-preview.png" alt="Ryan Coach" class="ryan-photo">
+                <!-- A tag alt aqui é fundamental para aparecer no Google Imagens quando pesquisarem Ryan Borges -->
+                <img src="assets/img/ryan_coach_atualizado-removebg-preview.png" alt="Ryan Borges - Desenvolvedor do sistema Ryan Coach App" class="ryan-photo">
             </div>
             <div class="auth-text">
                 <span class="quote-highlight">"Não existe atalho. Existe estratégia."</span>
@@ -172,7 +187,7 @@ require_once 'includes/head_main.php';
                 <div class="video-container">
                     <iframe 
                         src="https://www.youtube.com/embed/xiLG2PEPyL8?rel=0&modestbranding=1&controls=1&showinfo=0" 
-                        title="Demonstração do Sistema Ryan Coach" 
+                        title="Demonstração do Sistema Ryan Coach por Ryan Borges" 
                         frameborder="0" 
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                         allowfullscreen>
@@ -225,7 +240,7 @@ require_once 'includes/head_main.php';
                 <a href="https://www.instagram.com/joa0michel?igsh=azI1NDlrZ3M0ZGdw" class="review-card">
                     <div class="review-header">
                         <div class="user-info">
-                            <div class="user-avatar"><img src="assets/img/user-reviews/joaomichel.jpeg" alt=""></div>
+                            <div class="user-avatar"><img src="assets/img/user-reviews/joaomichel.jpeg" alt="Aluno do Ryan Coach App"></div>
                             <div><strong>João</strong><span class="user-tag">Plano Pro</span></div>
                         </div>
                         <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
@@ -237,7 +252,7 @@ Só tenho a agradecer, tem me incentivado pra caramba"</p>
                 <a href="https://www.instagram.com/pedro_azvdo_?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" class="review-card">
                     <div class="review-header">
                         <div class="user-info">
-                            <div class="user-avatar"><img src="assets/img/user-reviews/pedroazevedo.jpeg" alt=""></div>
+                            <div class="user-avatar"><img src="assets/img/user-reviews/pedroazevedo.jpeg" alt="Aluno do Ryan Coach App"></div>
                             <div><strong>Pedro Azevedo</strong><span class="user-tag">Plano Start</span></div>
                         </div>
                         <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
@@ -247,7 +262,7 @@ Só tenho a agradecer, tem me incentivado pra caramba"</p>
                 <a href="https://www.instagram.com/josiel_borges199?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" class="review-card">
                     <div class="review-header">
                         <div class="user-info">
-                            <div class="user-avatar"><img src="assets/img/user-reviews/josiel.jpeg" alt=""></div>
+                            <div class="user-avatar"><img src="assets/img/user-reviews/josiel.jpeg" alt="Aluno do Ryan Coach App"></div>
                             <div><strong>Josiel</strong><span class="user-tag">Plano Pro</span></div>
                         </div>
                         <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
@@ -257,7 +272,7 @@ Só tenho a agradecer, tem me incentivado pra caramba"</p>
                 <a href="https://www.instagram.com/rezende_vitor943?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" class="review-card">
                     <div class="review-header">
                         <div class="user-info">
-                            <div class="user-avatar"><img src="assets/img/user-reviews/vitor.jpeg" alt=""></div>
+                            <div class="user-avatar"><img src="assets/img/user-reviews/vitor.jpeg" alt="Aluno do Ryan Coach App"></div>
                             <div><strong>Vitor</strong><span class="user-tag">Plano Start</span></div>
                         </div>
                         <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
@@ -267,7 +282,7 @@ Só tenho a agradecer, tem me incentivado pra caramba"</p>
                 <a href="https://www.instagram.com/gui_ribeiro_374?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" class="review-card">
                     <div class="review-header">
                         <div class="user-info">
-                            <div class="user-avatar"><img src="assets/img/user-reviews/guilherme.jpeg" alt=""></div>
+                            <div class="user-avatar"><img src="assets/img/user-reviews/guilherme.jpeg" alt="Aluno do Ryan Coach App"></div>
                             <div><strong>Guilherme</strong><span class="user-tag">Plano Start</span></div>
                         </div>
                         <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>

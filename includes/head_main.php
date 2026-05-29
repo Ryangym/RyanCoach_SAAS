@@ -2,6 +2,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="assets/img/icones/favicon2.png">
 
+<title>Ryan Coach App | O Melhor Software de Gerenciamento de Treinos por Ryan Borges</title>
+
+<meta name="description" content="Organize e potencialize seus resultados com o Ryan Coach App. O sistema definitivo criado por Ryan Borges para gestão de treinos, histórico, evolução.">
+
 <!-- AJAX CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 

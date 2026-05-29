@@ -164,7 +164,7 @@ switch ($pagina) {
                     
                     <div class="status-bar-float">
                         <div class="sb-item">
-                            <i class="fa-solid fa-medal sb-icon" style="color: var(--gold);"></i>
+                            <i class="fa-solid fa-fire sb-icon fire"></i>
                             <div class="sb-info">
                                 <strong>'.$total_treinos_ano.'</strong>
                                 <span>Treinos no Ano</span>

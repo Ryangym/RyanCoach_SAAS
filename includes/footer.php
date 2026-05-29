@@ -8,19 +8,19 @@
                 <p>Onde foco, disciplina e ciência se encontram para transformar seu físico.</p>
                 
                 <div class="social-links-v2">
-                    <a href="https{SEU_LINK_WHATSAPP}" target="_blank" title="WhatsApp" style="--social-color: #25D366;">
+                    <a href="https://api.whatsapp.com/send?phone=5535999928473&text=Ol%C3%A1,%20gostaria%20de%20conversar%20sobre%20seu%20planejamento%20de%20treino." target="_blank" title="WhatsApp" style="--social-color: #25D366;">
                         <img src="assets/img/icones/whatsapp-fill-svgrepo-com.svg" alt="WhatsApp">
                     </a>
-                    <a href="https{SEU_LINK_INSTAGRAM}" target="_blank" title="Instagram" style="--social-color: #E4405F;">
+                    <a href="https://www.instagram.com/ryan.gym_/" target="_blank" title="Instagram" style="--social-color: #E4405F;">
                         <img src="assets/img/icones/instagram-fill-svgrepo-com.svg" alt="Instagram">
                     </a>
-                    <a href="https{SEU_LINK_TIKTOK}" target="_blank" title="TikTok" style="--social-color: #8f16aa;">
+                    <a href="https://www.tiktok.com/@ryan.gym_" target="_blank" title="TikTok" style="--social-color: #8f16aa;">
                         <img src="assets/img/icones/tiktok-fill-svgrepo-com.svg" alt="TikTok">
                     </a>
-                    <a href="https{SEU_LINK_TELEGRAM}" target="_blank" title="Telegram" style="--social-color: #229ED9;">
+                    <a href="https://t.me/ryanborges" target="_blank" title="Telegram" style="--social-color: #229ED9;">
                         <img src="assets/img/icones/telegram-fill-svgrepo-com.svg" alt="Telegram">
                     </a>
-                    <a href="https{SEU_LINK_YOUTUBE}" target="_blank" title="YouTube" style="--social-color: #FF0000;">
+                    <a href="https://www.youtube.com/channel/UCD6fzhXmxlFCUb91uRUCBVw" target="_blank" title="YouTube" style="--social-color: #FF0000;">
                         <img src="assets/img/icones/youtube-fill-svgrepo-com.svg" alt="YouTube">
                     </a>
                 </div>

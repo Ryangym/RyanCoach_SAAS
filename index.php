@@ -13,7 +13,7 @@ require_once 'includes/head_main.php';
         <a href="index.php">
             <div class="logo-container">
                 <img src="assets/img/icones/icon-nav.png" alt="Ryan Coach">
-                <span class="title">Ryan Coach</span>
+                <h1 class="title">Ryan Coach</h1>
             </div>
         </a>
         <a href="login.php" class="btn-login-nav">ENTRAR</a>
@@ -22,10 +22,10 @@ require_once 'includes/head_main.php';
     <header class="saas-hero">
         <div class="container">
             <div class="hero-content">
-                <h1 class="hero-title">
+                <h2 class="hero-title">
                     Sua Evolução não é Sorte. <br>
                     <span class="text-gold">É Método.</span>
-                </h1>
+                </h2>
                 <p class="hero-sub">
                     O sistema definitivo de gerenciamento de treinos. Periodização, controle de carga e análise de dados para quem busca alta performance.
                 </p>
@@ -54,7 +54,7 @@ require_once 'includes/head_main.php';
                                     <i class="fa-solid fa-fire sb-icon fire"></i>
                                     <div class="sb-info">
                                         <strong>12</strong>
-                                        <span>Dias seguidos</span>
+                                        <span>Treinos no Ano</span>
                                     </div>
                                 </div>
                                 <div class="sb-divider"></div>

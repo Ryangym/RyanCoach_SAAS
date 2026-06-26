@@ -1,3 +1,7 @@
+body{
+    background: linear-gradient(135deg, #0a0a0a, #2a0a0a, #1b1b1b);
+}
+
 /* --- TÍTULO DA PÁGINA --- */
 h1.section-title { /* Mudei o seletor para ser mais específico */
     font-family: 'Copse', sans-serif;
@@ -120,6 +124,8 @@ h1.section-title { /* Mudei o seletor para ser mais específico */
 }
 
 .textbeneficios li {
+    font-family: 'Copse', sans-serif;
+    letter-spacing: 0.7px;
     margin-bottom: 0.75rem; /* Espaço entre os itens */
     display: flex;
     align-items: center;
@@ -194,12 +200,12 @@ h1.section-title { /* Mudei o seletor para ser mais específico */
 /* --- ANIMAÇÕES (Glow) --- */
 @keyframes glow {
     0% {
-        text-shadow: 0 0 2px #fff, 0 0 3px #daa520, 0 0 4px #daa520, 0 0 6px #daa520, 0 0 8px #daa520;
+        text-shadow: 0 0 1px #fff, 0 0 2px #daa520, 0 0 3px #daa520;
     }
     50% {
-        text-shadow: 0 0 4px #fff, 0 0 6px #daa520, 0 0 9px #daa520, 0 0 12px #daa520, 0 0 15px #daa520;
+        text-shadow: 0 0 2px #fff, 0 0 4px #daa520, 0 0 6px #daa520;
     }
     100% {
-        text-shadow: 0 0 2px #fff, 0 0 3px #daa520, 0 0 4px #daa520, 0 0 6px #daa520, 0 0 8px #daa520;
+        text-shadow: 0 0 1px #fff, 0 0 2px #daa520, 0 0 3px #daa520;
     }
 }

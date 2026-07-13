@@ -564,6 +564,37 @@ if ($dados_usuario['data_expiracao_plano']) {
         </div>
     </div>
 
+    <!-- ---------------------------------------------------------------------------->
+    <!--------------- HTML DA ANIMAÇÃO DUOLINGO ----------------->
+    <div id="duo-workout-overlay" class="duo-overlay-oculto">
+        <div class="duo-content">
+
+            <!-- Anel de energia girando + ícone de chama com gradiente -->
+            <div class="duo-icon-container">
+                <div class="duo-glow-ring"></div>
+                <img src="assets/img/icones/fire-svgrepo-com.svg" class="duo-fire-icon" alt="Ícone de Chama">
+                    <defs>
+                        <linearGradient id="fireGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#fff2c9"/>
+                            <stop offset="35%" stop-color="#ffba42"/>
+                            <stop offset="100%" stop-color="#ff7a00"/>
+                        </linearGradient>
+                    </defs>
+                    <path fill="url(#fireGradient)" d="M11.66 22.88a10.08 10.08 0 0 1-5.74-2.58 8.86 8.86 0 0 1-2.45-6.07c0-2.83 1.25-5.46 3.42-7.23a1 1 0 0 1 1.48.19c1 1.34 1.48 2.65 1.5 3.84a1 1 0 0 0 1.62.77 5.48 5.48 0 0 0 2.22-4.57c0-.75-.12-1.5-.35-2.22a1 1 0 0 1 1.58-1.07c3.15 2.1 5 5.56 5 9.2a9.38 9.38 0 0 1-3.66 7.42 10.15 10.15 0 0 1-4.62 2.32z"/>
+                </svg>
+            </div>
+
+            <h2 class="duo-title">Treino Concluído!</h2>
+            <p class="duo-subtitle">Treinos realizados no ano</p>
+
+            <div class="duo-number-container" id="duo-number-container">
+                <span id="duo-numero-treinos" class="duo-number">0</span>
+            </div>
+
+            <button id="duo-btn-continuar" class="duo-btn" onclick="fecharAnimacaoDuolingo()">Continuar</button>
+        </div>
+    </div>
+
 
     <script>
 /* ==========================================================================
@@ -572,12 +603,13 @@ if ($dados_usuario['data_expiracao_plano']) {
    ÍNDICE:
    1. MÓDULO: AVALIAÇÃO FÍSICA (Visualização e Modal)
    2. MÓDULO: DIETA (Check de Refeições)
-   3. MÓDULO: CRONÔMETRO FLUTUANTE E MODAL DE TÉCNICAS AVANÇADAS
+   3. MÓDULO: CRONÔMETRO FLUTUANTE, MODAL DE TÉCNICAS AVANÇADAS E FINALIZAR TREINO
    4. MÓDULO: GESTÃO DE COACH (Vincular)
    5. MÓDULO: HISTÓRICO (DELETE & EDIT & PREVIEW)
    6. MÓDULO: TUTORIAIS VIDEOS
    7. MÓDULO: TREINOS PRONTOS (Biblioteca)
    8. MÓDULO: AUTO-SAVE (RASCUNHO) DO TREINO EM EXECUÇÃO
+   9. MÓDULO: ANIMAÇÃO ESTILO DUOLINGO (TREINO CONCLUÍDO)
    ========================================================================== */
 
 /* ==========================================================================
@@ -1037,6 +1069,48 @@ function confirmTechniqueData(id, type) {
 
     // 3. Fecha o modal
     closeTechniqueModal(id);
+}
+function enviarTreinoAjax(event, formElement) {
+    // 1. Impede a página de recarregar
+    event.preventDefault();
+
+    // 2. Confirmação
+    if (!confirm('Tem certeza que deseja finalizar este treino? Todos os dados serão salvos.')) {
+        return;
+    }
+
+    const btnFinalizar = document.getElementById('btn-finalizar-treino');
+    const treinosAntigos = formElement.getAttribute('data-treinos'); // Pega o número que injetamos via PHP
+    const formData = new FormData(formElement);
+
+    // Muda o visual do botão para indicar que está carregando
+    btnFinalizar.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> SALVANDO...';
+    btnFinalizar.disabled = true;
+
+    // 3. Envia os dados em segundo plano
+    fetch(formElement.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            // SUCESSO! Chama a função da animação que criamos anteriormente
+            iniciarAnimacaoTreino(treinosAntigos);
+        } else {
+            alert('Erro ao salvar o treino. Tente novamente.');
+            restaurarBotaoFinalizar(btnFinalizar);
+        }
+    })
+    .catch(error => {
+        console.error('Erro na requisição:', error);
+        alert('Erro de conexão. Verifique sua internet.');
+        restaurarBotaoFinalizar(btnFinalizar);
+    });
+}
+
+function restaurarBotaoFinalizar(btn) {
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> FINALIZAR TREINO';
+    btn.disabled = false;
 }
 /* ==========================================================================
    4. MÓDULO: GESTÃO DE COACH
@@ -1602,6 +1676,84 @@ function fecharModalVideo() {
     document.addEventListener('DOMContentLoaded', () => {
         observerTreino.observe(document.body, { childList: true, subtree: true });
     });
+
+/* ==========================================================================
+   9. MÓDULO: ANIMAÇÃO ESTILO DUOLINGO (TREINO CONCLUÍDO)
+   ========================================================================== */
+   function iniciarAnimacaoTreino(treinosAntigos) {
+    const overlay = document.getElementById('duo-workout-overlay');
+    const numeroElement = document.getElementById('duo-numero-treinos');
+    const btnContinuar = document.getElementById('duo-btn-continuar');
+    const numeroContainer = document.getElementById('duo-number-container');
+
+    // Reseta estados para caso o usuário faça 2 treinos no mesmo dia
+    btnContinuar.classList.remove('mostrar');
+    numeroElement.classList.remove('bump');
+    numeroElement.innerText = treinosAntigos;
+
+    // Abre o overlay
+    overlay.classList.add('ativo');
+
+    // Espera 1 segundo para o usuário focar na tela, depois sobe +1
+    setTimeout(() => {
+        const treinosNovos = parseInt(treinosAntigos) + 1;
+        numeroElement.innerText = treinosNovos;
+
+        // Adiciona a classe que faz o número "pular" e brilhar
+        numeroElement.classList.add('bump');
+
+        // Explosão de partículas comemorando o novo número
+        criarParticulas(numeroContainer);
+
+        // Remove o "pulo" do número depois de 500ms, deixando ele suave
+        setTimeout(() => {
+            numeroElement.classList.remove('bump');
+        }, 500);
+
+        // Exibe o botão de continuar 800ms após o número subir
+        setTimeout(() => {
+            btnContinuar.classList.add('mostrar');
+        }, 800);
+
+    }, 1000);
+}
+
+// Gera pequenas partículas douradas que voam para fora do número e desaparecem
+function criarParticulas(container) {
+    const cores = ['#ffba42', '#ff9600', '#fff2c9', '#ffffff'];
+    const totalParticulas = 16;
+
+    for (let i = 0; i < totalParticulas; i++) {
+        const particula = document.createElement('span');
+        particula.className = 'duo-particula';
+
+        const angulo = (360 / totalParticulas) * i + (Math.random() * 20 - 10);
+        const distancia = 80 + Math.random() * 60;
+        const tamanho = 4 + Math.random() * 5;
+
+        particula.style.setProperty('--angulo', `${angulo}deg`);
+        particula.style.setProperty('--distancia', `${distancia}px`);
+        particula.style.width = `${tamanho}px`;
+        particula.style.height = `${tamanho}px`;
+        particula.style.background = cores[Math.floor(Math.random() * cores.length)];
+
+        container.appendChild(particula);
+
+        // Remove a partícula do DOM depois que a animação termina
+        setTimeout(() => particula.remove(), 900);
+    }
+}
+
+function fecharAnimacaoDuolingo() {
+    const overlay = document.getElementById('duo-workout-overlay');
+    overlay.classList.remove('ativo');
+    
+    if (typeof carregarConteudo === 'function') {
+        carregarConteudo('dashboard'); // ou 'dashboard', ou o que carregar a tela principal
+    } else {
+        window.location.reload(); // Fallback se a função não existir
+    }
+}
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>

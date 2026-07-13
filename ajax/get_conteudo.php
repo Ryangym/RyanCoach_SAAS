@@ -450,7 +450,14 @@ switch ($pagina) {
 
         $nome_fase = $micro_atual ? 'Fase: '.$micro_atual['nome_fase'] : 'Treino Livre';
 
-        echo '<form action="actions/treino_registrar.php" method="POST" id="form-execucao">
+        // --- BUSCAR QUANTIDADE DE TREINOS NO ANO ---
+        $ano_atual = date('Y');
+        // Conta quantos dias diferentes o aluno treinou neste ano (ajuste a query se sua métrica for diferente)
+        $stmt_treinos_ano = $pdo->prepare("SELECT COUNT(DISTINCT DATE(data_treino)) FROM treino_historico WHERE aluno_id = ? AND YEAR(data_treino) = ?");
+        $stmt_treinos_ano->execute([$aluno_id, $ano_atual]);
+        $qtd_treinos_antigos = $stmt_treinos_ano->fetchColumn() ?: 0;
+
+        echo '<form action="actions/treino_registrar.php" method="POST" id="form-execucao" data-treinos="'.$qtd_treinos_antigos.'" onsubmit="enviarTreinoAjax(event, this)">
                 <input type="hidden" name="treino_id" value="'.$treino_ativo['id'].'">
                 <input type="hidden" name="divisao_id" value="'.$divisao_id.'">
 
@@ -809,10 +816,10 @@ switch ($pagina) {
 
         echo '  </div> 
 
-                <button type="submit" class="btn-finish" onclick="return confirm(\'Tem certeza que deseja finalizar este treino? Todos os dados serão salvos.\')">
+                <button type="submit" class="btn-finish" id="btn-finalizar-treino">
                     <i class="fa-solid fa-check"></i> FINALIZAR TREINO
                 </button>
-              </form>';
+            </form>';
         break;
 
 

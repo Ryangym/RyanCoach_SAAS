@@ -567,12 +567,13 @@ if ($dados_usuario['data_expiracao_plano']) {
     <!-- ---------------------------------------------------------------------------->
     <!--------------- HTML DA ANIMAÇÃO DUOLINGO ----------------->
     <div id="duo-workout-overlay" class="duo-overlay-oculto">
-        <div class="duo-content">
+    <div class="duo-content">
 
-            <!-- Anel de energia girando + ícone de chama com gradiente -->
+        <!-- PASSO 1: O Contador de Treinos -->
+        <div id="duo-step-1" class="duo-step-container">
             <div class="duo-icon-container">
                 <div class="duo-glow-ring"></div>
-                <img src="assets/img/icones/fire-svgrepo-com.svg" class="duo-fire-icon" alt="Ícone de Chama">
+                <img src="assets/img/icones/fire-svgrepo-com.svg" alt="Fogo" class="duo-fire-icon">
                     <defs>
                         <linearGradient id="fireGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                             <stop offset="0%" stop-color="#fff2c9"/>
@@ -583,17 +584,36 @@ if ($dados_usuario['data_expiracao_plano']) {
                     <path fill="url(#fireGradient)" d="M11.66 22.88a10.08 10.08 0 0 1-5.74-2.58 8.86 8.86 0 0 1-2.45-6.07c0-2.83 1.25-5.46 3.42-7.23a1 1 0 0 1 1.48.19c1 1.34 1.48 2.65 1.5 3.84a1 1 0 0 0 1.62.77 5.48 5.48 0 0 0 2.22-4.57c0-.75-.12-1.5-.35-2.22a1 1 0 0 1 1.58-1.07c3.15 2.1 5 5.56 5 9.2a9.38 9.38 0 0 1-3.66 7.42 10.15 10.15 0 0 1-4.62 2.32z"/>
                 </svg>
             </div>
-
             <h2 class="duo-title">Treino Concluído!</h2>
             <p class="duo-subtitle">Treinos realizados no ano</p>
-
             <div class="duo-number-container" id="duo-number-container">
                 <span id="duo-numero-treinos" class="duo-number">0</span>
             </div>
-
-            <button id="duo-btn-continuar" class="duo-btn" onclick="fecharAnimacaoDuolingo()">Continuar</button>
         </div>
+
+        <!-- PASSO 2: A Barra de Progresso da Patente -->
+        <div id="duo-step-2" class="duo-step-container" style="display: none; opacity: 0;">
+            <div class="patente-icon-wrapper" style="font-size: 3.5rem; color: var(--gold, #ffba42); margin-bottom: 10px; filter: drop-shadow(0 0 10px rgba(255,186,66,0.3));">
+                <i id="duo-patente-icone" class="fa-solid fa-egg"></i>
+            </div>
+            <h4 class="patente-subtitle" style="color: #888; text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem;">Seu Nível Atual</h4>
+            <h2 id="duo-patente-nome" class="duo-title" style="margin-bottom: 40px; font-size: 2.5rem;">Frango de Verão</h2>
+            
+            <div class="xp-container" style="width: 100%; min-width: 280px;">
+                <div class="xp-header" style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem; gap: 5px;">
+                    <span style="color: #aaa;">Próxima meta: <strong id="duo-patente-prox" style="color: #fff;">Rato de Academia</strong></span>
+                    <span id="duo-xp-text" style="color: var(--gold, #ffba42); font-weight: 800;">0 / 15 XP</span>
+                </div>
+                <div class="xp-bar-bg" style="width: 100%; height: 14px; background: rgba(255,255,255,0.1); border-radius: 20px; overflow: hidden;">
+                    <!-- A largura (width) será manipulada pelo JS para criar a animação de preenchimento -->
+                    <div id="duo-xp-bar" class="xp-bar-fill" style="height: 100%; width: 0%; background: var(--gold, #ffba42); border-radius: 20px; transition: width 1s cubic-bezier(0.25, 1, 0.5, 1); box-shadow: 0 0 10px var(--gold, #ffba42);"></div>
+                </div>
+            </div>
+        </div>
+
+        <button id="duo-btn-continuar" class="duo-btn" onclick="fecharAnimacaoDuolingo()">Continuar</button>
     </div>
+</div>
 
 
     <script>
@@ -1680,42 +1700,106 @@ function fecharModalVideo() {
 /* ==========================================================================
    9. MÓDULO: ANIMAÇÃO ESTILO DUOLINGO (TREINO CONCLUÍDO)
    ========================================================================== */
-   function iniciarAnimacaoTreino(treinosAntigos) {
+   function obterDadosPatente(treinos) {
+    // Régua de patentes espelhada do seu backend
+    if (treinos >= 200) return { nome: 'Mr. Olympia', prox: 'Nível Máximo', meta: treinos, icone: 'fa-trophy' };
+    if (treinos >= 130) return { nome: 'Gigante', prox: 'Mr. Olympia', meta: 200, icone: 'fa-hand-fist' };
+    if (treinos >= 80) return { nome: 'Mutante', prox: 'Gigante', meta: 130, icone: 'fa-dna' };
+    if (treinos >= 40) return { nome: 'Shape de Praia', prox: 'Mutante', meta: 80, icone: 'fa-umbrella-beach' };
+    if (treinos >= 15) return { nome: 'Rato de Academia', prox: 'Shape de Praia', meta: 40, icone: 'fa-mouse' };
+    return { nome: 'Frango de Verão', prox: 'Rato de Academia', meta: 15, icone: 'fa-egg' };
+}
+
+function iniciarAnimacaoTreino(treinosAntigos) {
     const overlay = document.getElementById('duo-workout-overlay');
+    const step1 = document.getElementById('duo-step-1');
+    const step2 = document.getElementById('duo-step-2');
     const numeroElement = document.getElementById('duo-numero-treinos');
     const btnContinuar = document.getElementById('duo-btn-continuar');
     const numeroContainer = document.getElementById('duo-number-container');
 
-    // Reseta estados para caso o usuário faça 2 treinos no mesmo dia
+    const treinosNovos = parseInt(treinosAntigos) + 1;
+    const patenteAntiga = obterDadosPatente(treinosAntigos);
+    const patenteNova = obterDadosPatente(treinosNovos);
+
+    // Reseta Interface
     btnContinuar.classList.remove('mostrar');
     numeroElement.classList.remove('bump');
+    step1.style.display = 'flex';
+    step1.style.opacity = '1';
+    step1.style.transform = 'scale(1)';
+    step2.style.display = 'none';
+    step2.style.opacity = '0';
     numeroElement.innerText = treinosAntigos;
 
-    // Abre o overlay
+    // Inicia Overlay
     overlay.classList.add('ativo');
 
-    // Espera 1 segundo para o usuário focar na tela, depois sobe +1
+    // --- FASE 1: Animação do Contador (+1) ---
     setTimeout(() => {
-        const treinosNovos = parseInt(treinosAntigos) + 1;
         numeroElement.innerText = treinosNovos;
-
-        // Adiciona a classe que faz o número "pular" e brilhar
         numeroElement.classList.add('bump');
-
-        // Explosão de partículas comemorando o novo número
         criarParticulas(numeroContainer);
 
-        // Remove o "pulo" do número depois de 500ms, deixando ele suave
         setTimeout(() => {
-            numeroElement.classList.remove('bump');
+            numeroElement.style.transform = 'scale(1) translateY(0)';
         }, 500);
 
-        // Exibe o botão de continuar 800ms após o número subir
+        // --- FASE 2: Transição para a Barra de Conquistas ---
         setTimeout(() => {
-            btnContinuar.classList.add('mostrar');
-        }, 800);
+            // Fade out no passo 1
+            step1.classList.add('fade-out');
+            
+            setTimeout(() => {
+                step1.style.display = 'none';
+                step2.style.display = 'flex';
+                
+                // Força a renderização para a transição funcionar
+                void step2.offsetWidth; 
+                step2.style.opacity = '1';
+                
+                // Configura os dados visuais do Passo 2
+                document.getElementById('duo-patente-icone').className = `fa-solid ${patenteNova.icone}`;
+                document.getElementById('duo-patente-nome').innerText = patenteNova.nome;
+                document.getElementById('duo-patente-prox').innerText = patenteNova.prox;
+                
+                const xpText = document.getElementById('duo-xp-text');
+                const xpBar = document.getElementById('duo-xp-bar');
+                
+                // Calcula a porcentagem antiga e seta a barra (para ela começar de onde estava)
+                let pctAntiga = (patenteNova.meta > 0) ? (treinosAntigos / patenteNova.meta) * 100 : 100;
+                if (pctAntiga > 100) pctAntiga = 100;
+                xpBar.style.width = `${pctAntiga}%`;
+                xpText.innerText = `${treinosAntigos} / ${patenteNova.meta} XP`;
 
-    }, 1000);
+                // --- FASE 3: Enchendo a barra de XP ao vivo ---
+                setTimeout(() => {
+                    let pctNova = (patenteNova.meta > 0) ? (treinosNovos / patenteNova.meta) * 100 : 100;
+                    if (pctNova > 100) pctNova = 100;
+                    
+                    // A barra vai crescer suavemente graças à transição do CSS
+                    xpBar.style.width = `${pctNova}%`;
+                    xpText.innerText = `${treinosNovos} / ${patenteNova.meta} XP`;
+
+                    // Se o usuário SUBIU de patente com este treino, joga partículas no ícone!
+                    if (patenteNova.nome !== patenteAntiga.nome) {
+                        setTimeout(() => {
+                            document.getElementById('duo-patente-icone').style.color = '#fff';
+                            criarParticulas(document.getElementById('duo-step-2'));
+                        }, 500);
+                    }
+
+                    // Por fim, exibe o botão Continuar
+                    setTimeout(() => {
+                        btnContinuar.classList.add('mostrar');
+                    }, 1000);
+
+                }, 600); // Pausa leve antes de encher a barra
+                
+            }, 400); // Tempo do fade out do Step 1
+        }, 1500); // Tempo que o usuário fica admirando o número novo na tela
+
+    }, 1000); // Tempo inicial antes de somar +1
 }
 
 // Gera pequenas partículas douradas que voam para fora do número e desaparecem
